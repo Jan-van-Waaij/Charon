@@ -1,0 +1,13 @@
+name = "PosteriorSampling"
+uuid = "eef181ce-16ce-45cf-8940-73268af89f45"
+authors = ["Jan van Waaij <jvanwaaij@gmail.com> and contributors"]
+version = "1.0.0-DEV"
+
+[deps]
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Likelihood = "6b21585a-d53a-4759-b69f-7d4585bb53a6"
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
+[compat]
+julia = "1"

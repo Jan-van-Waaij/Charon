@@ -1,0 +1,9 @@
+name = "Data"
+uuid = "816b60a8-ec2f-4cbd-b38f-037ed1de810e"
+authors = ["Jan van Waaij <jvanwaaij@gmail.com>"]
+version = "0.1.0"
+
+[deps]
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+GZip = "92fee26a-97fe-5a0c-ad85-20a5f3185b63"

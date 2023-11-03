@@ -1,0 +1,15 @@
+# ignore all .gz-files: too large for github.
+*.gz
+# ignore ~ files.
+*~
+# ignore all hidden files and folders:
+.*
+# Except for .gitignore and .gitmodules.
+!/.gitignore
+!/.gitmodules
+# Ignore vcf files. 
+*.vcf 
+# Ignore .csv files
+*.csv 
+*.tree
+*.txt

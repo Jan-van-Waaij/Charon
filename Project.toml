@@ -1,0 +1,7 @@
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+MCMCChains = "c7f686f2-ff18-58e9-bc7b-31028e88f75d"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+TestPackage = "17d8b26d-004b-4f45-b864-5aa78746e2cb"

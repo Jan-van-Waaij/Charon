@@ -1,0 +1,19 @@
+
+#amerind+asian
+python3 two_demes.py 3000 6000 30000 0
+
+#two europeans
+python3 two_demes.py 8000 9000 10000 0
+
+#two asians
+python3 two_demes.py 6000 7000 8000 0
+
+#african european
+python3 two_demes.py 11000 9000 70000 0
+
+
+#african asian
+python3 two_demes.py 11000 6000 70000 0
+
+
+
