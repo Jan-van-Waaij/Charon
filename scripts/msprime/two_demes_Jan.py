@@ -14,7 +14,7 @@ def two_demes(NeAncient, NeAnchor, split_time_in_generations, random_seed=None):
     demography.add_population(name="common_ancestor", initial_size=max(NeAncient, NeAnchor), growth_rate=0.0)
     demography.add_population_split(time=split_time_in_generations, derived=["ancient", "anchor"], ancestral="common_ancestor")
     ts = msprime.sim_ancestry(samples={"ancient":5_000, "anchor":5_000}, demography=demography, random_seed=random_seed, recombination_rate=1e-8, sequence_length=10e6)
-    mts = msprime.sim_mutations(ts, rate=2e-8)
+    mts = msprime.sim_mutations(ts, rate=2e-8, random_seed=random_seed)
     mts.dump( "two_demes_time_in_generations_"+str(NeAncient)+"_"+str(NeAnchor)+"_"+str(split_time_in_generations)+"_"+str(random_seed)+".tree");# ,  True);
     vcffilename="two_demes_time_in_generations_"+str(NeAncient)+"_"+str(NeAnchor)+"_"+str(split_time_in_generations)+"_"+str(random_seed)+".vcf";
     with open(vcffilename, "w") as vcf_file:

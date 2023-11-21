@@ -98,6 +98,23 @@ try
  #       results = MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs)
         for i in eachindex(results)
             nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[i]
+            τCsampleunpacked = Vector{Float64}(undef, nsteps)
+            τAsampleunpacked = Vector{Float64}(undef, nsteps)
+            ϵsampleunpacked = Vector{Float64}(undef, nsteps)
+            for index in 1:nsteps
+                τCsampleunpacked[index] = τCsample[index, nsample[index]]
+                τAsampleunpacked[index] = τAsample[index, nsample[index]]
+                ϵsampleunpacked[index] = ϵsample[index, nsample[index]]
+            end  
+            acceptedvecunpacked = BitVector(undef, nsteps)
+            acceptedvecunpacked[1] = true
+            for index in 2:nsteps
+                if (nsample[index] == nsample[index-1]) && (τCsampleunpacked[index] == τCsampleunpacked[index-1]) && (τAsampleunpacked[index] == τAsampleunpacked[index-1])  
+                    acceptedvecunpacked[index] = false
+                else
+                    acceptedvecunpacked[index] = true
+                end 
+            end 
             local df = DataFrame(NeAnchorPop = repeat([2000], nsteps),
                         NeAncientPop = repeat([1000], nsteps),
                         jointtimegenerations = repeat([500], nsteps),
@@ -107,11 +124,11 @@ try
                         truenumind = repeat([truenumind], nsteps),
                         coverage = repeat([coverage], nsteps),
                         nsample = nsample,
-                        τCsample = τCsample,
-                        τAsample = τAsample,
-                        ϵsample = ϵsample,
-                        accepted = acceptedvec,
-                        logjointprob = logjointprob,
+                        τCsample = τCsampleunpacked,
+                        τAsample = τAsampleunpacked,
+                        ϵsample = ϵsampleunpacked,
+                        accepted = acceptedvecunpacked,
+                        logjointprob = logjointprob[:,1],
                         chainid = repeat([Int(i)], nsteps))
             CSV.write(csvfile, df, append=true)
         end 

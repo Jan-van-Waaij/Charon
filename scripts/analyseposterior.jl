@@ -26,11 +26,11 @@ using GZip, # to work with zipped files,
 # Files to analyse: 
 # 
 # allsampleswitherrorsthreepromilenewsims.csv.gz
-csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "allsampleswitherrorsthreepromilenewsims.csv.gz")
+csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "allsampleswitherrorsthreepromilenewsimspropmcmc.csv.gz")
 
 df = CSV.read(csvfile, DataFrame) #, header = names)
 
-gdf = groupby(df, [:NeAnchorPop, :NeAncientPop, :jointtimegenerations, :trueτC, :trueτA, :trueϵ, :truenumind,  #:temperature,
+gdf = groupby(df, [:NeAnchorPop, :NeAncientPop, :jointtimegenerations, :trueτC, :trueτA, :trueϵ, :truenumind, :coverage, #:temperature,
  :chainid])
 
 f(x) = mean(x[end÷2:100:end])
@@ -58,8 +58,10 @@ cdf= combine(gdf, :nsample => lowerbound => Symbol("n 0.025%"),
 
 
 
-show(cdf[1:700, [:acceptanceratelasthalf, :truenumind, :assumedn, :trueτC, :meanτC]], allrows=true)
-                    
+show(cdf[:, [:acceptanceratelasthalf, :truenumind, :nmean, :trueτC, :meanτC]], allrows=true)
+
+
+show(cdf[:, [:acceptanceratelasthalf, :truenumind, :nmean, :trueτA, :meanτA]], allrows=true)
         
 
 show(cdf[:, [:acceptanceratelasthalf, #:temperature, 
