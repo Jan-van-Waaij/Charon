@@ -1,0 +1,22 @@
+---
+time_units: generations
+demes:
+  - name: common_ancestor
+    epochs:
+      - end_time: 1000
+        start_size: 2000
+  - name: ancient
+    ancestors:
+      - common_ancestor
+    epochs:
+      - start_size: 2000
+  - name: anchor
+    ancestors:
+      - common_ancestor
+    epochs:
+      - start_size: 2000
+
+# tauA =  1000 / (2*2000) = 0.25
+# tauC = 1000 / (2*2000) = 0.25
+# number of generations since last common ancestor: 1000
+# Effective population size for both is 2000.

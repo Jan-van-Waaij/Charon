@@ -31,12 +31,12 @@ using Data, # For parsing frequency and read files.
 
 starttime = now()
 
-numberofindividualsinthesedimentvec = 1:8 #  [1, 2, 4, 8]  #  [1, 2, 4, 8, 16, 32] #, 16, 32, 64] 
-coverage=30
-frequencyfile = "data/frequencies/freqanchor/two_demes_time_in_generations_1000_2000_500_1_freqanchor.txt.gz"
+numberofindividualsinthesedimentvec = 1:2 #  [1, 2, 4, 8]  #  [1, 2, 4, 8, 16, 32] #, 16, 32, 64] 
+coverage=9
+frequencyfile = "data/frequencies/freqanchor/two_demes_demes_freqanchor.txt.gz"
 freqs = parsefreqfile(frequencyfile)
 
-csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "allsampleswitherrorsthreepromilenewsimspropmcmc.csv.gz")
+csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "demesmcmc.csv.gz")
 
 if isfile(csvfile)
     println(csvfile, " does already exist. Do not overwrite existing files!")
@@ -64,7 +64,7 @@ CSV.write(csvfile, df)
 
 nsteps = 400_000 
 prioronτCτA = Product([Uniform(), Uniform()])
-prioronn = DiscreteUniform(1, 10) # Discrete uniform prior on 1,...,10.
+prioronn = DiscreteUniform(1, 2) # Discrete uniform prior on 1,...,10.
 prioronϵ = Uniform(0, 0.5)
 nchains = 4
 
@@ -78,8 +78,8 @@ nchains = 4
 # trueτA = jointtimeyears / (2*NeAncientPop*25)
 # trueτC = jointtimeyears / (2*NeAnchorPop*25)
 trueϵ = 0.003
-trueτA = 500 / (2*1000)
-trueτC = 500 / (2*2000)
+trueτA = 1000 / (2*2000)
+trueτC = 1000 / (2*2000)
 try
     for truenumind in numberofindividualsinthesedimentvec
         firstpart = "data/reads/two_demes_time_in_generations_1000_2000_500_"
@@ -117,7 +117,7 @@ try
             end 
             local df = DataFrame(NeAnchorPop = repeat([2000], nsteps),
                         NeAncientPop = repeat([1000], nsteps),
-                        jointtimegenerations = repeat([500], nsteps),
+                        jointtimegenerations = repeat([1000], nsteps),
                         trueτC = repeat([trueτC], nsteps),
                         trueτA = repeat([trueτA], nsteps),
                         trueϵ = repeat([trueϵ], nsteps),

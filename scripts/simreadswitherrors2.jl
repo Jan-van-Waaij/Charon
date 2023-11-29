@@ -23,13 +23,13 @@
 using Data, GZip, StatsBase
 
 
-vcffile = "data/vcffiles_simulated_by_Jan/two_demes_time_in_generations_1000_2000_500_1.vcf.gz"
+vcffile = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=200012.vcf.gz"
 
-readfilefirstpart = "data/reads/two_demes_time_in_generations_1000_2000_500_"
+readfilefirstpart = "data/reads/two_demes_demes_"
 
 numberofindividualsinthesedimentvec = 1:8 # [1, 2, 4, 8]
 ϵ = 0.003
-coverage = 30
+coveragevec = 9:20
 
 openedvcffile = GZip.open(vcffile)
 # skip the header. 
@@ -44,30 +44,32 @@ anchorpopulation = lastindividualancientpopulation+1:numcolumns
 @assert length(ancientpopulation) == length(anchorpopulation)    
 close(openedvcffile)
 
-for numberofindividualsinthesediment in numberofindividualsinthesedimentvec
-    # I choose numberofindividualsinthesediment individuals from the ancient population. 
-    individualsinthesediment = sample(ancientpopulation, numberofindividualsinthesediment, 
-                                        replace=false, ordered=true)
+for coverage in coveragevec
+    for numberofindividualsinthesediment in numberofindividualsinthesedimentvec
+        # I choose numberofindividualsinthesediment individuals from the ancient population. 
+        individualsinthesediment = sample(ancientpopulation, numberofindividualsinthesediment, 
+                                            replace=false, ordered=true)
 
-    # I open the file where I while store the reads. 
-    local openedvcffile = GZip.open(vcffile)
-    # skip the header. 
-    skiplines(openedvcffile, 6)
-    readfile = string(readfilefirstpart, 
-        numberofindividualsinthesediment, '_', coverage, "_reads_with_errors.txt.gz")
-    openedreadfile = GZip.open(readfile, "w")
+        # I open the file where I while store the reads. 
+        local openedvcffile = GZip.open(vcffile)
+        # skip the header. 
+        skiplines(openedvcffile, 6)
+        readfile = string(readfilefirstpart, 
+            numberofindividualsinthesediment, '_', coverage, "_reads_with_errors.txt.gz")
+        openedreadfile = GZip.open(readfile, "w")
 
-    comments = """
-    Each line contains the number of derived reads and the total number of reads, seperated by a tab.  
-    original vcf file: $vcffile
-    Individuals in the sediment: $individualsinthesediment
-    Total number of individuals in the sediment: $numberofindividualsinthesediment
-    coverage: $coverage"""
+        comments = """
+        Each line contains the number of derived reads and the total number of reads, seperated by a tab.  
+        original vcf file: $vcffile
+        Individuals in the sediment: $individualsinthesediment
+        Total number of individuals in the sediment: $numberofindividualsinthesediment
+        coverage: $coverage"""
 
-    reads(openedvcffile, openedreadfile, individualsinthesediment, coverage, comments, ϵ)
-    close(openedreadfile)
-    close(openedvcffile)
-end  
+        reads(openedvcffile, openedreadfile, individualsinthesediment, coverage, comments, ϵ)
+        close(openedreadfile)
+        close(openedvcffile)
+    end  
+end 
 
 
 
