@@ -31,12 +31,12 @@ using Data, # For parsing frequency and read files.
 
 starttime = now()
 
-numberofindividualsinthesedimentvec = 1:2 #  [1, 2, 4, 8]  #  [1, 2, 4, 8, 16, 32] #, 16, 32, 64] 
-coverage=9
+numberofindividualsinthesedimentvec = 1:3 #  [1, 2, 4, 8]  #  [1, 2, 4, 8, 16, 32] #, 16, 32, 64] 
+coverage=8
 frequencyfile = "data/frequencies/freqanchor/two_demes_demes_freqanchor.txt.gz"
 freqs = parsefreqfile(frequencyfile)
 
-csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "demesmcmc.csv.gz")
+csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "demesmcmccov8numind3.csv.gz")
 
 if isfile(csvfile)
     println(csvfile, " does already exist. Do not overwrite existing files!")
@@ -64,7 +64,7 @@ CSV.write(csvfile, df)
 
 nsteps = 400_000 
 prioronτCτA = Product([Uniform(), Uniform()])
-prioronn = DiscreteUniform(1, 2) # Discrete uniform prior on 1,...,10.
+prioronn = DiscreteUniform(1, maximum(numberofindividualsinthesedimentvec)) # Discrete uniform prior on 1,...,10.
 prioronϵ = Uniform(0, 0.5)
 nchains = 4
 
@@ -82,7 +82,7 @@ trueτA = 1000 / (2*2000)
 trueτC = 1000 / (2*2000)
 try
     for truenumind in numberofindividualsinthesedimentvec
-        firstpart = "data/reads/two_demes_time_in_generations_1000_2000_500_"
+        firstpart = "data/reads/two_demes_demes_"
         readsfile = string(firstpart, 
         truenumind, '_', coverage, "_reads_with_errors.txt.gz")
         if !isfile(readsfile)

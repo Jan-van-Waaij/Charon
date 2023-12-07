@@ -23,13 +23,13 @@
 using Data, GZip, StatsBase
 
 
-vcffile = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=200012.vcf.gz"
+vcffile = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=2000_12.vcf.gz"
 
 readfilefirstpart = "data/reads/two_demes_demes_"
 
 numberofindividualsinthesedimentvec = 1:8 # [1, 2, 4, 8]
 ϵ = 0.003
-coveragevec = 9:20
+coveragevec = 8:8 # 9-20 al gedaan.
 
 openedvcffile = GZip.open(vcffile)
 # skip the header. 

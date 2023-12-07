@@ -21,7 +21,7 @@
 
 using GZip, Data
 
-inputfilename = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=200012.vcf.gz"
+inputfilename = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=2000_12.vcf.gz"
 outputfilename = "data/frequencies/freqanchor/two_demes_demes_freqanchor.txt.gz"
 
 readfile = GZip.open(inputfilename)

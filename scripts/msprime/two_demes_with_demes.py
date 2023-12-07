@@ -10,12 +10,12 @@ def two_demes(demesfile, demesfiledescription, random_seed=None):
     print('2')
     ts = msprime.sim_ancestry(samples={"ancient":5_000, "anchor":5_000}, 
     demography=demography, random_seed=random_seed, recombination_rate=1e-8, 
-    sequence_length=10e9)
+    sequence_length=10e7)
     print('3')
     mts = msprime.sim_mutations(ts, rate=2e-8, random_seed=random_seed)
     print('4')
-    filenamewithoutextension = "two_demes_with_demes_" + 
-    demesfiledescription +str(random_seed)
+    filenamewithoutextension = "two_demes_with_demes_" + \
+    demesfiledescription + '_' + str(random_seed)
     print('5')
     mts.dump( filenamewithoutextension+".tree")
     print('6')
@@ -32,4 +32,4 @@ if len(sys.argv) == 4:
 elif len(sys.argv) == 3:
     two_demes(sys.argv[1], sys.argv[2])
 else: 
-    println("Something went wrong, use one or two arguments: the first argument should be the demes file and the second is optionally the seed.")
+    println("Something went wrong, use two or three arguments: the first argument should be the demes file, the second one a description, and the third is optionally the seed.")

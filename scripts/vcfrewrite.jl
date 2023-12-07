@@ -1,7 +1,7 @@
 using GZip 
 
-inputfile = "data/vcffiles_simulated_by_Jan/two_demes_time_in_generations_1000_2000_500_1.vcf.gz"
-outputfile = "data/vcffiles_simulated_by_Jan/two_demes_time_in_generations_1000_2000_500_1_rewrite.vcf.gz"
+inputfile = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=2000_12.vcf.gz"
+outputfile = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=2000_12_rewrite.vcf.gz"
 input = GZip.open(inputfile)
 output = GZip.open(outputfile, "w")
 
@@ -23,7 +23,5 @@ close(input)
 close(output)
 
 rm(inputfile)
-sleep(10)
 cp(outputfile, inputfile)
-sleep(10)
 rm(outputfile)
