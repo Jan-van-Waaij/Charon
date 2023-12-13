@@ -25,10 +25,10 @@ using GZip, # to work with zipped files,
 
 # Files to analyse: 
 # 
-# allsampleswitherrorsthreepromilenewsims.csv.gz
-# data/mcmcsamples/demesmcmc.csv.gz, prior one or two. one or two individuals.
-# data/mcmcsamples/demesmcmc3.csv.gz
-csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "demesmcmc3.csv.gz")
+# demesmcmccov15numind5.csv.gz 
+# demesmcmccov2numind2.csv.gz Done no correct estimation of individuals
+# 
+csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "demesmcmccov5numind3.csv.gz")
 
 df = CSV.read(csvfile, DataFrame) #, header = names)
 
@@ -59,9 +59,9 @@ cdf= combine(gdf, :nsample => lowerbound => Symbol("n 0.025%"),
                      :accepted => f => :acceptanceratelasthalf)
 
 
-cdf[:, [Symbol("n 0.025%"), Symbol("n 0.975%"), Symbol("τC 0.025%"), Symbol("τC 0.975%"), Symbol("τA 0.025%"), Symbol("τA 0.975%"), Symbol("ϵ 0.025%"), Symbol("ϵ 0.975%")]]
+pdf= cdf[:, [Symbol("n 0.025%"), Symbol("n 0.975%"), Symbol("τC 0.025%"), Symbol("τC 0.975%"), Symbol("τA 0.025%"), Symbol("τA 0.975%"), Symbol("ϵ 0.025%"), Symbol("ϵ 0.975%")]]
 
-show(cdf[:, [:acceptanceratelasthalf, :truenumind, :nmean, :trueτC, :meanτC, :trueτA, :meanτA]], allrows=true)
+show(cdf[:, [:acceptanceratelasthalf, :truenumind, :nmean, :trueτC, :meanτC, :trueτA, :meanτA, :trueϵ, :meanϵ]], allrows=true)
 
 
 show(cdf[:, [:acceptanceratelasthalf, :truenumind, :nmean, :trueτA, :meanτA]], allrows=true)
@@ -96,6 +96,9 @@ show(cdf[:, [:acceptanceratelasthalf, #:temperature,
 pdf = cidf[:, ["NeAnchorPop", "NeAncientPop", "jointtimeyears",  "n 0.025%", "truenumind", "n 0.975%",   "τC 0.025%", "trueτC", "τC 0.975%",  "τA 0.025%", "trueτA", "τA 0.975%", "acceptanceratelasthalf"]]
 
 pdf = cdf[:, [:acceptanceratelasthalf, :truenumind, :nmean, :trueτC, :meanτC, :trueτA, :meanτA, :trueϵ, :meanϵ]]
+
+pdf = cdf[:, [:acceptanceratelasthalf, :truenumind, :nmean, :trueτC, :meanτC, :trueτA, :meanτA, :trueϵ, :meanϵ]]
+
 
 a(x::Int) = x
 a(x::Float64) = round(x, sigdigits=3)

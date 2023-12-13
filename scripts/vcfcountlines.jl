@@ -1,6 +1,7 @@
 using GZip 
 
-inputfile = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=200012.vcf.gz"
+inputfile = "data/vcffiles_demes/multiple_demes_multipledemes_12.vcf.gz"
+
 
 file = GZip.open(inputfile)
 println("hi")
@@ -15,7 +16,7 @@ let
             println(counter)
         end 
     end 
-    println(counter) # 28_287_219 before rewrite. 28_260_464 after
+    println(counter) # 61767 before rewrite. 61632 after
 end 
 
 close(file)

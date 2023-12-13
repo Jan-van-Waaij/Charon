@@ -1,7 +1,7 @@
 using GZip 
 
-inputfile = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=2000_12.vcf.gz"
-outputfile = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=2000_12_rewrite.vcf.gz"
+inputfile = "data/vcffiles_demes/multiple_demes_multipledemes_12.vcf.gz"
+outputfile = "data/vcffiles_demes/multiple_demes_multipledemes_12_rewrite.vcf.gz"
 input = GZip.open(inputfile)
 output = GZip.open(outputfile, "w")
 

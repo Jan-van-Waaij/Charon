@@ -261,8 +261,15 @@ end
 
 # test written 
 # This function is needed so that the compiler can distinghuish between all the options. 
-reads(vcffile::String, readsfile::String, individualsinthesediment::Vector{Int}, coverage, comments::String="", error::Float64=0.0) =
-    reads(vcffile, readsfile, individualsinthesediment, coverage, false, comments, error)
+#reads(vcffile::String, readsfile::String, individualsinthesediment::Vector{Int}, coverage, comments::String="", error::Float64=0.0) =
+#    reads(vcffile, readsfile, individualsinthesediment, coverage, false, comments, error)
+
+#= HOLA PROBLEEMPJE!!!!!
+IK KREEG DE VOLGENDE FOUTMELDING
+WARNING: Method definition reads(String, String, Array{Int64, 1}, Any) in module Data at /home/people/jvawa/.julia/packages/Data/ibwf7/src/Data.jl:253 overwritten at /home/people/jvawa/.julia/packages/Data/ibwf7/src/Data.jl:264.
+
+OPLOSSING 1: REMOVER 264 EN KIJK WAT ER GEBEURT!
+=#
 
 #=
 Algemene stramien: 

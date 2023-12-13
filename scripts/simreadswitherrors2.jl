@@ -22,27 +22,16 @@
 
 using Data, GZip, StatsBase
 
+infoblock = 9
+ancientpopulation = infoblock .+ (1:5000)
 
-vcffile = "data/vcffiles_demes/two_demes_with_demes_tauC=0.25tauA=0.25numgen=1000effpop=2000_12.vcf.gz"
+vcffile = "data/vcffiles_demes/multiple_demes_multipledemes_12.vcf.gz"
 
-readfilefirstpart = "data/reads/two_demes_demes_"
+readfilefirstpart = "data/reads/multiple_demes_"
 
 numberofindividualsinthesedimentvec = 1:8 # [1, 2, 4, 8]
 ϵ = 0.003
-coveragevec = 8:8 # 9-20 al gedaan.
-
-openedvcffile = GZip.open(vcffile)
-# skip the header. 
-skiplines(openedvcffile, 5)
-# save the column names. 
-columnnames = split(readline(openedvcffile))
-close(openedvcffile)
-numcolumns = length(columnnames)
-lastindividualancientpopulation = 9 + (numcolumns-9)÷2 
-ancientpopulation = 10:lastindividualancientpopulation
-anchorpopulation = lastindividualancientpopulation+1:numcolumns
-@assert length(ancientpopulation) == length(anchorpopulation)    
-close(openedvcffile)
+coveragevec = 2:20
 
 for coverage in coveragevec
     for numberofindividualsinthesediment in numberofindividualsinthesedimentvec
