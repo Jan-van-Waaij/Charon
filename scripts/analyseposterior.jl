@@ -28,12 +28,19 @@ using GZip, # to work with zipped files,
 # demesmcmccov15numind5.csv.gz 
 # demesmcmccov2numind2.csv.gz Done no correct estimation of individuals
 # 
-csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "demesmcmccov5numind3.csv.gz")
 
-df = CSV.read(csvfile, DataFrame) #, header = names)
+csvfile1 = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "multipledemescov3.csv.gz")
+csvfile2 = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "multipledemescov4to6.csv.gz")
+csvfile3 = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "multipledemescov7to20.csv.gz")
 
-gdf = groupby(df, [:NeAnchorPop, :NeAncientPop, :jointtimegenerations, :trueτC, :trueτA, :trueϵ, :truenumind, :coverage, #:temperature,
- :chainid])
+df1 = CSV.read(csvfile1, DataFrame) #, header = names)
+df2 = CSV.read(csvfile2, DataFrame) #, header = names)
+df3 = CSV.read(csvfile3, DataFrame) #, header = names)
+
+
+df = vcat(df1, df2, df3)
+
+gdf = groupby(df, [:coverage, :trueτC, :trueτA, :trueϵ,  :anchorpop, :truenumind, :chainid])
 
 f(x) = mean(x[end÷2:100:end])
 
@@ -58,11 +65,11 @@ cdf= combine(gdf, :nsample => lowerbound => Symbol("n 0.025%"),
                      :ϵsample => upperbound => Symbol("ϵ 0.975%"),
                      :accepted => f => :acceptanceratelasthalf)
 
+show(cdf[cdf.coverage .== 7, [ :coverage, :anchorpop, :truenumind, :nmean, :trueτC, :meanτC, :trueτA, :meanτA, :trueϵ, :meanϵ]], allrows=true)
 
-pdf= cdf[:, [Symbol("n 0.025%"), Symbol("n 0.975%"), Symbol("τC 0.025%"), Symbol("τC 0.975%"), Symbol("τA 0.025%"), Symbol("τA 0.975%"), Symbol("ϵ 0.025%"), Symbol("ϵ 0.975%")]]
+pdf= cdf[:, [:coverage, :anchorpop, :truenumind, Symbol("n 0.025%"), Symbol("n 0.975%"), :trueτC, Symbol("τC 0.025%"), Symbol("τC 0.975%"), :trueτA, Symbol("τA 0.025%"), Symbol("τA 0.975%"), Symbol("ϵ 0.025%"), Symbol("ϵ 0.975%")]]
 
-show(cdf[:, [:acceptanceratelasthalf, :truenumind, :nmean, :trueτC, :meanτC, :trueτA, :meanτA, :trueϵ, :meanϵ]], allrows=true)
-
+show(pdf[pdf.coverage .== 7, :], allrows=true)
 
 show(cdf[:, [:acceptanceratelasthalf, :truenumind, :nmean, :trueτA, :meanτA]], allrows=true)
         

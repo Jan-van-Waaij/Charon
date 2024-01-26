@@ -24,8 +24,3 @@ demes:
     start_time: 400
     epochs:
         - start_size: 2000
-
-# tauA =  1000 / (2*2000) = 0.25
-# tauC = 1000 / (2*2000) = 0.25
-# number of generations since last common ancestor: 1000
-# Effective population size for both is 2000.
