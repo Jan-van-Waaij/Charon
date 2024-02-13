@@ -972,7 +972,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         τCsample = Matrix{Float64}(undef, nsteps, nmax)
         τAsample = Matrix{Float64}(undef, nsteps, nmax)
         ϵsample = Matrix{Float64}(undef, nsteps, nmax)
-        acceptedvec = BitMatrix(undef, nsteps, nmax+1) # BitVector is more efficient than Vector{Bool} 
+        acceptedvec = BitMatrix(undef, nsteps, nmax+1) # BitMatrix is more efficient than Matrix{Bool} 
         # (roughly, one bit per item, instead of one byte.)
         logjointprob = Matrix{Float64}(undef, nsteps, nmax+1)
         # Initialise.
