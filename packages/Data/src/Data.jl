@@ -115,14 +115,19 @@ end
 
 # tested.
 """
+    openfile(file::String)
     openfile(file::String, fileextension::String)
 
-Open file in read modus, and check whether it exists and ends with fileextension. 
+Open file in read modus, checks whether it exists and, optionally, if it ends with fileextension. 
 """
-function openfile(file::String, fileextension::String)
-    endswith(file, fileextension) || throw(FileError("$file is not a $fileextension file."))
+function openfile(file::String)
+    #endswith(file, fileextension) || throw(FileError("$file is not a $fileextension file."))
     isfile(file) || throw(FileError("$file does not exist."))
     return GZip.open(file) 
+end
+function openfile(file::String, fileextension::String)
+    endswith(file, fileextension) || throw(FileError("$file is not a $fileextension file."))
+    return openfile(file)
 end
 
 """
@@ -371,7 +376,7 @@ parsefreqfile(readfile::IO) = vec(readdlm(readfile, '\t', Float64, comments = tr
 Parse the frequency file and return a vector with frequencies. readsfiles is a .txt.gz file. 
 """
 function parsefreqfile(freqsfile::String)
-    openedfreqsfile = openfile(freqsfile, ".txt.gz")
+    openedfreqsfile = openfile(freqsfile)#, ".txt.gz")
     allfreqs = parsefreqfile(openedfreqsfile)
     close(openedfreqsfile)
     return allfreqs
@@ -395,7 +400,7 @@ end
 Parse the reads file and return two vectors, the first containing the number of derived reads and the second the coverages. The file is assumed to be a .txt.gz file. 
 """
 function parsereadfile(readsfile::String)
-    openedreadsfile = openfile(readsfile, ".txt.gz")
+    openedreadsfile = openfile(readsfile)#, ".txt.gz")
     derivedreads, coverages = parsereadfile(openedreadsfile)
     close(openedreadsfile)
     return derivedreads, coverages

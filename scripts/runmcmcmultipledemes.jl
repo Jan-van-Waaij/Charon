@@ -22,7 +22,7 @@
 
 
 using Data, # For parsing frequency and read files. 
-      GZip, # Read and write zip files. 
+      #GZip, # Read and write zip files. 
       DataFrames, # work with data frames.
       CSV, # convert dataframes to a CSV file. 
       Distributions, # To specify the prior.
@@ -44,25 +44,29 @@ trueτAs = (1000:-200:400) ./ (2*2000)
 trueτCs = trueτAs
 jointtimegenerations = 1000:-200:400
 
+nsteps = 100_000
+prioronτCτA = Product([Uniform(), Uniform()])
+prioronϵ = Uniform(0, 0.5)
+nchains = 4
+
+trueϵ = 0.003
+
+
 @threads for maxcov in 2:20 # 7:4:20
     @threads for maxind in 2:8 
-        @threads for anchorpopulation in 1:4
-            starttime = now()
-            numberofindividualsinthesedimentvec = Base.OneTo(maxind) #1:5 #  [1, 2, 4, 8]  #  [1, 2, 4, 8, 16, 32] #, 16, 32, 64] 
-            coverage= maxcov#10
-            frequencyfile = "data/frequencies/freqanchor/multiple_demes_freq_anchor$(anchorpopulation).txt.gz"
-            freqs = parsefreqfile(frequencyfile)
+        starttime = now()
+        numberofindividualsinthesedimentvec = Base.OneTo(maxind) #1:5 #  [1, 2, 4, 8]  #  [1, 2, 4, 8, 16, 32] #, 16, 32, 64] 
+        coverage= maxcov#10    
+        csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("multipledemesmcmccov_", maxcov, "_numind_", maxind, ".csv"))
+        zippedcsvfile = csvfile * ".gz"
+        if isfile(zippedcsvfile)
+            println(zippedcsvfile, " does already exist. Do not overwrite existing files!")
+            continue 
+        end
 
-            csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("multipledemesmcmccov_", maxcov, "_numind_", maxind, ".csv.gz"))
+        prioronn = DiscreteUniform(1, maximum(numberofindividualsinthesedimentvec))
 
-            #=
-            if isfile(csvfile)
-                println(csvfile, " does already exist. Do not overwrite existing files!")
-                continue 
-            end
-            =# 
-
-            df = DataFrame(anchorpopulation = Int[],
+        df = DataFrame(anchorpopulation = Int[],
                                 NeAnchorPop = Int[],
                                 NeAncientPop = Int[],
                                 jointtimegenerations = Int[],
@@ -80,83 +84,73 @@ jointtimegenerations = 1000:-200:400
                                 chainid = Int[]
                                 )
 
-            CSV.write(csvfile, df)
-
-            nsteps = 400_000 
-            prioronτCτA = Product([Uniform(), Uniform()])
-            prioronn = DiscreteUniform(1, maximum(numberofindividualsinthesedimentvec)) # Discrete uniform prior on 1,...,10.
-            prioronϵ = Uniform(0, 0.5)
-            nchains = 4
-
-            trueϵ = 0.003
+        CSV.write(csvfile, df)
+        for anchorpopulation in 1:4
+            frequencyfile = "data/frequencies/freqanchor/multiple_demes_freq_anchor$(anchorpopulation).txt.gz"
+            freqs = parsefreqfile(frequencyfile)
+            
             trueτA = trueτAs[anchorpopulation]
             trueτC = trueτCs[anchorpopulation]
-            try
-                for truenumind in numberofindividualsinthesedimentvec
-                    firstpart = "data/reads/multiple_demes_"
-                    readsfile = string(firstpart, 
-                    truenumind, '_', coverage, "_reads_with_errors.txt.gz")
-                    if !isfile(readsfile)
-                        println(readsfile, " does not exist.")
-                        continue
-                    end 
-                    derivedreadsvec, coveragevec = parsereadfile(readsfile)
-                    @assert length(unique(coveragevec)) == 1
-                    @assert coveragevec[1] == coverage
-                    @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
-                    println(length(freqs))
-            # MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
-                    
-                    @show nchains 
-                    @show nsteps 
-                    results = MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 100_000)
-            #       results = MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs)
-                    for i in eachindex(results)
-                        nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[i]
-                        τCsampleunpacked = Vector{Float64}(undef, nsteps)
-                        τAsampleunpacked = Vector{Float64}(undef, nsteps)
-                        ϵsampleunpacked = Vector{Float64}(undef, nsteps)
-                        for index in 1:nsteps
-                            τCsampleunpacked[index] = τCsample[index, nsample[index]]
-                            τAsampleunpacked[index] = τAsample[index, nsample[index]]
-                            ϵsampleunpacked[index] = ϵsample[index, nsample[index]]
-                        end  
-                        acceptedvecunpacked = BitVector(undef, nsteps)
-                        acceptedvecunpacked[1] = true
-                        for index in 2:nsteps
-                            if (nsample[index] == nsample[index-1]) && (τCsampleunpacked[index] == τCsampleunpacked[index-1]) && (τAsampleunpacked[index] == τAsampleunpacked[index-1])  
-                                acceptedvecunpacked[index] = false
-                            else
-                                acceptedvecunpacked[index] = true
-                            end 
+            for truenumind in numberofindividualsinthesedimentvec
+                firstpart = "data/reads/multiple_demes_"
+                readsfile = string(firstpart, 
+                truenumind, '_', coverage, "_reads_with_errors.txt.gz")
+                if !isfile(readsfile)
+                    println(readsfile, " does not exist.")
+                    continue
+                end 
+                derivedreadsvec, coveragevec = parsereadfile(readsfile)
+                @assert length(unique(coveragevec)) == 1
+                @assert coveragevec[1] == coverage
+                @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
+        # MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
+                results = MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 100_000)
+        #       results = MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs)
+                for i in eachindex(results)
+                    nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[i]
+                    τCsampleunpacked = Vector{Float64}(undef, nsteps)
+                    τAsampleunpacked = Vector{Float64}(undef, nsteps)
+                    ϵsampleunpacked = Vector{Float64}(undef, nsteps)
+                    for index in 1:nsteps
+                        τCsampleunpacked[index] = τCsample[index, nsample[index]]
+                        τAsampleunpacked[index] = τAsample[index, nsample[index]]
+                        ϵsampleunpacked[index] = ϵsample[index, nsample[index]]
+                    end  
+                    acceptedvecunpacked = BitVector(undef, nsteps)
+                    acceptedvecunpacked[1] = true
+                    for index in 2:nsteps
+                        if (nsample[index] == nsample[index-1]) && (τCsampleunpacked[index] == τCsampleunpacked[index-1]) && (τAsampleunpacked[index] == τAsampleunpacked[index-1])  
+                            acceptedvecunpacked[index] = false
+                        else
+                            acceptedvecunpacked[index] = true
                         end 
-                        local df = DataFrame(anchorpopulation = repeat([anchorpopulation], nsteps),
-                                    NeAnchorPop = repeat([2000], nsteps),
-                                    NeAncientPop = repeat([2000], nsteps),
-                                    jointtimegenerations = repeat([jointtimegenerations[anchorpopulation]], nsteps),
-                                    trueτC = repeat([trueτC], nsteps),
-                                    trueτA = repeat([trueτA], nsteps),
-                                    trueϵ = repeat([trueϵ], nsteps),
-                                    truenumind = repeat([truenumind], nsteps),
-                                    coverage = repeat([coverage], nsteps),
-                                    nsample = nsample,
-                                    τCsample = τCsampleunpacked,
-                                    τAsample = τAsampleunpacked,
-                                    ϵsample = ϵsampleunpacked,
-                                    accepted = acceptedvecunpacked,
-                                    logjointprob = logjointprob[:,1],
-                                    chainid = repeat([Int(i)], nsteps))
-                        CSV.write(csvfile, df, append=true)
                     end 
-                    println("finished true num ind ", truenumind)
-                end # truenumind
-            finally
-                #close(openedcsvfile)
-                finishtime = now()
-                println(finishtime - starttime)
-                println("Finished with ", csvfile)
-            end # try 
+                    local df = DataFrame(anchorpopulation = repeat([anchorpopulation], nsteps),
+                                NeAnchorPop = repeat([2000], nsteps),
+                                NeAncientPop = repeat([2000], nsteps),
+                                jointtimegenerations = repeat([jointtimegenerations[anchorpopulation]], nsteps),
+                                trueτC = repeat([trueτC], nsteps),
+                                trueτA = repeat([trueτA], nsteps),
+                                trueϵ = repeat([trueϵ], nsteps),
+                                truenumind = repeat([truenumind], nsteps),
+                                coverage = repeat([coverage], nsteps),
+                                nsample = nsample,
+                                τCsample = τCsampleunpacked,
+                                τAsample = τAsampleunpacked,
+                                ϵsample = ϵsampleunpacked,
+                                accepted = acceptedvecunpacked,
+                                logjointprob = logjointprob[:,1],
+                                chainid = repeat([Int(i)], nsteps))
+                    CSV.write(csvfile, df, append=true)
+                end 
+                println("finished true num ind ", truenumind)
+            end # truenumind 
         end # anchorpopulation
+        command = `gzip $csvfile`
+        run(command)
+        finishtime = now()
+        println(finishtime - starttime)
+        println("Finished with ", csvfile)
     end # maxind  
 end # maxcov 
 # 

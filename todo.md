@@ -17,3 +17,5 @@ DONE
 # Implement a likelihood function where the coverages may differ from SNP to SNP.
 
 # Try to find the exact eigenvalues and eigenvectors of Q and Q\downarrow. 
+
+--optimize=3 is the same as -O3

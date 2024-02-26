@@ -40,9 +40,14 @@ df3 = CSV.read(csvfile3, DataFrame) #, header = names)
 
 df = vcat(df1, df2, df3)
 
-gdf = groupby(df, [:coverage, :trueτC, :trueτA, :trueϵ,  :anchorpop, :truenumind, :chainid])
+csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "multipledemestraditionalmcmccov_20_numind_3.csv.gz")
+df = CSV.read(csvfile, DataFrame)
+
+
+gdf = groupby(df, [:anchorpopulation, :NeAnchorPop, :NeAncientPop, :jointtimegenerations, :trueτC, :trueτA, :trueϵ, :truenumind, :coverage, :chainid])
 
 f(x) = mean(x[end÷2:100:end])
+g(x) = median(x[end÷2:100:end])
 
 minn(x) = minimum(x[end÷2:100:end])
 maxn(x) = maximum(x[end÷2:100:end])
@@ -50,22 +55,29 @@ maxn(x) = maximum(x[end÷2:100:end])
 lowerbound(x) = quantile(x[end÷2:100:end], 0.025)
 upperbound(x) = quantile(x[end÷2:100:end], 0.975)
 
+#cdf= combine(gdf, :nsample => f => mean)
 
 cdf= combine(gdf, :nsample => lowerbound => Symbol("n 0.025%"),
                      :nsample => f => :nmean,
                      :nsample => upperbound => Symbol("n 0.975%"),
                      :τCsample => lowerbound => Symbol("τC 0.025%"),
                      :τCsample => f => :meanτC,
+                     :τCsample => g => :medianτC,
                      :τCsample => upperbound => Symbol("τC 0.975%"),
                      :τAsample => lowerbound => Symbol("τA 0.025%"),
                      :τAsample => f => :meanτA,
+                     :τAsample => g => :medianτA,
                      :τAsample => upperbound => Symbol("τA 0.975%"),
                      :ϵsample => lowerbound => Symbol("ϵ 0.025%"),
                      :ϵsample => f => :meanϵ,
                      :ϵsample => upperbound => Symbol("ϵ 0.975%"),
                      :accepted => f => :acceptanceratelasthalf)
 
-show(cdf[cdf.coverage .== 7, [ :coverage, :anchorpop, :truenumind, :nmean, :trueτC, :meanτC, :trueτA, :meanτA, :trueϵ, :meanϵ]], allrows=true)
+#show(cdf[cdf.coverage .== 7, [ :coverage, :anchorpop, :truenumind, :nmean, :trueτC, :meanτC, :trueτA, :meanτA, :trueϵ, :meanϵ]], allrows=true)
+
+show(cdf[:, [ :anchorpopulation, :truenumind, :nmean, :trueτC, :medianτC, :trueτA, :medianτA, :trueϵ, :meanϵ]], allrows=true)
+
+show(cdf[:, [ :anchorpopulation, :truenumind, :nmean, :trueτC, :meanτC, Symbol("τA 0.025%"), :trueτA, Symbol("τA 0.975%"), :meanτA, :trueϵ, :meanϵ]], allrows=true)
 
 pdf= cdf[:, [:coverage, :anchorpop, :truenumind, Symbol("n 0.025%"), Symbol("n 0.975%"), :trueτC, Symbol("τC 0.025%"), Symbol("τC 0.975%"), :trueτA, Symbol("τA 0.025%"), Symbol("τA 0.975%"), Symbol("ϵ 0.025%"), Symbol("ϵ 0.975%")]]
 
@@ -136,13 +148,13 @@ using Plots,
       StatsPlots,
       MCMCChains
 
-numdataset=1
+nsteps = 100_000
 nchains = 4
 #picindex = 0
 for numdataset in 1:length(gdf)÷nchains
     gdfindex = (numdataset-1)*nchains # k = 1,..., nchains 
     
-    chainarray = cat((Matrix(gdf[gdfindex+k][1:400_000, 
+    chainarray = cat((Matrix(gdf[gdfindex+k][1:nsteps, 
     [:nsample, 
     :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     #global picindex += 1
