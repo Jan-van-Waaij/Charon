@@ -388,8 +388,8 @@ end
 
 Parse the read files and return two vectors, the first one containing the number of derived reads for each locus, and the second containing the coverage for each locus. 
 """
-function parsereadfile(readfile::IO)
-    M = readdlm(readfile, '\t', Int, comments = true)
+function parsereadfile(readfile::IO, delim = '\t')
+    M = readdlm(readfile, delim, Int, comments = true)
     return M[:,1], M[:,2]
 end 
 
@@ -399,9 +399,9 @@ end
 
 Parse the reads file and return two vectors, the first containing the number of derived reads and the second the coverages. The file is assumed to be a .txt.gz file. 
 """
-function parsereadfile(readsfile::String)
+function parsereadfile(readsfile::String, delim = '\t')
     openedreadsfile = openfile(readsfile)#, ".txt.gz")
-    derivedreads, coverages = parsereadfile(openedreadsfile)
+    derivedreads, coverages = parsereadfile(openedreadsfile, delim)
     close(openedreadsfile)
     return derivedreads, coverages
 end
