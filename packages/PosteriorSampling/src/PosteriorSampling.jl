@@ -59,13 +59,13 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     cm = countmap(tuples)
     thekeys = keys(cm)
     d = [key[1] for key in thekeys]
-    d = SizedVector{length(d), Int}(d)
     y = [key[2] for key in thekeys]
     counts = values(cm)
     for index in eachindex(d, y, counts)
         @assert cm[(d[index], y[index])] == counts[index]
     end 
-    
+    d = SizedVector{length(d), Int}(d)
+
     nmax = maximum(prioronn)
     nmax ≤ 10 || throw(ArgumentError("The current implementation can handle at most 10 individuals."))
     Qs = Vector{EigenExpansion}(undef, nmax)
@@ -392,8 +392,21 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     # Remove frequencies 0.0 and 1.0
     allowedindices = 0.0 .< y .< 1.0
     d = d[allowedindices]
-    d = SizedVector{length(d), Int}(d)
     y = y[allowedindices]
+
+    tuples = zip(d, y)
+    cm = countmap(tuples)
+    thekeys = keys(cm)
+    d = [key[1] for key in thekeys]
+    y = [key[2] for key in thekeys]
+    counts = collect(values(cm))
+    for index in eachindex(d, y, counts)
+        @assert cm[(d[index], y[index])] == counts[index]
+    end 
+    cm2 = Dict((d[index], y[index]) => counts[index] for index in eachindex(d, y, counts))
+    @assert cm == cm2 
+    
+    d = SizedVector{length(d), Int}(d)
     nmax = maximum(prioronn)
     nmax ≤ 10 || throw(ArgumentError("The current implementation can handle at most 10 individuals."))
     Qs = Vector{EigenExpansion}(undef, nmax)
@@ -444,7 +457,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         loglikprevious = Vector{Float64}(undef, nmax)
         loglikproposal = Vector{Float64}(undef, nmax)
         for n in 1:nmax
-            loglikprevious[n] = logprobderivedreads!(p[n], q[n], d, τCprevious[n], τAprevious[n], ϵprevious[n], n, R, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
+            loglikprevious[n] = logprobderivedreads!(p[n], q[n], d, counts, τCprevious[n], τAprevious[n], ϵprevious[n], n, R, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
         end
         # check if the initial value is valid. 
         any(loglikprevious .== -Inf) && throw(DomainError("The data does not support the initial value."))
@@ -476,7 +489,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                 ϵproposal[index] = ϵprevious[index] + rand(distproposalϵ[index])
             end
             for n in 1:nmax
-                loglikproposal[n] = logprobderivedreads!(p[n], q[n], d, τCproposal[n], τAproposal[n], ϵproposal[n], n, R, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
+                loglikproposal[n] = logprobderivedreads!(p[n], q[n], d, counts, τCproposal[n], τAproposal[n], ϵproposal[n], n, R, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
             end 
             for n in 1:nmax
                 logpdfpriorproposal[n] = logpdf(prioronτCτA, [τCproposal[n], τAproposal[n]]) + logpdf(prioronϵ, ϵproposal[n])
