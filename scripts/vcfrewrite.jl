@@ -1,11 +1,11 @@
 using GZip 
 
-inputfile = "data/vcffiles_demes/multiple_demes_multipledemes_12.vcf.gz"
-outputfile = "data/vcffiles_demes/multiple_demes_multipledemes_12_rewrite.vcf.gz"
+inputfile = "/home/projects/MAAG/msprime_deme/janvan/isoaltes_4pop_1kindi.vcf.gz"
+outputfile = "data/vcffilesMads/isoaltes_4pop_1kindi.vcf.gz"
 input = GZip.open(inputfile)
 output = GZip.open(outputfile, "w")
 
-for i in 1:6
+for i in 1:6 # copy the comments without change. 
     line = readline(input)
     print(output, line)
 end 
@@ -21,7 +21,3 @@ end
 
 close(input)
 close(output)
-
-rm(inputfile)
-cp(outputfile, inputfile)
-rm(outputfile)

@@ -166,32 +166,6 @@ function makebinomialprobs(n::Int, R::Vector{Int})
 end 
 
 """
-    preparedata(n::Int, R::Union{Int, Vector{Int}}, y::Vector{Float64})
-
-Returns a named tuple (Q=Q, Qꜜ=Qꜜ, hvals=hvals, binomialcoefficients=binomialcoefficients, binomialprobs=binomialprobs), where 
-Q and Qꜜ are EigenExpansions of Q and Qꜜ (as in Schraiber 2018), respectively. 
-hvals is a (2n+1) x length(y) matrix of type SizedMatrix. SizedMatrix is used rather than SMatrix, because this matrix is so large, and 
-SMatrix is slow for large matrices, here hvals[k+1,i] = y[i]^k*(1-y[i])^(2n-k).
-binomialcoefficients is a vector (of type SVector) containing the binomial coefficients 2n over k, k=0,...,2n.  
-binomialprobs is a (2n+1)x(R+1) matrix (or vector of such matrices when R is a vector), where binomialprobs[k+1, d+1] is the probability of having d successes out of R experiments when the probability of success is equal to k/(2n).
-"""
-function preparedata(n::Int, R::Union{Int, AbstractVector{<:Integer}}, y::AbstractVector{<:Real})
-    # I can define an if statement and give Matrix(makeQ(n)) for large n.
-    Q = EigenExpansion(makeQ(n))
-    Qꜜ = EigenExpansion(makeQꜜ(n))
-    binomialcoefficients = SVector{2n+1, Int}(binomial.(2n, 0:2n))
-    #binomialdistributions = Binomial.(R, range(0.0, 1.0, length = 2n+1)) # with Distributions package. 
-    binomialprobs = makebinomialprobs(n, R)
-    hvals = SizedMatrix{2n+1, length(y), Float64}(undef)
-    for j in eachindex(y)
-        for k in 0:2n 
-            hvals[k+1, j] = y[j]^k*(1.0-y[j])^(2n-k)
-        end 
-    end
-    return (Q=Q, Qꜜ=Qꜜ, hvals=hvals, binomialcoefficients=binomialcoefficients, binomialprobs=binomialprobs)
-end
-
-"""
     preparedata(n::Int, y::AbstractVector{<:Real})
 
 Returns a named tuple (Q=Q, Qꜜ=Qꜜ, hvals=hvals, binomialcoefficients=binomialcoefficients), where 
@@ -214,37 +188,6 @@ function preparedata(n::Int, y::AbstractVector{<:Real})
     return (Q=Q, Qꜜ=Qꜜ, hvals=hvals, binomialcoefficients=binomialcoefficients)
 end
 
-#Qs[n], Qꜜs[n], hvals[n], binomialcoefficients[n], _
-
-# Efficient version.
-"""
-    logprobderivedreads!(p::AbstractVector{Float64}, d::AbstractVector{Int}, τC::Float64, τA::Float64, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, binomialprobs::AbstractMatrix{Float64}, hvals::AbstractMatrix{Float64})
-
-Calculates the log-probability of the data (a.k.a. log-likelihood, data is d) given the parameters and the prior data. It is implicitly assumed that Q and Qꜜ are (2n+1)x(2n+1)-matrices (or their eigenvalue decomposition), that p is a 2n+1 vector, binomialcoefficients is a 2n+1-vector of binomial coefficients, with k+1 element equal to binomial coefficient 2n over k, k = 0,...,2n. binomialprobs is a (2n+1)x(R+1)-matrix where the (k+1, d+1) element is equal to the probability of d success out of R experiments with probability of success k/(2n), where k = 0,...,2n, and d = 0,...,R. hvals is a (2n+1)xlength(y) matrix, where y are all frequencies, where the (k+1,j)-th element is equal to y[j]^k*(1.0-y[j])^(2n-k). So you should initialise 
-Q, Qꜜ, hvals, binomialcoefficients, p, binomialprobs = preparedatafixedn(n, R, y)
-"""
-function logprobderivedreads!(p::AbstractVector{Float64}, d::AbstractVector{Int}, τC::Float64, τA::Float64, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, binomialprobs::AbstractMatrix{Float64}, hvals::AbstractMatrix{Float64})
-    if τC ≤ 0 || τA ≤ 0
-        return -Inf 
-    else
-        M = calcmatrix(Q, Qꜜ, τC, τA)
-        loglik = 0.0
-        for index in eachindex(d)
-            # update p
-            probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
-            # p[k+1] now contains the probability of k derived alleles at locus index,
-            # with n individuals and model parameters τC and τA and anchor frequency y[index].
-            loglik +=  log(dot(p, view(binomialprobs, :, d[index]+1)))
-            # binomialprobs[k+1, d+1] is the probabilities of seeing d derived reads when there are 
-            # k derived alleles. 
-            # So the total probability of d derived reads at locus index given frequency y[index]
-            # and model parameters τC and τA is \sum_k=0^2n P(d reads | k alleles)*P(k alleles | y[index], τC, τA),
-            # which is exactly the dot product between the two vectors. 
-        end
-        return loglik
-    end 
-end # Constant coverage and without errors. 
-
 ## With errors and constant coverage.
 """
     logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractArray{Float64}, reads::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, R::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
@@ -252,7 +195,7 @@ end # Constant coverage and without errors.
 Calculates the log-probability of the data (a.k.a. log-likelihood, data is d) given the parameters and the prior data. It is implicitly assumed that Q and Qꜜ are (2n+1)x(2n+1)-matrices (or their eigenvalue decomposition), that p is a 2n+1 vector, binomialcoefficients is a 2n+1-vector of binomial coefficients, with k+1 element equal to binomial coefficient 2n over k, k = 0,...,2n. binomialprobs is a (2n+1)x(R+1)-matrix where the (k+1, d+1) element is equal to the probability of d success out of R experiments with probability of success k/(2n), where k = 0,...,2n, and d = 0,...,R. hvals is a (2n+1)xlength(y) matrix, where y are all frequencies, where the (k+1,j)-th element is equal to y[j]^k*(1.0-y[j])^(2n-k). So you should initialise 
 Q, Qꜜ, hvals, binomialcoefficients, p, binomialprobs = preparedatafixedn(n, R, y)
 """
-function logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractArray{Float64}, reads::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, R::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+function logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractArray{Float64}, reads::AbstractVector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, R::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
     if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
         return -Inf 
     else
@@ -266,36 +209,17 @@ function logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractArray{Float
             end 
         end 
         loglik = 0.0
-        for index in eachindex(reads)
+        for index in eachindex(reads, counts)
             # update p
             probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
-            loglik +=  log(dot(p, view(q, :, reads[index]+1))) 
+            loglik +=  counts[index]*log(dot(p, view(q, :, reads[index]+1))) 
         end
         return loglik
     end 
 end # Constant coverage and with errors. 
 
-## Implement likelihood for non-constant coverages and no errors. 
-function logprobderivedreads!(p::AbstractVector{Float64}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, τC::Float64, τA::Float64, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, binomialprobs::AbstractVector{<:AbstractMatrix{Float64}}, hvals::AbstractMatrix{Float64})
-    if τC ≤ 0 || τA ≤ 0
-        return -Inf
-    else
-        M = calcmatrix(Q, Qꜜ, τC, τA)
-        loglik = 0.0
-        for index in eachindex(reads, coverages)
-            # update p
-            probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
-            loglik +=  log(dot(p, view(binomialprobs[coverages[index]], :, reads[index]+1)))
-            # binomialprobs[R][k+1, d+1] is the probabilities of seeing d derived reads when there are 
-            # k derived alleles, with coverage R.
-        end
-        return loglik
-    end 
-end
-## End implementation voor verschillende coverages.
-
 ## Implement likelihood for non-constant coverages and with errors.
-function logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractVector{<:AbstractMatrix{Float64}}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, maxcoverage::Int, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+function logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractVector{<:AbstractMatrix{Float64}}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, counts::AbstractVector{Int}, maxcoverage::Int, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
     if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
         return -Inf
     else
@@ -309,40 +233,16 @@ function logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractVector{<:Ab
             end 
         end 
         loglik = 0.0
-        for index in eachindex(reads, coverages)
+        for index in eachindex(reads, coverages, counts)
             # update p
             probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
             # p[k+1] now contains the probability of k derived alleles at locus index,
             # with n individuals and model parameters τC and τA and anchor frequency y[index].
-            loglik +=  log(dot(p, view(q[coverages[index]], :, reads[index] + 1)))
+            loglik +=  counts[index]*log(dot(p, view(q[coverages[index]], :, reads[index] + 1)))
         end
         return loglik
     end 
 end
 ## End implementation voor verschillende coverages.
-
-
-
-#=
-# Precompilation, in order to make startup time faster.
-@setup_workload begin
-    A = rand(2,2)
-    B = A'*A 
-    SB = SMatrix{2,2, Float64}(B)
-    lowerdiagonal = upperdiagonal = [1.0, 2.0, 3.0]
-    diagonal = [4.0, 5.0, 6.0, 7.0]
-    T = Tridiagonal(lowerdiagonal, diagonal, upperdiagonal)
-    @compile_workload begin
-        EigenExpansion(B)
-        EigenExpansion(SB)
-        F = EigenExpansion(T)
-        makeQꜜ(2)
-        makeQ(2)
-        exp(F, 0.2)
-        calcmatrix(F, F, 0.2, 0.1)
-        preparedatafixedn(3, 10, rand(4))
-    end
-end
-=#
 
 end # module Likelihood

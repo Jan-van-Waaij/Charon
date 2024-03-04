@@ -1,10 +1,7 @@
 using GZip 
 
-inputfile = "data/vcffiles_demes/multiple_demes_multipledemes_12.vcf.gz"
-
-
+inputfile = "data/vcffilesMads/isoaltes_4pop_1kindi.vcf.gz"
 file = GZip.open(inputfile)
-println("hi")
 
 let 
     line = readline(file)
@@ -16,7 +13,7 @@ let
             println(counter)
         end 
     end 
-    println(counter) # 61767 before rewrite. 61632 after
+    println(counter) # 3_612_735 before rewrite. 3_595_222  after
 end 
 
 close(file)
