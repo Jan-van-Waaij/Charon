@@ -190,7 +190,7 @@ end
 
 ## With errors and constant coverage.
 """
-    logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractArray{Float64}, reads::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, R::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+    logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractArray{Float64}, reads::AbstractVector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, R::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
 
 Calculates the log-probability of the data (a.k.a. log-likelihood, data is d) given the parameters and the prior data. It is implicitly assumed that Q and Qꜜ are (2n+1)x(2n+1)-matrices (or their eigenvalue decomposition), that p is a 2n+1 vector, binomialcoefficients is a 2n+1-vector of binomial coefficients, with k+1 element equal to binomial coefficient 2n over k, k = 0,...,2n. binomialprobs is a (2n+1)x(R+1)-matrix where the (k+1, d+1) element is equal to the probability of d success out of R experiments with probability of success k/(2n), where k = 0,...,2n, and d = 0,...,R. hvals is a (2n+1)xlength(y) matrix, where y are all frequencies, where the (k+1,j)-th element is equal to y[j]^k*(1.0-y[j])^(2n-k). So you should initialise 
 Q, Qꜜ, hvals, binomialcoefficients, p, binomialprobs = preparedatafixedn(n, R, y)

@@ -57,11 +57,14 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     y = y[allowedindices]
     tuples = zip(d, y)
     cm = countmap(tuples)
-    d = [key[1] for key in keys(cm)]
+    thekeys = keys(cm)
+    d = [key[1] for key in thekeys]
     d = SizedVector{length(d), Int}(d)
-    y = [key[2] for key in keys(cm)]
+    y = [key[2] for key in thekeys]
     counts = values(cm)
-    # HIER VERDER!!!!!
+    for index in eachindex(d, y, counts)
+        @assert cm[(d[index], y[index])] == counts[index]
+    end 
     
     nmax = maximum(prioronn)
     nmax ≤ 10 || throw(ArgumentError("The current implementation can handle at most 10 individuals."))
@@ -103,7 +106,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
         acceptedvec[1] = true 
         # Calculate log likelihood and log prior density with initial values.
         # HIER MOET IK DUS logprobderivedreads GAAN VERANDEREN!!!!
-        loglikprevious = logprobderivedreads!(p[nprevious], q[nprevious], d, τCprevious, τAprevious, ϵprevious, nprevious, R, Qs[nprevious], Qꜜs[nprevious], binomialcoefficients[nprevious], hvals[nprevious])
+        loglikprevious = logprobderivedreads!(p[nprevious], q[nprevious], d, counts, τCprevious, τAprevious, ϵprevious, nprevious, R, Qs[nprevious], Qꜜs[nprevious], binomialcoefficients[nprevious], hvals[nprevious])
         # check if the initial value is valid. 
         loglikprevious == -Inf && throw(DomainError("The data does not support the initial value."))
         logpdfpriorprevious = logpdf(prioronn, nprevious) + 
@@ -127,7 +130,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
             # equal to nprevious. 
             ϵproposal = ϵprevious + rand(distproposalϵ)
             # calculate the loglikelihood
-            loglikproposal = logprobderivedreads!(p[nproposal], q[nproposal], d, τCproposal, τAproposal, ϵproposal, nproposal, R, Qs[nproposal], Qꜜs[nproposal], binomialcoefficients[nproposal], hvals[nproposal])
+            loglikproposal = logprobderivedreads!(p[nproposal], q[nproposal], d, counts, τCproposal, τAproposal, ϵproposal, nproposal, R, Qs[nproposal], Qꜜs[nproposal], binomialcoefficients[nproposal], hvals[nproposal])
             logpdfpriorproposal = logpdf(prioronn, nproposal) + logpdf(prioronτCτA, [τCproposal, τAproposal]) + logpdf(prioronϵ, ϵproposal)
             # calculate the acceptance probability. 
             # Note that our proposal function for n, τC, τA, ϵ is symmetric, i.e. q(x|y)=q(y|x).
@@ -227,10 +230,22 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     # Remove frequencies 0.0 and 1.0
     allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
     d = d[allowedindices]
-    d = SizedVector{length(d), Int}(d)
     R = R[allowedindices]
-    R = SizedVector{length(R), Int}(R)
     y = y[allowedindices]
+    tuples = zip(d, R, y)
+    cm = countmap(tuples)
+    d = [key[1] for key in keys(cm)]
+    R = [key[2] for key in keys(cm)]
+    y = [key[3] for key in keys(cm)]
+    counts = collect(values(cm))
+    for index in eachindex(d, R, y, counts)
+        @assert cm[(d[index], R[index], y[index])] == counts[index]
+    end 
+    cm2 = Dict((d[index], R[index], y[index]) => counts[index] for index in eachindex(d, R, y, counts))
+    @assert cm == cm2 
+
+    d = SizedVector{length(d), Int}(d)
+    R = SizedVector{length(R), Int}(R)
     Qs = Vector{EigenExpansion}(undef, nmax)
     Qꜜs = Vector{EigenExpansion}(undef, nmax)
     hvals = Vector{Any}(undef, nmax) # contains the matrices with values y^k(1-y)^{2n-k}.
