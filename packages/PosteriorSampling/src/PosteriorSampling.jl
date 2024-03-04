@@ -284,7 +284,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
         τAsample[1] = τAprevious
         ϵsample[1] = ϵprevious
         acceptedvec[1] = true
-        loglikprevious = logprobderivedreads!(p[nprevious], q[nprevious], d, R, Rmax, τCprevious, τAprevious, ϵprevious, nprevious, Qs[nprevious], Qꜜs[nprevious], binomialcoefficients[nprevious], hvals[nprevious])
+        loglikprevious = logprobderivedreads!(p[nprevious], q[nprevious], d, R, counts, Rmax, τCprevious, τAprevious, ϵprevious, nprevious, Qs[nprevious], Qꜜs[nprevious], binomialcoefficients[nprevious], hvals[nprevious])
         # check if the initial value is valid. 
         loglikprevious == -Inf && throw(DomainError("The data does not support the initial value."))
         logpdfpriorprevious = logpdf(prioronn, nprevious) + 
@@ -308,7 +308,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
             # equal to nprevious. 
             ϵproposal = ϵprevious + rand(distproposalϵ)
             # calculate the loglikelihood
-            loglikproposal = logprobderivedreads!(p[nproposal], q[nproposal], d, R, Rmax, τCproposal, τAproposal, ϵproposal, nproposal, Qs[nproposal], Qꜜs[nproposal], binomialcoefficients[nproposal], hvals[nproposal])
+            loglikproposal = logprobderivedreads!(p[nproposal], q[nproposal], d, R, counts, Rmax, τCproposal, τAproposal, ϵproposal, nproposal, Qs[nproposal], Qꜜs[nproposal], binomialcoefficients[nproposal], hvals[nproposal])
             logpdfpriorproposal = logpdf(prioronn, nproposal) + logpdf(prioronτCτA, [τCproposal, τAproposal]) + logpdf(prioronϵ, ϵproposal)
             # calculate the acceptance probability. 
             # Note that our proposal function for n, τC, τA, ϵ is symmetric, i.e. q(x|y)=q(y|x).
