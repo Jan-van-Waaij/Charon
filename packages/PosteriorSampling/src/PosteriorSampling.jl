@@ -164,9 +164,12 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                 # the covariance is calculated from the previous steps and used in the next iteration.
                 if step < nsteps÷4 && step > 1000  
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
-                    if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
-                        scalefactor = 3*scalefactor/4
-                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                    if acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
+                        scalefactor = scalefactor/10
+                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 1/10, new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
+                            scalefactor = 3*scalefactor/4
+                            println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
                     elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
                         scalefactor = 4*scalefactor/3
                         println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
@@ -341,7 +344,10 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                 # the covariance is calculated from the previous steps and used in the next iteration.
                 if step < nsteps÷4 && step > 1000  
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
-                    if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
+                    if acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
+                        scalefactor = scalefactor/10
+                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 1/10, new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
                         scalefactor = 3*scalefactor/4
                         println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
                     elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.

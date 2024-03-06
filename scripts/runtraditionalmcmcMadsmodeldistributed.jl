@@ -95,8 +95,12 @@ end
 @assert numprocs == 64
 futures = [@spawnat process Threads.nthreads() for process in processes]
 num_threads = fetch.(futures)
-@show num_threads # weghalen en nog een test toevoegen om te bepalen of de project goed is. 
+#@show num_threads # weghalen en nog een test toevoegen om te bepalen of de project goed is. 
 @assert unique(num_threads) == [numthreadsperprocess]
+futures2 = [@spawnat process Base.active_project() for process in processes]
+projects = fetch.(futures2)
+@assert unique(projects) == [dir*"/Project.toml"]
+
 
 nsteps = 200_000 # number of steps in mcmc chain 
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
