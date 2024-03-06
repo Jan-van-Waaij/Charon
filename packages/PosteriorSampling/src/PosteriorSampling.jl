@@ -60,10 +60,12 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     thekeys = keys(cm)
     d = [key[1] for key in thekeys]
     y = [key[2] for key in thekeys]
-    counts = values(cm)
+    counts = collect(values(cm))
     for index in eachindex(d, y, counts)
         @assert cm[(d[index], y[index])] == counts[index]
     end 
+    cm2 = Dict((d[index], y[index]) => counts[index] for index in eachindex(d, y, counts))
+    @assert cm == cm2 
     d = SizedVector{length(d), Int}(d)
 
     nmax = maximum(prioronn)

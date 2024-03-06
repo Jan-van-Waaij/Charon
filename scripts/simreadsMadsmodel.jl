@@ -25,11 +25,10 @@ ancientpopulation = infoblock .+ (1:5000)
 vcffile = "data/vcffilesMads/isoaltes_4pop_1kindi.vcf.gz"
 readfilefirstpart = "data/reads/Mads_model_pop_"
 
+populations = Dict(:CEU => 9 .+ (1:2000), :YRI => 9 .+ (2001:4000), :CHB => 9 .+ (4001:6000), :KAR => 9 .+ (6001:8000), :CEUS => 9 .+ (8001:10_000), :YRIS => 9 .+ (10_001:12_000), :CHBS => 9 .+ (12_001:14_000), :KARS => 9 .+ (14_001:16_000))
 
-populations = Dict(:CEU => 9 .+ (1:1000), :YRI => 9 .+ (1001:2000), :CHB => 9 .+ (2001:3000), :KAR => 9 .+ (3001:4000), :CEUS => 9 .+ (4001:5000), :YRIS => 9 .+ (5001:6000), :CHBS => 9 .+ (6001:7000), :KARS => 9 .+ (7001:8000))
-
-for (_, pop) in populations
-    @assert length(pop) == 1000
+for pop in values(populations)
+    @assert length(pop) == 2000
 end 
 
 numberofindividualsinthesedimentvec = [1, 2, 4, 8]
@@ -37,7 +36,7 @@ numberofindividualsinthesedimentvec = [1, 2, 4, 8]
 coverage = 64
 
 populationnames = [:CHBS, :YRIS, :CEUS, :KARS]
-allcombinations = [(population, numberofindividualsinthesediment) for population in populationnames for numberofindividualsinthesediment in numberofindividualsinthesedimentvec]
+allcombinations = [(population, numberofindividualsinthesediment) for population in populationnames for numberofindividualsinthesediment in numberofindividualsinthesedimentvec] # 16 elements. 
 @threads for (population, numberofindividualsinthesediment) in allcombinations
     # I choose numberofindividualsinthesediment individuals from the ancient population. 
     individualsinthesediment = sample(populations[population], numberofindividualsinthesediment, 

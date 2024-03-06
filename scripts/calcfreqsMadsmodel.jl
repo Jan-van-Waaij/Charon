@@ -15,14 +15,13 @@
 #
 # The output will have a few lines of comments, each of which preceded by #, and then each line has a number between 0.0 and 1.0, which is a frequency. 
 
-using GZip, Data
+using GZip, Data, Base.Threads
 
 vcffile = "data/vcffilesMads/isoaltes_4pop_1kindi.vcf.gz"
 
+populations = Dict(:CEU => 9 .+ (1:2000), :YRI => 9 .+ (2001:4000), :CHB => 9 .+ (4001:6000), :KAR => 9 .+ (6001:8000), :CEUS => 9 .+ (8001:10_000), :YRIS => 9 .+ (10_001:12_000), :CHBS => 9 .+ (12_001:14_000), :KARS => 9 .+ (14_001:16_000))
 
-populations = Dict(:CEU => 9 .+ (1:1000), :YRI => 9 .+ (1001:2000), :CHB => 9 .+ (2001:3000), :KAR => 9 .+ (3001:4000), :CEUS => 9 .+ (4001:5000), :YRIS => 9 .+ (5001:6000), :CHBS => 9 .+ (6001:7000), :KARS => 9 .+ (7001:8000))
-
-for population in [:YRI, :CEU, :CHB, :KAR]
+@threads for population in [:YRI, :CEU, :CHB, :KAR]
     openedvcffile = GZip.open(vcffile)
 
     outputfile = "data/frequencies/freqanchor/Madsmodel_freq_anchor_$(population).txt.gz"

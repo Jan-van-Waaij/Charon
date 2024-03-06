@@ -22,12 +22,13 @@ using Data, # For parsing frequency and read files.
       Distributions, # To specify the prior.
       PosteriorSampling, # To sample from the posterior.
       Dates, # for the now function 
-      Base.Threads # for threads
+      Base.Threads, # for threads
+      Distributed # for distributed programming. 
 
 ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = [1, 2, 4, 8]
-allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec]
+allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec] # 64 elementen. 
 
 nsteps = 200_000 # number of steps in mcmc chain 
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
