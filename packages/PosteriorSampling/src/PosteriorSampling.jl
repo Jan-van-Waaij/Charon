@@ -18,7 +18,7 @@ export MHsampler, # The mcmc sampler.
 
 # fixed R, error model, unknown n.
 """
-    MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing, temperature::Float64 = 1.0)
+    MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
 
 Adaptive Metropolis (Haario et al. 2001, mentioned in Rosenthal 2010 "Optimal proposal distributions and adaptive MCMC, section 3.2), with prior on n, τC, τA and ϵ. Instead of using the recommended scaling factor 1.4161, we use the first nsteps÷4 steps to find a scaling factor that results in an acceptance ratio between 0.1 and 0.6. Setting messages ≤ 0, results in no messages being print, if message>0, then every message steps, a message is print, updating the progress.
 
@@ -114,7 +114,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
         logpdfpriorprevious = logpdf(prioronn, nprevious) + 
             logpdf(prioronτCτA, [τCprevious, τAprevious]) + logpdf(prioronϵ, ϵprevious)
         logpdfpriorprevious == -Inf && throw(DomainError("The initial value is outside the support of the prior."))
-        logjointprob[1] = temperature * ( loglikprevious + logpdfpriorprevious )
+        logjointprob[1] = loglikprevious + logpdfpriorprevious
         # Define proposal densities. 
         Σ = [0.00001 0.0; 0.0 0.00001]
         distproposalτCτA = MvNormal(Σ)# Multivariate normal distribution with mean zero and 
@@ -136,8 +136,8 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
             logpdfpriorproposal = logpdf(prioronn, nproposal) + logpdf(prioronτCτA, [τCproposal, τAproposal]) + logpdf(prioronϵ, ϵproposal)
             # calculate the acceptance probability. 
             # Note that our proposal function for n, τC, τA, ϵ is symmetric, i.e. q(x|y)=q(y|x).
-            logacceptanceprobability = temperature * ( loglikproposal - loglikprevious + 
-                logpdfpriorproposal - logpdfpriorprevious ) 
+            logacceptanceprobability = loglikproposal - loglikprevious + 
+                logpdfpriorproposal - logpdfpriorprevious
             acceptanceprobability = exp(logacceptanceprobability)
             # accept or reject the proposal with probability max(1, acceptanceprobability), note that rand() samples from the uniform distribution.
             accepted = rand() ≤ acceptanceprobability
@@ -147,7 +147,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                 nsample[step] = nprevious = nproposal
                 ϵsample[step] = ϵprevious = ϵproposal
                 acceptedvec[step] = true
-                logjointprob[step] = temperature * ( loglikproposal + logpdfpriorproposal )
+                logjointprob[step] = loglikproposal + logpdfpriorproposal
                 # Update everything for the next cycle. 
                 loglikprevious = loglikproposal
                 logpdfpriorprevious = logpdfpriorproposal
@@ -157,7 +157,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                 nsample[step] = nprevious
                 ϵsample[step] = ϵprevious
                 acceptedvec[step] = false
-                logjointprob[step] = temperature * ( loglikprevious + logpdfpriorprevious )
+                logjointprob[step] = loglikprevious + logpdfpriorprevious 
                 # no updating: loglikprevious and logpdfpriorprevious remain the same.
             end 
             if step % 1000 == 0
@@ -195,7 +195,7 @@ end # function.
 
 # variable R, error model, unknown n. 
 """
-    MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Vector{Int}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing, temperature::Float64 = 1.0)
+    MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Vector{Int}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
 
 Adaptive Metropolis (Haario et al. 2001, mentioned in Rosenthal 2010 "Optimal proposal distributions and adaptive MCMC, section 3.2), with prior on n, τC, τA and ϵ. Instead of using the recommended scaling factor 1.4161, we use the first nsteps÷4 steps to find a scaling factor that results in an acceptance ratio between 0.1 and 0.6. Setting messages ≤ 0, results in no messages being print, if message>0, then every message steps, a message is print, updating the progress.
 
@@ -210,7 +210,7 @@ nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[1]
 
 gives the results of the first chain.
 """
-function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Vector{Int}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing, temperature::Float64 = 1.0)
+function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Vector{Int}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronn) ≥ 1 || throw(ArgumentError("prioronn should have support on positive integers. There is always at least one individual."))
@@ -227,8 +227,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     nmax ≤ 10 || throw(ArgumentError("The current implementation can handle at most 10 individuals."))
     Rmax = maximum(R)
     Rmax > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
-    0.0 < temperature ≤ 1.0 || throw(DomainError("The temperature should satisfy 0.0 < temperature ≤ 1.0."))
-
+    
     # Remove frequencies 0.0 and 1.0
     allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
     d = d[allowedindices]
@@ -292,7 +291,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
         logpdfpriorprevious = logpdf(prioronn, nprevious) + 
             logpdf(prioronτCτA, [τCprevious, τAprevious]) + logpdf(prioronϵ, ϵprevious)
         logpdfpriorprevious == -Inf && throw(DomainError("The initial value is outside the support of the prior."))
-        logjointprob[1] = temperature * ( loglikprevious + logpdfpriorprevious )
+        logjointprob[1] = loglikprevious + logpdfpriorprevious
         # Define proposal densities. 
         Σ = [0.00001 0.0; 0.0 0.00001]
         distproposalτCτA = MvNormal(Σ)# Multivariate normal distribution with mean zero and 
@@ -314,8 +313,8 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
             logpdfpriorproposal = logpdf(prioronn, nproposal) + logpdf(prioronτCτA, [τCproposal, τAproposal]) + logpdf(prioronϵ, ϵproposal)
             # calculate the acceptance probability. 
             # Note that our proposal function for n, τC, τA, ϵ is symmetric, i.e. q(x|y)=q(y|x).
-            logacceptanceprobability = temperature * ( loglikproposal - loglikprevious + 
-                logpdfpriorproposal - logpdfpriorprevious ) 
+            logacceptanceprobability = loglikproposal - loglikprevious + 
+                logpdfpriorproposal - logpdfpriorprevious
             acceptanceprobability = exp(logacceptanceprobability)
             # accept or reject the proposal with probability max(1, acceptanceprobability), note that rand() samples from the uniform distribution.
             accepted = rand() ≤ acceptanceprobability
@@ -325,7 +324,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                 nsample[step] = nprevious = nproposal
                 ϵsample[step] = ϵprevious = ϵproposal
                 acceptedvec[step] = true
-                logjointprob[step] = temperature * ( loglikproposal + logpdfpriorproposal )
+                logjointprob[step] = loglikproposal + logpdfpriorproposal 
                 # Update everything for the next cycle. 
                 loglikprevious = loglikproposal
                 logpdfpriorprevious = logpdfpriorproposal
@@ -335,7 +334,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                 nsample[step] = nprevious
                 ϵsample[step] = ϵprevious
                 acceptedvec[step] = false
-                logjointprob[step] = temperature * ( loglikprevious + logpdfpriorprevious )
+                logjointprob[step] = loglikprevious + logpdfpriorprevious 
                 # no updating: loglikprevious and logpdfpriorprevious remain the same.
             end 
             if step % 1000 == 0

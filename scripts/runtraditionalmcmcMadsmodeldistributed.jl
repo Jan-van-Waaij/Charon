@@ -15,7 +15,16 @@
 
 # Als compute01 ongebruikt is, run het daar, het heeft meer dan 128 CPUs. 
 
-using Distributed 
+# trigger precompilation.
+using Data, # For parsing frequency and read files. 
+      DataFrames, # work with data frames.
+      CSV, # convert dataframes to a CSV file. 
+      Distributions, # To specify the prior.
+      PosteriorSampling, # To sample from the posterior.
+      Dates, # for the now function 
+      Base.Threads, # for threads
+      Distributed
+
 
 ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
