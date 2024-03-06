@@ -25,7 +25,7 @@ using Data, # For parsing frequency and read files.
       Base.Threads, # for threads
       Distributed
 
-let 
+function forceprecompile()
     nchains = 2
     nsteps = 4 
     prioronn = DiscreteUniform(1, 2)
@@ -35,7 +35,10 @@ let
     derivedreadsvec = [1, 1, 3, 2]
     freqs = [0.1, 0.2, 0.1, 0.15]
     MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1)
+    return nothing 
 end 
+
+forceprecompile()
 
 ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
@@ -84,15 +87,18 @@ end
       Base.Threads, # for threads
       Distributed
 
+futures = [@spawnat process forceprecompile() for process in processes]
+fetch.(futures)
+
 @assert nworkers() == 64
 @assert nworkers() == length(processes)
 @assert numprocs == 64
-futures = [@spawnat process Threads.nthreads() for process in processes]
-num_threads = fetch.(futures)
+futures2 = [@spawnat process Threads.nthreads() for process in processes]
+num_threads = fetch.(futures2)
 #@show num_threads # weghalen en nog een test toevoegen om te bepalen of de project goed is. 
 @assert unique(num_threads) == [numthreadsperprocess]
-futures2 = [@spawnat process Base.active_project() for process in processes]
-projects = fetch.(futures2)
+futures3 = [@spawnat process Base.active_project() for process in processes]
+projects = fetch.(futures3)
 @assert unique(projects) == [dir*"/Project.toml"]
 
 
