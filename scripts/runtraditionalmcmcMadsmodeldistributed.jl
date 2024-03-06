@@ -25,6 +25,17 @@ using Data, # For parsing frequency and read files.
       Base.Threads, # for threads
       Distributed
 
+let 
+    nchains = 2
+    nsteps = 4 
+    prioronn = DiscreteUniform(1, 2)
+    prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
+    prioronϵ = Uniform(0, 0.5) # uniform prior on [0, 0.5]
+    coverage = 4 
+    derivedreadsvec = [1, 1, 3, 2]
+    freqs = [0.1, 0.2, 0.1, 0.15]
+    MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1)
+end 
 
 ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
@@ -35,33 +46,16 @@ dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
 exeflags = ["--project=$dir", "--threads=4", "--optimize=3"]
 
-#= max nodes 
-nodes = [
-    ("node01", 6),
-    ("node02", 4),
-    ("node03", 6),
-    ("node04", 6),
-    ("node05", 6),
-    ("node06", 6),
-    ("node07", 16),
-    ("node08", 5),
-    ("node11", 10),
-    ("node12", 4),
-    ("node13", 4),
-    ("node14", 4),
-]
-=#
-
 nodes = [
     ("node01", 6), # not used
     ("node02", 4), # not used
     ("node03", 6), # not used 
     ("node04", 6), # not used 
-    ("node05", 3), #6), # 3 cores in use. 
+    ("node05", 6), #6), # 6 cores in use. 
     ("node06", 6), # not used 
-    ("node07", 13), #14), # 16), # 2 cores in use. 
+    ("node07", 16), #14), # 16), # 5 cores in use. 
     ("node08", 5), # not used 
-    ("node11", 7), #10), # 3 cores in use 
+    ("node11", 1), #10), # 100 % in use 
     ("node12", 4), # not used 
     #("node13", 4), # 100 % in use 
     ("node14", 4), # not used 

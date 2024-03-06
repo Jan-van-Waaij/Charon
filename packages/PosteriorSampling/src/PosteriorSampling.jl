@@ -163,17 +163,45 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
             if step % 1000 == 0
                 # the covariance is calculated from the previous steps and used in the next iteration.
                 if step < nsteps÷4 && step > 1000  
+                    percentage = round(Int, 100*step / nsteps)
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
-                    if acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
-                        scalefactor = scalefactor/10
-                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 1/10, new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
-                            scalefactor = 3*scalefactor/4
-                            println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
-                        scalefactor = 4*scalefactor/3
-                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
-                    end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
+                    if acceptancerate < 0.01 # acceptancerate extremely low, take smaller steps.
+                        factor = 1/100
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
+                        factor = 1/10
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate < 0.1 # acceptancerate low, take smaller steps.
+                        factor = 1/2
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate < 0.234 # acceptancerate low, take smaller steps.
+                        factor = 3/4
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.99 
+                        factor = 100
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.9
+                        factor = 10
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.8 # acceptancerate too large, take bigger steps.
+                        factor = 2
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
+                        factor = 4/3
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.44 # acceptancerate too large, take bigger steps.
+                        factor = 11/10
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    end # So do nothing when the acceptancerate is between 0.234 and 0.44. 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                 Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]]) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
@@ -344,16 +372,43 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                 # the covariance is calculated from the previous steps and used in the next iteration.
                 if step < nsteps÷4 && step > 1000  
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
-                    if acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
-                        scalefactor = scalefactor/10
-                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 1/10, new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
-                        scalefactor = 3*scalefactor/4
-                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                    if acceptancerate < 0.01 # acceptancerate extremely low, take smaller steps.
+                        factor = 1/100
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
+                        factor = 1/10
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate < 0.1 # acceptancerate low, take smaller steps.
+                        factor = 1/2
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate < 0.234 # acceptancerate low, take smaller steps.
+                        factor = 3/4
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.99 
+                        factor = 100
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.9
+                        factor = 10
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.8 # acceptancerate too large, take bigger steps.
+                        factor = 2
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
                     elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
-                        scalefactor = 4*scalefactor/3
-                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
-                    end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
+                        factor = 4/3
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.44 # acceptancerate too large, take bigger steps.
+                        factor = 11/10
+                        scalefactor *= factor
+                        println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                    end # So do nothing when the acceptancerate is between 0.234 and 0.44.
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                 Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]]) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
@@ -381,6 +436,7 @@ end # function.
 ##
 ##
 ## MCMC with simulated proposals. 
+# function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
 function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
@@ -395,6 +451,8 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     maximum(d) ≤  R || throw(DomainError("All reads should be at most the coverage."))
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
     length(d) == length(y) || throw(DimensionMismatch("d and y should be of the same length."))
+    nmax = maximum(prioronn)
+    nmax ≤ 10 || throw(ArgumentError("The current implementation can handle at most 10 individuals."))
     
     # Remove frequencies 0.0 and 1.0
     allowedindices = 0.0 .< y .< 1.0
@@ -414,8 +472,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     @assert cm == cm2 
     
     d = SizedVector{length(d), Int}(d)
-    nmax = maximum(prioronn)
-    nmax ≤ 10 || throw(ArgumentError("The current implementation can handle at most 10 individuals."))
+    R = SizedVector{length(R), Int}(R)
     Qs = Vector{EigenExpansion}(undef, nmax)
     Qꜜs = Vector{EigenExpansion}(undef, nmax)
     hvals = Vector{Any}(undef, nmax) # contains the matrices with values y^k(1-y)^{2n-k}.
@@ -423,6 +480,8 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     for n in 1:nmax
         Qs[n], Qꜜs[n], hvals[n], binomialcoefficients[n] = preparedata(n, y)
     end
+    #p = Vector{Any}(undef, nmax)
+    #binomialprobs = Vector{Any}(undef, nmax)
     hvals = [item for item in hvals] # change type of hvals to more specific one then Any.
     binomialcoefficients = [item for item in binomialcoefficients] # same.
     # Each item in results contains a tuple 
@@ -554,13 +613,43 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                 for n in 1:nmax
                     if step < nsteps÷4 && step > 1000  
                         acceptancerate = mean(acceptedvec[step-999:step, n+1]) # acceptance rate in the last 1000 steps.
-                        if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
-                            scalefactor[n] = 3*scalefactor[n]/4
-                            #println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
-                            scalefactor[n] = 4*scalefactor[n]/3
-                            #println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
-                        end # So do nothing when the acceptancerate is between 0.1 and 0.15. 
+                        if acceptancerate < 0.01 # acceptancerate extremely low, take smaller steps.
+                            factor = 1/100
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
+                            factor = 1/10
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate < 0.1 # acceptancerate low, take smaller steps.
+                            factor = 1/2
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate < 0.234 # acceptancerate low, take smaller steps.
+                            factor = 3/4
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.99 
+                            factor = 100
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.9
+                            factor = 10
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.8 # acceptancerate too large, take bigger steps.
+                            factor = 2
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
+                            factor = 4/3
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.44 # acceptancerate too large, take bigger steps.
+                            factor = 11/10
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        end # So do nothing when the acceptancerate is between 0.234 and 0.44.
                     end 
                     # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                     Σ = scalefactor[n] * (cov([τCsample[1:10:step, n] τAsample[1:10:step, n]]) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
@@ -582,9 +671,244 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     end # Chains. 
     return results
 end # function.
-## end new, adding error model.
+
 ##
 ##
+## MCMCSimProp non-constant coverage. 
 ##
+##
+function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Vector{Int}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
+    # Check conditions.
+    length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
+    minimum(prioronn) ≥ 1 || throw(ArgumentError("prioronn should have support on positive integers. There is always at least one individual."))
+    maximum(prioronn) < Inf || throw(ArgumentError("For the current implementation we require that the prior on n is bounded. I.e. there is an N, so that P(prioronn ≤ N)=1"))
+    minimum(prioronϵ) ≥ 0 || throw(ArgumentError("prioronϵ should have support on [0,0.5], but the minimum is negative."))
+    maximum(prioronϵ) ≤ 0.5 || throw(ArgumentError("prioronϵ should have support on [0,0.5], but the maximum exceeds 0.5."))
+    nchains > 0 || throw(ArgumentError("There should be at least one chain."))
+    nsteps > 0 || throw(ArgumentError("nsteps should be positive."))
+    Rmax = maximum(R)
+    Rmax > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
+    minimum(d) ≥ 0 || throw(DomainError("All reads should be non-negative."))
+    all(d .≤ R) || throw(DomainError("All reads should be at most the coverage."))
+    all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
+    length(d) == length(y) == length(R) || throw(DimensionMismatch("R, d and y should be of the same length."))
+    
+    # Remove frequencies 0.0 and 1.0
+    allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
+    d = d[allowedindices]
+    R = R[allowedindices]
+    y = y[allowedindices]
+    tuples = zip(d, R, y)
+    cm = countmap(tuples)
+    d = [key[1] for key in keys(cm)]
+    R = [key[2] for key in keys(cm)]
+    y = [key[3] for key in keys(cm)]
+    counts = collect(values(cm))
+    for index in eachindex(d, R, y, counts)
+        @assert cm[(d[index], R[index], y[index])] == counts[index]
+    end 
+    cm2 = Dict((d[index], R[index], y[index]) => counts[index] for index in eachindex(d, R, y, counts))
+    @assert cm == cm2 
+
+    d = SizedVector{length(d), Int}(d)
+    R = SizedVector{length(R), Int}(R)
+    Qs = Vector{EigenExpansion}(undef, nmax)
+    Qꜜs = Vector{EigenExpansion}(undef, nmax)
+    hvals = Vector{Any}(undef, nmax) # contains the matrices with values y^k(1-y)^{2n-k}.
+    binomialcoefficients = Vector{Any}(undef, nmax)
+    for n in 1:nmax
+        Qs[n], Qꜜs[n], hvals[n], binomialcoefficients[n] = preparedata(n, y)
+    end
+    #p = Vector{Any}(undef, nmax)
+    #binomialprobs = Vector{Any}(undef, nmax)
+    hvals = [item for item in hvals] # change type of hvals to more specific one then Any.
+    binomialcoefficients = [item for item in binomialcoefficients] # same.
+    
+    results = Vector{Tuple{Vector{Int}, Matrix{Float64}, Matrix{Float64}, Matrix{Float64}, BitMatrix, Matrix{Float64}}}(undef,nchains)
+    @threads for chainindex in eachindex(results) 
+        p = [MVector{2n+1, Float64}(undef) for n in 1:nmax]
+        q = [[MMatrix{2n+1, R+1, Float64}(undef) for R in 1:Rmax] for n in 1:nmax]
+        nsample = Vector{Int}(undef, nsteps)
+        τCsample = Matrix{Float64}(undef, nsteps, nmax)
+        τAsample = Matrix{Float64}(undef, nsteps, nmax)
+        ϵsample = Matrix{Float64}(undef, nsteps, nmax)
+        acceptedvec = BitMatrix(undef, nsteps, nmax+1) # BitMatrix is more efficient than Matrix{Bool} 
+        # (roughly, one bit per item, instead of one byte.)
+        logjointprob = Matrix{Float64}(undef, nsteps, nmax+1)
+        # Initialise.
+        τCprevious = Vector{Float64}(undef, nmax)
+        τAprevious = Vector{Float64}(undef, nmax)
+        ϵprevious = Vector{Float64}(undef, nmax)
+        if init === nothing # draw initial value from the prior.
+            nprevious = rand(prioronn)
+            for index in eachindex(τCprevious, τAprevious)
+                τCprevious[index], τAprevious[index] = rand(prioronτCτA)
+                ϵprevious[index] = rand(prioronϵ)
+            end 
+        else 
+            nprevious = init[1]
+            for index in eachindex(τCprevious, τAprevious)
+                _, τCprevious[index], τAprevious[index], ϵprevious[index] = init
+            end
+        end 
+        nsample[1] = nprevious
+        τCsample[1,:] = τCprevious
+        τAsample[1,:] = τAprevious 
+        ϵsample[1,:] = ϵprevious
+        acceptedvec[1,:] .= true 
+        # Calculate log likelihood and log prior density with initial values.
+        loglikprevious = Vector{Float64}(undef, nmax)
+        loglikproposal = Vector{Float64}(undef, nmax)
+        for n in 1:nmax
+            loglikprevious[n] = logprobderivedreads!(p[n], q[n], d, R, counts, Rmax, τCprevious[n], τAprevious[n], ϵprevious[n], n, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
+        end
+        # check if the initial value is valid. 
+        any(loglikprevious .== -Inf) && throw(DomainError("The data does not support the initial value."))
+        logpdfpriorprevious = Vector{Float64}(undef, nmax)
+        for n in 1:nmax
+            logpdfpriorprevious[n] = logpdf(prioronτCτA, [τCprevious[n], τAprevious[n]]) + logpdf(prioronϵ, ϵprevious[n])
+        end
+        any(logpdfpriorprevious .== -Inf) && throw(DomainError("The initial value is outside the support of the prior."))
+        logjointprob[1,2:end] .= loglikprevious .+ logpdfpriorprevious
+        logjointprob[1,1] = loglikprevious[nprevious] + logpdfpriorprevious[nprevious] + logpdf(prioronn, nprevious)
+        # Define proposal densities. 
+        Σ = [0.00001 0.0; 0.0 0.00001]
+        distproposalτCτA = repeat([MvNormal(Σ)], nmax)# Multivariate normal distribution with mean zero and 
+        # covariance matrix Σ.
+        σ = 0.001
+        distproposalϵ = repeat([Normal(0.0, σ)],nmax)
+        scalefactor = repeat([1.8881], nmax) # = 2.38^2/4, as we have dimension of prior equal to 4.
+        τCproposal = Vector{Float64}(undef, nmax)
+        τAproposal = Vector{Float64}(undef, nmax)
+        ϵproposal = Vector{Float64}(undef, nmax)
+        logpdfpriorproposal = Vector{Float64}(undef, nmax)
+        logacceptanceprobability = Vector{Float64}(undef, nmax)
+        acceptanceprobability = Vector{Float64}(undef, nmax)
+        accepted = BitVector(undef, nmax)
+        for step in 2:nsteps  
+            # draw proposals.
+            for index in eachindex(τCproposal, τAproposal, ϵproposal) 
+                τCproposal[index], τAproposal[index] = [τCprevious[index], τAprevious[index]] + rand(distproposalτCτA[index])
+                ϵproposal[index] = ϵprevious[index] + rand(distproposalϵ[index])
+            end
+            for n in 1:nmax
+                loglikproposal[n] = logprobderivedreads!(p[n], q[n], d, counts, τCproposal[n], τAproposal[n], ϵproposal[n], n, R, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
+            end 
+            for n in 1:nmax
+                logpdfpriorproposal[n] = logpdf(prioronτCτA, [τCproposal[n], τAproposal[n]]) + logpdf(prioronϵ, ϵproposal[n])
+            end 
+            logacceptanceprobability .= loglikproposal .- loglikprevious .+ logpdfpriorproposal .- logpdfpriorprevious
+            acceptanceprobability .= exp.(logacceptanceprobability)
+            # accept or reject the proposal with probability max(1, acceptanceprobability), note that rand() samples from the uniform distribution.
+            for index in eachindex(acceptanceprobability)
+                accepted[index] = rand() ≤ acceptanceprobability[index]
+            end 
+            for n in 1:nmax
+                if accepted[n]
+                    τCsample[step, n] = τCprevious[n] = τCproposal[n]
+                    τAsample[step, n] = τAprevious[n] = τAproposal[n]
+                    ϵsample[step, n] = ϵprevious[n] = ϵproposal[n]
+                    acceptedvec[step, n+1] = true
+                    logjointprob[step, n+1] = loglikproposal[n] + logpdfpriorproposal[n]
+                    # Update everything for the next cycle. 
+                    loglikprevious[n] = loglikproposal[n]
+                    logpdfpriorprevious[n] = logpdfpriorproposal[n]
+                else
+                    τCsample[step, n] = τCprevious[n]
+                    τAsample[step, n] = τAprevious[n]
+                    ϵsample[step, n] = ϵprevious[n]
+                    acceptedvec[step, n+1] = false
+                    logjointprob[step, n+1] = loglikprevious[n] + logpdfpriorprevious[n]
+                    # no updating: loglikprevious and logpdfpriorprevious remain the same.
+                end 
+            end
+            nproposalprobvec = vcat(repeat([0.2 / (nmax-1)], nprevious-1), [0.8], repeat([0.2 / (nmax-1)], nmax - nprevious))
+            nproposal = rand(Categorical(nproposalprobvec)) # so with 80% chance nproposal is 
+            # equal to nprevious. 
+            logpdfnprev = logpdf(prioronn, nprevious)
+            if nproposal == nprevious
+                nsample[step] = nproposal
+                acceptedvec[step, 1] = true
+                logjointprob[step, 1] = logjointprob[step, nprevious] + logpdfnprev
+            else 
+                logpdfnprop = logpdf(prioronn, nproposal)
+                logacceptprobn = logjointprob[step, nproposal+1] - logjointprob[step, nprevious+1] + logpdfnprop - logpdfnprev
+                acceptprobn = exp(logacceptprobn)
+                if rand() ≤ acceptprobn
+                    nsample[step] = nproposal
+                    nprevious = nproposal
+                    acceptedvec[step, 1] = true
+                    logjointprob[step, 1] = logjointprob[step, nproposal+1] + logpdfnprop
+                else
+                    nsample[step] = nprevious
+                    acceptedvec[step, 1] = false 
+                    logjointprob[step, 1] = logjointprob[step, nprevious+1] + logpdfnprev
+                end 
+            end             
+            if step % 1000 == 0
+                # the covariance is calculated from the previous steps and used in the next iteration.
+                for n in 1:nmax
+                    if step < nsteps÷4 && step > 1000  
+                        acceptancerate = mean(acceptedvec[step-999:step, n+1]) # acceptance rate in the last 1000 steps.
+                        if acceptancerate < 0.01 # acceptancerate extremely low, take smaller steps.
+                            factor = 1/100
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
+                            factor = 1/10
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate < 0.1 # acceptancerate low, take smaller steps.
+                            factor = 1/2
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate < 0.234 # acceptancerate low, take smaller steps.
+                            factor = 3/4
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.99 
+                            factor = 100
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.9
+                            factor = 10
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.8 # acceptancerate too large, take bigger steps.
+                            factor = 2
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
+                            factor = 4/3
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.44 # acceptancerate too large, take bigger steps.
+                            factor = 11/10
+                            scalefactor[n] *= factor
+                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
+                        end # So do nothing when the acceptancerate is between 0.234 and 0.44.
+                    end 
+                    # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
+                    Σ = scalefactor[n] * (cov([τCsample[1:10:step, n] τAsample[1:10:step, n]]) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
+                    # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
+                    distproposalτCτA[n] = MvNormal(Σ)
+                    # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
+                    # so not really necessary. 
+                    σ = std(ϵsample[1:10:step, n]) + 1.0e-10 # small threshold to prevent getting zero variance. 
+                    distproposalϵ[n] = Normal(0.0, sqrt(scalefactor[n]) * σ)
+                end 
+            end
+            if messages > 0 # No messages at all when messages ≤ 0.
+                if step % messages == 0
+                    println("Chain ", chainindex, " talking, I finished step ", step, " of ", nsteps, ", ", round(Int, 100*step / nsteps, RoundDown), " percent finished.")
+                end
+            end
+        end # MCMC step
+        results[chainindex] = (nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob)
+    end # Chains. 
+    return results
+end # function.
+
+
 
 end # package PosteriorSampling
