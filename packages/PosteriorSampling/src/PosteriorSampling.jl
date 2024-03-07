@@ -592,7 +592,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
             if nproposal == nprevious
                 nsample[step] = nproposal
                 acceptedvec[step, 1] = true
-                logjointprob[step, 1] = logjointprob[step, nprevious] + logpdfnprev
+                logjointprob[step, 1] = logjointprob[step, nproposal+1] + logpdfnprev
             else 
                 logpdfnprop = logpdf(prioronn, nproposal)
                 logacceptprobn = logjointprob[step, nproposal+1] - logjointprob[step, nprevious+1] + logpdfnprop - logpdfnprev
@@ -764,6 +764,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         end
         # check if the initial value is valid. 
         any(loglikprevious .== -Inf) && throw(DomainError("The data does not support the initial value."))
+        logpdfnprev = logpdf(prioronn, nprevious)
         logpdfpriorprevious = Vector{Float64}(undef, nmax)
         for n in 1:nmax
             logpdfpriorprevious[n] = logpdf(prioronτCτA, [τCprevious[n], τAprevious[n]]) + logpdf(prioronϵ, ϵprevious[n])
@@ -792,7 +793,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                 ϵproposal[index] = ϵprevious[index] + rand(distproposalϵ[index])
             end
             for n in 1:nmax
-                loglikproposal[n] = logprobderivedreads!(p[n], q[n], d, counts, τCproposal[n], τAproposal[n], ϵproposal[n], n, R, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
+                loglikproposal[n] = logprobderivedreads!(p[n], q[n], d, R, counts, Rmax, τCproposal[n], τAproposal[n], ϵproposal[n], n, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
             end 
             for n in 1:nmax
                 logpdfpriorproposal[n] = logpdf(prioronτCτA, [τCproposal[n], τAproposal[n]]) + logpdf(prioronϵ, ϵproposal[n])
@@ -825,11 +826,11 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
             nproposalprobvec = vcat(repeat([0.2 / (nmax-1)], nprevious-1), [0.8], repeat([0.2 / (nmax-1)], nmax - nprevious))
             nproposal = rand(Categorical(nproposalprobvec)) # so with 80% chance nproposal is 
             # equal to nprevious. 
-            logpdfnprev = logpdf(prioronn, nprevious)
+            #logpdfnprev = logpdf(prioronn, nprevious) # dubbele berekening.
             if nproposal == nprevious
                 nsample[step] = nproposal
                 acceptedvec[step, 1] = true
-                logjointprob[step, 1] = logjointprob[step, nprevious] + logpdfnprev
+                logjointprob[step, 1] = logjointprob[step, nproposal+1] + logpdfnprev
             else 
                 logpdfnprop = logpdf(prioronn, nproposal)
                 logacceptprobn = logjointprob[step, nproposal+1] - logjointprob[step, nprevious+1] + logpdfnprop - logpdfnprev
@@ -837,6 +838,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                 if rand() ≤ acceptprobn
                     nsample[step] = nproposal
                     nprevious = nproposal
+                    logpdfnprev = logpdf(prioronn, nprevious)
                     acceptedvec[step, 1] = true
                     logjointprob[step, 1] = logjointprob[step, nproposal+1] + logpdfnprop
                 else

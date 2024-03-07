@@ -72,6 +72,34 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     end 
 end 
 
+isconstant(x) = length(unique(x)) == 1 
+# constant n for all chains? 
+constantchainsdisagree = Bool[]
+for (anchorpop, ancientpop, truenumind) in allcombinations
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    zippedcsvfile = csvfile * ".gz"
+    df = CSV.read(zippedcsvfile, DataFrame)
+    gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
+    chainsagree = isconstant(vcat([gdf[k].:nsample[end÷2:end] for k in eachindex(gdf)]...))
+    everyseperatechainisconstant = all([isconstant(gdf[k].:nsample[end÷2:end]) for k in eachindex(gdf)])
+    push!(constantchainsdisagree, everyseperatechainisconstant & !chainsagree)
+    #println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chains agree? ", chainsagree, " every chain is constant? ", everyseperatechainisconstant) 
+end 
+
+constantchainsdisagree = Bool[]
+chainsagreevec = Bool[]
+for (anchorpop, ancientpop, truenumind) in allcombinations
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    zippedcsvfile = csvfile * ".gz"
+    df = CSV.read(zippedcsvfile, DataFrame)
+    gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
+    chainsagree = isconstant(vcat([gdf[k].:nsample[end÷2:end] for k in eachindex(gdf)]...))
+    push!(chainsagreevec, chainsagree)
+    everyseperatechainisconstant = all([isconstant(gdf[k].:nsample[end÷2:end]) for k in eachindex(gdf)])
+    push!(constantchainsdisagree, everyseperatechainisconstant & !chainsagree)
+    #println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chains agree? ", chainsagree, " every chain is constant? ", everyseperatechainisconstant) 
+end 
+
 f(x) = mean(x[end÷2:100:end])
 g(x) = median(x[end÷2:100:end])
 
