@@ -472,7 +472,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     @assert cm == cm2 
     
     d = SizedVector{length(d), Int}(d)
-    R = SizedVector{length(R), Int}(R)
+    #R = SizedVector{length(R), Int}(R)
     Qs = Vector{EigenExpansion}(undef, nmax)
     Qꜜs = Vector{EigenExpansion}(undef, nmax)
     hvals = Vector{Any}(undef, nmax) # contains the matrices with values y^k(1-y)^{2n-k}.
