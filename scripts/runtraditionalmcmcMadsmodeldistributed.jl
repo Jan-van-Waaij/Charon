@@ -103,7 +103,7 @@ projects = fetch.(futures3)
 @assert unique(projects) == [dir*"/Project.toml"]
 
 
-nsteps = 200_000 # number of steps in mcmc chain 
+nsteps = 100_000 # number of steps in mcmc chain 
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
 prioronn = DiscreteUniform(1, 10) # uniform prior on {1, 2, ..., 10}
 prioronϵ = Uniform(0, 0.5) # uniform prior on [0, 0.5]
@@ -160,20 +160,24 @@ coverage = 64 # the coverage is 64 everywhere.
     results = MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 2000)
     for chain in eachindex(results)
         nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[chain]
-        #= 
-        anchorpop = String[],
-        ancientpop = String[],
-        trueϵ = Float64[],
-        truenumind = Int[],
-        coverage = Int[],
-        nsample = Int[],
-        τCsample = Float64[],
-        τAsample = Float64[],
-        ϵsample = Float64[],
-        accepted = Bool[],
-        logjointprob = Float64[],
-        chainid = Int[]
-        =#
+
+        τCsampleunpacked = Vector{Float64}(undef, nsteps)
+        τAsampleunpacked = Vector{Float64}(undef, nsteps)
+        ϵsampleunpacked = Vector{Float64}(undef, nsteps)
+        for index in 1:nsteps
+            τCsampleunpacked[index] = τCsample[index, nsample[index]]
+            τAsampleunpacked[index] = τAsample[index, nsample[index]]
+            ϵsampleunpacked[index] = ϵsample[index, nsample[index]]
+        end  
+        acceptedvecunpacked = BitVector(undef, nsteps)
+        acceptedvecunpacked[1] = true
+        for index in 2:nsteps
+            if (nsample[index] == nsample[index-1]) && (τCsampleunpacked[index] == τCsampleunpacked[index-1]) && (τAsampleunpacked[index] == τAsampleunpacked[index-1])  
+                acceptedvecunpacked[index] = false
+            else
+                acceptedvecunpacked[index] = true
+            end 
+        end
         local df = DataFrame(
                              anchorpop = repeat([anchorpop], nsteps),
                              ancientpop = repeat([ancientpop], nsteps),
@@ -181,11 +185,11 @@ coverage = 64 # the coverage is 64 everywhere.
                              truenumind = repeat([truenumind], nsteps),
                              coverage = repeat([coverage], nsteps),
                              nsample = nsample,
-                             τCsample = τCsample,
-                             τAsample = τAsample,
-                             ϵsample = ϵsample,
-                             accepted = acceptedvec,
-                             logjointprob = logjointprob,
+                             τCsample = τCsampleunpacked,
+                             τAsample = τAsampleunpacked,
+                             ϵsample = ϵsampleunpacked,
+                             accepted = acceptedvecunpacked,
+                             logjointprob = logjointprob[:,1],
                              chainid = repeat([Int(chain)], nsteps)
                             )
         CSV.write(csvfile, df, append=true)

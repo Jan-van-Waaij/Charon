@@ -165,43 +165,13 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                 if step < nsteps÷4 && step > 1000  
                     percentage = round(Int, 100*step / nsteps)
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
-                    if acceptancerate < 0.01 # acceptancerate extremely low, take smaller steps.
-                        factor = 1/100
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
-                        factor = 1/10
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate < 0.1 # acceptancerate low, take smaller steps.
-                        factor = 1/2
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate < 0.234 # acceptancerate low, take smaller steps.
-                        factor = 3/4
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.99 
-                        factor = 100
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.9
-                        factor = 10
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.8 # acceptancerate too large, take bigger steps.
-                        factor = 2
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
-                        factor = 4/3
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.44 # acceptancerate too large, take bigger steps.
-                        factor = 11/10
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    end # So do nothing when the acceptancerate is between 0.234 and 0.44. 
+                    if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
+                        scalefactor = 3*scalefactor/4
+                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
+                        scalefactor = 4*scalefactor/3
+                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
+                    end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                 Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]]) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
@@ -372,43 +342,13 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                 # the covariance is calculated from the previous steps and used in the next iteration.
                 if step < nsteps÷4 && step > 1000  
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
-                    if acceptancerate < 0.01 # acceptancerate extremely low, take smaller steps.
-                        factor = 1/100
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
-                        factor = 1/10
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate < 0.1 # acceptancerate low, take smaller steps.
-                        factor = 1/2
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate < 0.234 # acceptancerate low, take smaller steps.
-                        factor = 3/4
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.99 
-                        factor = 100
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.9
-                        factor = 10
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.8 # acceptancerate too large, take bigger steps.
-                        factor = 2
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
-                        factor = 4/3
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.44 # acceptancerate too large, take bigger steps.
-                        factor = 11/10
-                        scalefactor *= factor
-                        println("Chain ", chainindex, " talking, ", percentage, "% finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                    end # So do nothing when the acceptancerate is between 0.234 and 0.44.
+                    if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
+                        scalefactor = 3*scalefactor/4
+                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
+                        scalefactor = 4*scalefactor/3
+                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
+                    end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                 Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]]) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
@@ -613,43 +553,13 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                 for n in 1:nmax
                     if step < nsteps÷4 && step > 1000  
                         acceptancerate = mean(acceptedvec[step-999:step, n+1]) # acceptance rate in the last 1000 steps.
-                        if acceptancerate < 0.01 # acceptancerate extremely low, take smaller steps.
-                            factor = 1/100
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
-                            factor = 1/10
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate < 0.1 # acceptancerate low, take smaller steps.
-                            factor = 1/2
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate < 0.234 # acceptancerate low, take smaller steps.
-                            factor = 3/4
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.99 
-                            factor = 100
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.9
-                            factor = 10
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.8 # acceptancerate too large, take bigger steps.
-                            factor = 2
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
-                            factor = 4/3
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.44 # acceptancerate too large, take bigger steps.
-                            factor = 11/10
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        end # So do nothing when the acceptancerate is between 0.234 and 0.44.
+                        if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
+                            scalefactor = 3*scalefactor/4
+                            println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
+                            scalefactor = 4*scalefactor/3
+                            println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
+                        end # So do nothing when the acceptancerate is between 0.1 and 0.6.     
                     end 
                     # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                     Σ = scalefactor[n] * (cov([τCsample[1:10:step, n] τAsample[1:10:step, n]]) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
@@ -852,43 +762,13 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                 for n in 1:nmax
                     if step < nsteps÷4 && step > 1000  
                         acceptancerate = mean(acceptedvec[step-999:step, n+1]) # acceptance rate in the last 1000 steps.
-                        if acceptancerate < 0.01 # acceptancerate extremely low, take smaller steps.
-                            factor = 1/100
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate < 0.05 # acceptancerate very low, take smaller steps.
-                            factor = 1/10
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate < 0.1 # acceptancerate low, take smaller steps.
-                            factor = 1/2
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate < 0.234 # acceptancerate low, take smaller steps.
-                            factor = 3/4
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.99 
-                            factor = 100
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.9
-                            factor = 10
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.8 # acceptancerate too large, take bigger steps.
-                            factor = 2
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
-                            factor = 4/3
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.44 # acceptancerate too large, take bigger steps.
-                            factor = 11/10
-                            scalefactor[n] *= factor
-                            #println("Chain ", chainindex, " talking, ", percentage, " finished, I scaled scalefactor with factor ", factor, ", new scalefactor = ", scalefactor, '.')
-                        end # So do nothing when the acceptancerate is between 0.234 and 0.44.
+                        if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
+                            scalefactor = 3*scalefactor/4
+                            println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
+                            scalefactor = 4*scalefactor/3
+                            println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
+                        end # So do nothing when the acceptancerate is between 0.1 and 0.6.     
                     end 
                     # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                     Σ = scalefactor[n] * (cov([τCsample[1:10:step, n] τAsample[1:10:step, n]]) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
