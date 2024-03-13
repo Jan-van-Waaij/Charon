@@ -30,23 +30,40 @@ anchorpops = ["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = [1, 2, 4, 8]
 allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec] # 64 elementen. 
 
+#randomselection = sample(1:64, 4, replace=false)
+
+#= 
+[38, 63, 36, 57]
+("CHB", "YRIS", 2)
+("KAR", "KARS", 4)
+("CHB", "CHBS", 8)
+("KAR", "CEUS", 1)
+
+println(randomselection)
+allcombinations = allcombinations[randomselection]
+for combination in allcombinations
+    println(combination)
+end 
+=# 
+
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
 exeflags = ["--project=$dir", "--threads=4", "--optimize=3"]
 
 nodes = [
-    ("node01", 5), # not used
-    ("node02", 3), # not used
-    ("node03", 6), # not used 
-    ("node04", 6), # not used 
-    ("node05", 5), #6), # 4 cores in use. 
-    ("node06", 4), # 1 core in use. 
-    ("node07", 14), #14), # 16), # 4 cores in use. 
-    ("node08", 4), # not used 
-    ("node11", 8), #10), # 1 core in use 
-    ("node12", 3), # not used 
-    ("node13", 3), # not used.  
-    ("node14", 3), # not used 
+    ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
+    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
+    ("node06", 5), # 1 core in use. MAX CAP FOR ME: 5 ASO MODE 6
+    #("node07", 0), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
+    ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
+    #("node11", 0), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
+    ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
+    ("node13", 3), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
+    ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    ("compute01", 16) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
 ]
 
 numprocs = sum(item[2] for item in nodes)
@@ -103,7 +120,7 @@ projects = fetch.(futures3)
 @assert unique(projects) == [dir*"/Project.toml"]
 
 
-nsteps = 100_000 # number of steps in mcmc chain 
+nsteps = 400_000 # number of steps in mcmc chain 
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
 prioronn = DiscreteUniform(1, 10) # uniform prior on {1, 2, ..., 10}
 prioronϵ = Uniform(0, 0.5) # uniform prior on [0, 0.5]
@@ -155,7 +172,7 @@ coverage = 64 # the coverage is 64 everywhere.
                    logjointprob = Float64[],
                    chainid = Int[]
                   )
-    CSV.write(csvfile, df)
+    CSV.write(csvfile, df, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
     #results = MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 2000)
     results = MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 2000)
     for chain in eachindex(results)
@@ -192,7 +209,7 @@ coverage = 64 # the coverage is 64 everywhere.
                              logjointprob = logjointprob[:,1],
                              chainid = repeat([Int(chain)], nsteps)
                             )
-        CSV.write(csvfile, df, append=true)
+        CSV.write(csvfile, df, append=true, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
     end # chain 
     command = `gzip -f $csvfile`
     run(command)

@@ -11,11 +11,35 @@ for node in nodes
     append!(processes, addprocs([node], dir=dir, exename=exename, exeflags=exeflags))
 end 
 
+@everywhere function get_cpu_stats()
+    st = read("/proc/stat", String)
+    m = match(r"^cpu\s+(.*)", st)
+    parse.(Int, split(m.captures[1], ' '))
+end
+
+
+@everywhere cpu_usage = py"""
+import psutil
+def get_cpu():
+    return psutil.cpu_percent()
+"""
+
+futures = [@spawnat process get_cpu_stats() for process in processes] 
+cpuusage = fetch.(futures)
+
+
 @everywhere using Hwloc 
 
 futures = [@spawnat process num_physical_cores() for process in processes] 
 
 cores = fetch.(futures)
+
+@everywhere using Hwloc 
+
+futures = [@spawnat process num_virtual_cores() for process in processes] 
+
+cores = fetch.(futures)
+
 
 @everywhere Base.Threads 
 
