@@ -30,7 +30,7 @@ ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = [1, 2, 4, 8]
 allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec] 
-nsteps = 100_000 # number of steps in mcmc chain 
+nsteps = 400_000 # number of steps in mcmc chain 
 nchains = 4 # number of chains. 
 trueϵ = 0.001 # true error rate used in the simulations. 
 coverage = 64 # the coverage is 64 everywhere. 
@@ -42,20 +42,25 @@ ancientpop = "YRIS"
 csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
 zippedcsvfile = csvfile * ".gz"
 
-df = CSV.read(zippedcsvfile, DataFrame, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
+df = CSV.read(zippedcsvfile, DataFrame)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
 
 gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
 
 # make plots
-allcombinations = allcombinations[[38, 63, 36, 57]]
+#allcombinations = allcombinations[[38, 63, 36, 57]]
 for (anchorpop, ancientpop, truenumind) in allcombinations
     csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
+    if !isfile(zippedcsvfile)
+        continue
+    end 
     plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "plots", "Madsmodel", string("MCMCplotsMadsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
     df = CSV.read(zippedcsvfile, DataFrame)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
-    chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
-    chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
+    # chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+    # chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
+    chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+    chain = Chains(chainarray, [:τCsample, :τAsample, :ϵsample])
     p=plot(chain)
     savefig(p, plotfile)
     display(p)
@@ -111,6 +116,27 @@ lowerbound(x) = quantile(x[end÷2:100:end], 0.025)
 upperbound(x) = quantile(x[end÷2:100:end], 0.975)
 
 #cdf= combine(gdf, :nsample => f => mean)
+
+grid = 1:10_000:80_001  # vcat(1:80_000:400_000, 400_000)
+ranges = [grid[n]:grid[n+1] for n in eachindex(grid)[1:end-1]]
+
+acceptance(x, range) = mean(x[range])
+
+cdf = combine(gdf, :accepted .=> [x -> acceptance(x, range) for range in ranges] .=> [Symbol(:accrange, n) for n in 1:length(ranges)])
+
+allcdf2 = DataFrame()
+for (anchorpop, ancientpop, truenumind) in allcombinations
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    zippedcsvfile = csvfile * ".gz"
+    if !isfile(zippedcsvfile)
+        continue
+    end 
+    df = CSV.read(zippedcsvfile, DataFrame)
+    gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
+    cdf = combine(gdf, :accepted .=> [x -> acceptance(x, range) for range in ranges] .=> [Symbol(:accrange, n) for n in 1:length(ranges)])
+    append!(allcdf2, cdf)
+end 
+
 
 cdf= combine(gdf, :nsample => lowerbound => Symbol("n 0.025%"),
                      :nsample => f => :nmean,

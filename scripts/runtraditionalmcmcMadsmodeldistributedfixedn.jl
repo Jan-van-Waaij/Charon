@@ -132,7 +132,10 @@ trueϵ = 0.001 # true error rate used in the simulations.
 
 coverage = 64 # the coverage is 64 everywhere. 
 
-@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations    
+allcombinations2 = allcombinations[[38, 63, 36, 57]]
+factors = [0.001, 0.01, 0.1, 0.2 , 0.4 , 0.5, 0.6, 0.7, 0.9, 1.0 , 1.1, 1.2, 1.4, 1.5, 1.7,  2.0]
+allcombinations3 = [(tuple..., factor) for tuple in allcombinations2 for factor in factors]
+@sync @distributed for (anchorpop, ancientpop, truenumind, factor) in allcombinations3    
     starttime = now()
     frequencyfile = "data/frequencies/freqanchor/Madsmodel_freq_anchor_$(anchorpop).txt.gz"
     if !isfile(frequencyfile)
@@ -158,7 +161,7 @@ coverage = 64 # the coverage is 64 everywhere.
         println(zippedcsvfile, " does already exist. Do not overwrite existing files!")
         continue 
     end
-    =#
+    =# #pid 614428
     df = DataFrame(anchorpop = String[],
                    ancientpop = String[],
                    trueϵ = Float64[],
@@ -169,10 +172,11 @@ coverage = 64 # the coverage is 64 everywhere.
                    ϵsample = Float64[],
                    accepted = Bool[],
                    logjointprob = Float64[],
+                   factor = Float64[],
                    chainid = Int[]
                   )
-    CSV.write(csvfile, df, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
-    results = MHsampler(nchains, nsteps, truenumind, prioronτCτA, prioronϵ, R, d, y, 1000)
+    CSV.write(csvfile, df)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
+    results = MHsampler(nchains, nsteps, truenumind, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1000, factor = factor)
     for chain in eachindex(results)
         τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[chain]
         local df = DataFrame(
@@ -186,6 +190,7 @@ coverage = 64 # the coverage is 64 everywhere.
                              ϵsample = ϵsample,
                              accepted = acceptedvec,
                              logjointprob = logjointprob,
+                             factor = repeat([factor], nsteps),
                              chainid = repeat([Int(chain)], nsteps)
                             )
         CSV.write(csvfile, df, append=true)

@@ -39,7 +39,7 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Float64, Float64, Float64}}=nothing)
+function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Float64, Float64, Float64}}=nothing, factor::Union{Nothing, Float64}=nothing)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronϵ) ≥ 0 || throw(ArgumentError("prioronϵ should have support on [0, 0.5], but the minimum is negative."))
@@ -114,7 +114,11 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         # covariance matrix Σ.
         σ = 0.001
         distproposalϵ = Normal(0.0, σ)
-        scalefactor = 1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
+        if factor === nothing 
+            scalefactor = 1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
+        else 
+            scalefactor = factor * 1.8881
+        end  
         for step in 2:nsteps  
             # draw proposals. 
             τCproposal, τAproposal = [τCprevious, τAprevious] + rand(distproposalτCτA)
@@ -153,15 +157,17 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
             end 
             if step % 1000 == 0
                 # the covariance is calculated from the previous steps and used in the next iteration.
-                if step < nsteps÷4 && step > 1000  
-                    acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
-                    if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
-                        scalefactor = 3*scalefactor/4
-                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
-                        scalefactor = 4*scalefactor/3
-                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
-                    end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
+                if factor === nothing 
+                    if step < nsteps÷4 && step > 1000  
+                        acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
+                        if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
+                            scalefactor = 3*scalefactor/4
+                            println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                        elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
+                            scalefactor = 4*scalefactor/3
+                            println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
+                        end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
+                    end 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                 Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]]) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
