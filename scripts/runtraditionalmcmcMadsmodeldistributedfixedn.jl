@@ -56,19 +56,19 @@ nodes = [
     ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
-    ("node06", 5), # 1 core in use. MAX CAP FOR ME: 5 ASO MODE 6
-    #("node07", 0), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
+    ("node06", 5), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
+    ("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
     ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
-    #("node11", 0), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
+    ("node11", 8), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
     ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
     ("node13", 3), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
     ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("compute01", 16) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
+    ("compute01", 26) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
 ]
 
 numprocs = sum(item[2] for item in nodes)
 
-@assert numprocs == 64
+#@assert numprocs == 64
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
@@ -108,6 +108,7 @@ forceprecompile()
 futures = [@spawnat process forceprecompile() for process in processes]
 fetch.(futures)
 
+#=
 @assert nworkers() == 64
 @assert nworkers() == length(processes)
 @assert numprocs == 64
@@ -118,7 +119,7 @@ num_threads = fetch.(futures2)
 futures3 = [@spawnat process Base.active_project() for process in processes]
 projects = fetch.(futures3)
 @assert unique(projects) == [dir*"/Project.toml"]
-
+=#
 
 nsteps = 400_000 # number of steps in mcmc chain 
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
@@ -133,7 +134,7 @@ trueϵ = 0.001 # true error rate used in the simulations.
 coverage = 64 # the coverage is 64 everywhere. 
 
 allcombinations2 = allcombinations[[38, 63, 36, 57]]
-factors = [0.001, 0.01, 0.1, 0.2 , 0.4 , 0.5, 0.6, 0.7, 0.9, 1.0 , 1.1, 1.2, 1.4, 1.5, 1.7,  2.0]
+factors = [10.0^(-k) for k in 4:10]#[0.001, 0.01, 0.1, 0.2 , 0.4 , 0.5, 0.6, 0.7, 0.9, 1.0 , 1.1, 1.2, 1.4, 1.5, 1.7,  2.0]
 allcombinations3 = [(tuple..., factor) for tuple in allcombinations2 for factor in factors]
 @sync @distributed for (anchorpop, ancientpop, truenumind, factor) in allcombinations3    
     starttime = now()
@@ -154,7 +155,7 @@ allcombinations3 = [(tuple..., factor) for tuple in allcombinations2 for factor 
     @assert coveragevec[1] == coverage
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, "_factor_", factor, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     #=
     if isfile(zippedcsvfile)

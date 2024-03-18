@@ -42,21 +42,30 @@ ancientpop = "YRIS"
 csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
 zippedcsvfile = csvfile * ".gz"
 
+zippedcsvfile = "data/mcmcsamples/Madsmodel_ancient_pop_KARS_anchor_pop_KAR_true_num_ind_4_factor_1.0.csv.gz"
+
 df = CSV.read(zippedcsvfile, DataFrame)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
 
 gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
 
 # make plots
 #allcombinations = allcombinations[[38, 63, 36, 57]]
-for (anchorpop, ancientpop, truenumind) in allcombinations
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+
+allcombinations2 = allcombinations[[38, 63, 36, 57]]
+factors = [0.001, 0.01, 0.1, 0.2 , 0.4 , 0.5, 0.6, 0.7, 0.9, 1.0 , 1.1, 1.2, 1.4, 1.5, 1.7,  2.0]
+allcombinations3 = [(tuple..., factor) for tuple in allcombinations2 for factor in factors]
+for (anchorpop, ancientpop, truenumind, factor) in allcombinations3
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, "_factor_", factor, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     if !isfile(zippedcsvfile)
         continue
     end 
-    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "plots", "Madsmodel", string("MCMCplotsMadsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
+    if factor != 1.0
+        continue
+    end 
+    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "plots", "Madsmodel", string("MCMCplotsMadsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, "_factor_", factor, ".png"))
     df = CSV.read(zippedcsvfile, DataFrame)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
-    gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
+    gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid, :factor])
     # chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     # chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
     chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
@@ -77,6 +86,25 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
         println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " rate ", rate)
     end 
 end 
+
+# calculate acceptancerate
+allcombinations2 = allcombinations[[38, 63, 36, 57]]
+factors = [10.0^(-k) for k in 4:10]#[0.001, 0.01, 0.1, 0.2 , 0.4 , 0.5, 0.6, 0.7, 0.9, 1.0 , 1.1, 1.2, 1.4, 1.5, 1.7,  2.0]
+allcombinations3 = [(tuple..., factor) for tuple in allcombinations2 for factor in factors]
+for (anchorpop, ancientpop, truenumind, factor) in allcombinations3
+    if factor != 10.0^(-6)
+        continue 
+    end 
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, "_factor_", factor, ".csv"))
+    zippedcsvfile = csvfile * ".gz"
+    df = CSV.read(zippedcsvfile, DataFrame)
+    gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
+    for chain in 1:4
+        rate = mean(gdf[chain].:accepted[end÷2:end])
+        println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " factor ", factor, " rate ", rate)
+    end 
+end 
+
 
 isconstant(x) = length(unique(x)) == 1 
 # constant n for all chains? 
