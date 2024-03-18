@@ -187,7 +187,7 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Float64, Float64, Float64}}=nothing, factor::Union{Nothing, Float64}=nothing)
+function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Float64, Float64, Float64}}=nothing, factor::Union{Nothing, Float64}=nothing, temperature::Float64=1.0)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronϵ) ≥ 0 || throw(ArgumentError("prioronϵ should have support on [0, 0.5], but the minimum is negative."))
@@ -200,7 +200,9 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
     length(d) == length(y) || throw(DimensionMismatch("d and y should be of the same length."))
     R > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
-    
+    1.0 ≤ temperature < Inf || throw(DomainError("temperature should be larger than 1.0 and finite."))
+    inversetemperature = 1/temperature
+
     # Remove frequencies 0.0 and 1.0
     allowedindices = 0.0 .< y .< 1.0
     d = d[allowedindices]
@@ -255,7 +257,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         loglikprevious == -Inf && throw(DomainError("The data does not support the initial value."))
         logpdfpriorprevious = logpdf(prioronτCτA, [τCprevious, τAprevious]) + logpdf(prioronϵ, ϵprevious)
         logpdfpriorprevious == -Inf && throw(DomainError("The initial value is outside the support of the prior."))
-        logjointprob[1] = loglikprevious + logpdfpriorprevious 
+        logjointprob[1] = loglikprevious + logpdfpriorprevious
         # Define proposal densities. 
         Σ = [0.00001 0.0; 0.0 0.00001]
         distproposalτCτA = MvNormal(Σ)# Multivariate normal distribution with mean zero and 
@@ -281,8 +283,8 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
             logpdfpriorproposal = logpdf(prioronτCτA, [τCproposal, τAproposal]) + logpdf(prioronϵ, ϵproposal)
             # calculate the acceptance probability. 
             # Note that our proposal function for n, τC, τA, ϵ is symmetric, i.e. q(x|y)=q(y|x).
-            logacceptanceprobability = loglikproposal - loglikprevious + 
-                logpdfpriorproposal - logpdfpriorprevious 
+            logacceptanceprobability = inversetemperature * ( loglikproposal - loglikprevious + 
+                logpdfpriorproposal - logpdfpriorprevious )
             acceptanceprobability = exp(logacceptanceprobability)
             # accept or reject the proposal with probability max(1, acceptanceprobability), note that rand() samples from the uniform distribution.
             accepted = rand() ≤ acceptanceprobability
@@ -323,7 +325,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                 distproposalτCτA = MvNormal(Σ)
                 # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
                 # so not really necessary. 
-                σ = std(ϵsample[1:10:step], corrected=true) + 1.0e-5 # small threshold to prevent getting zero variance. 
+                σ = std(ϵsample[1:10:step], corrected=true) + 1.0e-10 # small threshold to prevent getting zero variance. 
                 distproposalϵ = Normal(0.0, sqrt(scalefactor) * σ)
             end
             if messages > 0 # No messages at all when messages ≤ 0.
