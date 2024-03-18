@@ -171,7 +171,6 @@ allcombinations2 = allcombinations[[38, 63, 36, 57]]
                    ϵsample = Float64[],
                    accepted = Bool[],
                    logjointprob = Float64[],
-                   factor = Float64[],
                    chainid = Int[]
                   )
     CSV.write(csvfile, df)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
@@ -189,7 +188,6 @@ allcombinations2 = allcombinations[[38, 63, 36, 57]]
                              ϵsample = ϵsample,
                              accepted = acceptedvec,
                              logjointprob = logjointprob,
-                             factor = repeat([factor], nsteps),
                              chainid = repeat([Int(chain)], nsteps)
                             )
         CSV.write(csvfile, df, append=true)

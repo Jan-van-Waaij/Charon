@@ -66,6 +66,8 @@ nodes = [
     ("compute01", 26) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
 ]
 
+reverse!(nodes)
+
 numprocs = sum(item[2] for item in nodes)
 
 #@assert numprocs == 64
@@ -98,7 +100,7 @@ end
     coverage = 4 
     derivedreadsvec = [1, 1, 3, 2]
     freqs = [0.1, 0.2, 0.1, 0.15]
-    MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1)
+    MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1)
     return nothing 
 end 
 
@@ -155,7 +157,7 @@ allcombinations3 = [(tuple..., temperature) for tuple in allcombinations2 for te
     @assert coveragevec[1] == coverage
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, "_factor_", factor, "_temperature_", temperature, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, "_temperature_", temperature, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     #=
     if isfile(zippedcsvfile)
