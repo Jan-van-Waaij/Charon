@@ -69,8 +69,8 @@ function ExactPosterior(fixedn::Int, τrange::AbstractVector{Float64}, fixedϵ::
     q = MMatrix{2fixedn+1, R+1, Float64}(undef)
     M = Matrix{Float64}(undef, 2fixedn+1, 2fixedn+1)
         
-    for k in 0:2n
-        dist = Binomial(R, k*(1.0-fixedϵ)/(2n) + (2n-k)*fixedϵ/(2n))
+    for k in 0:2fixedn
+        dist = Binomial(R, k*(1.0-fixedϵ)/(2fixedn) + (2fixedn-k)*fixedϵ/(2fixedn))
         for d in 0:R
             q[k+1, d+1] = pdf(dist, d)
         end 
