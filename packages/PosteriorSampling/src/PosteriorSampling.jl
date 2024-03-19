@@ -40,29 +40,29 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function ExactPosterior(fixedn::Int, τrange::AbstractVector{Float64}, fixedϵ::Float64, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=length(τrange)^2÷100)
+function ExactPosterior(fixedn::Int, τrange::AbstractVector{Float64}, fixedϵ::Float64, R::Int, reads::Vector{Int}, y::Vector{Float64}, messages::Int=length(τrange)^2÷100)
     # Check conditions.
     0≤fixedϵ<0.5 || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(τrange) > 0 || throw(ArgumentError("τrange should have at least one element."))
     R > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
-    minimum(d) ≥ 0 || throw(DomainError("All reads should be non-negative."))
-    all(d .≤ R) || throw(DomainError("All reads should be at most the coverage."))
+    minimum(reads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
+    all(reads .≤ R) || throw(DomainError("All reads should be at most the coverage."))
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
-    length(d) == length(y) || throw(DimensionMismatch("d and y should be of the same length."))
+    length(reads) == length(y) || throw(DimensionMismatch("d and y should be of the same length."))
     
     # Remove frequencies 0.0 and 1.0
     allowedindices = 0.0 .< y .< 1.0
     any(allowedindices) || throw(ArgumentError("At least one element of y should be strictly between 0 and 1."))
-    d = d[allowedindices]
+    reads = reads[allowedindices]
     y = y[allowedindices]
 
-    tuples = zip(d, y)
+    tuples = zip(reads, y)
     cm = countmap(tuples)
     thekeys = keys(cm)
-    d = [key[1] for key in thekeys]
+    reads = [key[1] for key in thekeys]
     y = [key[2] for key in thekeys]
     counts = collect(values(cm))
-    d = SizedVector{length(d), Int}(d)
+    reads = SizedVector{length(reads), Int}(reads)
 
     Q, Qꜜ, hvals, binomialcoefficients = preparedata(fixedn, y)
     p = MVector{2fixedn+1, Float64}(undef)
