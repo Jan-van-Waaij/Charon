@@ -70,10 +70,10 @@ end
 
 
 allcombinations2 = allcombinations[[38, 63, 36, 57]]
-temperatures = [1.0, 2.0, 4.0, 8.0, 16.0, 100.0]
+temperatures = vcat(20.0:20.0:80.0, 120.0:20.0:160.0) #[1.0, 2.0, 4.0, 8.0, 16.0, 100.0]
 allcombinations3 = [(tuple..., temperature) for tuple in allcombinations2 for temperature in temperatures]
 for (anchorpop, ancientpop, truenumind, temperature) in allcombinations3
-    if temperature != 100.0 
+    if temperature != 1.0 
         continue 
     end 
     csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, "_temperature_", temperature, ".csv"))
@@ -118,7 +118,7 @@ end
 
 # calculate acceptancerate
 allcombinations2 = allcombinations[[38, 63, 36, 57]]
-temperatures = [1.0, 2.0, 4.0, 8.0, 16.0, 100.0]
+temperatures = vcat(20.0:20.0:80.0, 120.0:20.0:160.0) #[1.0, 2.0, 4.0, 8.0, 16.0, 100.0]
 allcombinations3 = [(tuple..., temperature) for tuple in allcombinations2 for temperature in temperatures]
 for (anchorpop, ancientpop, truenumind, temperature) in allcombinations3
     csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, "_temperature_", temperature, ".csv"))
@@ -127,7 +127,7 @@ for (anchorpop, ancientpop, truenumind, temperature) in allcombinations3
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     for chain in 1:4
         rate = mean(gdf[chain].:accepted[end÷2:end])
-        println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " rate ", rate)
+        println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " temperature ", temperature, " rate ", rate)
     end 
 end 
 

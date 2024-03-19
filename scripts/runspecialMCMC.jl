@@ -51,21 +51,20 @@ exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
 exeflags = ["--project=$dir", "--threads=4", "--optimize=3"]
 
 nodes = [
-    ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
-    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    #("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
+    #("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    #("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     #("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
-    ("node06", 5), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
-    ("node07", 10), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
-    ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
+    #("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
+    ("node06", 4), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
+    ("node07", 4), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
+   # ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
     #("node11", 8), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
-    ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
-    ("node13", 3), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
-    ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("compute01", 13) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
+    #("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
+    #("node13", 3), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
+    #("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    #("compute01", 13) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
 ]
-
 numprocs = sum(item[2] for item in nodes)
 
 #@assert numprocs == 64
@@ -155,7 +154,7 @@ allcombinations3 = [(tuple1..., tuple2...) for tuple1 in allcombinations2 for tu
     @assert coveragevec[1] == coverage
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_Special_MCMC_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_Special_MCMC_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, "_stdtau_", stdτ, "_stdeps_", stdϵ, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     #=
     if isfile(zippedcsvfile)

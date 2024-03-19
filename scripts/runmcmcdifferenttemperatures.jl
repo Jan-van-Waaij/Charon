@@ -136,7 +136,7 @@ trueϵ = 0.001 # true error rate used in the simulations.
 coverage = 64 # the coverage is 64 everywhere. 
 
 allcombinations2 = allcombinations[[38, 63, 36, 57]]
-temperatures = vcat(20.0:20.0:80.0, 120.0:20.0:160.0) #[1.0, 2.0, 4.0, 8.0, 16.0, 100.0]
+temperatures = [200, 400, 1000, 10_000.0]#vcat(20.0:20.0:80.0, 120.0:20.0:160.0) #[1.0, 2.0, 4.0, 8.0, 16.0, 100.0]
 allcombinations3 = [(tuple..., temperature) for tuple in allcombinations2 for temperature in temperatures]
 @sync @distributed for (anchorpop, ancientpop, truenumind, temperature) in allcombinations3    
     starttime = now()

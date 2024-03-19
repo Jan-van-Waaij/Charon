@@ -15,7 +15,8 @@ using StaticArrays
 
 export logprobderivedreads!, # the log probability of the read vector. A.k.a. the likelihood.
        EigenExpansion, # Data type to store a decomposition A = XDX^{-1}, which allows for fast matrix exponentiation.
-       preparedata # prepare the data needed for logprobderivedreads!, for fixed n. 
+       preparedata, # prepare the data needed for logprobderivedreads!, for fixed n. 
+       probderivedalleles! 
 
 # Test written
 struct EigenExpansion{S, T}
