@@ -216,7 +216,7 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function SpecialSampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Float64, Float64, Float64}}=nothing)
+function SpecialSampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Float64, Float64, Float64}}=nothing, stdτ::Float64, stdϵ::Float64)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronϵ) ≥ 0 || throw(ArgumentError("prioronϵ should have support on [0, 0.5], but the minimum is negative."))
@@ -252,11 +252,10 @@ function SpecialSampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::C
     d = SizedVector{length(d), Int}(d)
     Q, Qꜜ, hvals, binomialcoefficients = preparedata(fixedn, y)
 
-    Σ = 10.0^(-10)*I(2)
+    Σ = stdτ^2*I(2)#10.0^(-10)*I(2)
     distproposalτCτA = MvNormal(Σ)# Multivariate normal distribution with mean zero and 
         # covariance matrix Σ.
-    σ = 0.0001
-    distproposalϵ = Normal(0.0, σ)
+    distproposalϵ = Normal(0.0, stdϵ)
 
     results = Vector{Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}, BitVector, Vector{Float64}}}(undef,nchains)        
     @threads for chainindex in eachindex(results) 

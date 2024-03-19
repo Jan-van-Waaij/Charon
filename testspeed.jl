@@ -13,4 +13,4 @@ Qꜜ = EigenExpansion(makeQꜜ(n))
         expτCQꜜ = exp(Qꜜ, τC)
         M = expτAQ * expτCQꜜ
     end
-end
+end # 17 minuten. 

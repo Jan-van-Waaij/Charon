@@ -133,8 +133,10 @@ trueϵ = 0.001 # true error rate used in the simulations.
 
 coverage = 64 # the coverage is 64 everywhere. 
 
+stdsparameters = [(10.0^(-3), 0.001), (10.0^(-4.5), 0.0001)]
 allcombinations2 = allcombinations[[38, 63, 36, 57]]
-@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations2    
+allcombinations3 = [(tuple1..., tuple2...) for tuple1 in allcombinations2 for tuple2 in stdsparameters] 
+@sync @distributed for (anchorpop, ancientpop, truenumind, stdτ, stdϵ) in allcombinations3    
     starttime = now()
     frequencyfile = "data/frequencies/freqanchor/Madsmodel_freq_anchor_$(anchorpop).txt.gz"
     if !isfile(frequencyfile)
@@ -174,7 +176,7 @@ allcombinations2 = allcombinations[[38, 63, 36, 57]]
                    chainid = Int[]
                   )
     CSV.write(csvfile, df)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
-    results = SpecialSampler(nchains, nsteps, truenumind, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1000)
+    results = SpecialSampler(nchains, nsteps, truenumind, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1000, stdτ = stdτ, stdϵ = stdϵ)
     for chain in eachindex(results)
         τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[chain]
         local df = DataFrame(

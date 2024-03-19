@@ -56,17 +56,17 @@ nodes = [
     ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
-    ("node06", 5), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
-    ("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
-    ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
-    ("node11", 8), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
-    ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
-    ("node13", 3), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
-    ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("compute01", 26) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
+    ("node06", 1), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
+   # ("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
+   # ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
+    #("node11", 8), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
+    #("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
+    #("node13", 3), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
+    #("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    #("compute01", 13) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
 ]
 
-reverse!(nodes)
+#reverse!(nodes)
 
 numprocs = sum(item[2] for item in nodes)
 
@@ -136,7 +136,7 @@ trueϵ = 0.001 # true error rate used in the simulations.
 coverage = 64 # the coverage is 64 everywhere. 
 
 allcombinations2 = allcombinations[[38, 63, 36, 57]]
-temperatures = [1.0, 2.0, 4.0, 8.0, 16.0, 100.0]
+temperatures = vcat(20.0:20.0:80.0, 120.0:20.0:160.0) #[1.0, 2.0, 4.0, 8.0, 16.0, 100.0]
 allcombinations3 = [(tuple..., temperature) for tuple in allcombinations2 for temperature in temperatures]
 @sync @distributed for (anchorpop, ancientpop, truenumind, temperature) in allcombinations3    
     starttime = now()
