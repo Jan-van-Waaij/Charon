@@ -14,7 +14,8 @@ using Distributions, # for probability distributions
       
 export MHsampler, # The mcmc sampler.
        MCMCSimProp, # More efficient mcmc sampler for low coverage with simulated proposal, at the cost of a longer run time. 
-       SpecialSampler
+       SpecialSampler, 
+       ExactPosterior
 
 ##
 ##
