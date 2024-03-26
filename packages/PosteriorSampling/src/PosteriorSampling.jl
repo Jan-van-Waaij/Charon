@@ -10,6 +10,7 @@ using Distributions, # for probability distributions
       StatsBase, # for countmap
       LinearAlgebra, # Needed for the identity matrix I. 
       StaticArrays, # for SizedVector and MVector, they are generally faster.
+      CSV, # for CSV files. 
       Base.Threads # for multithreading.
       
 export MHsampler, # The mcmc sampler.
@@ -409,7 +410,12 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                     end 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
+                #Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I)
+                Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-10*I
+                if step % 100_000 == 0
+                    @show Σ 
+                end 
+                # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                 # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
                 distproposalτCτA = MvNormal(Σ)
                 # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,

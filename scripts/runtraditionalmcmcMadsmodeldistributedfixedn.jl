@@ -25,8 +25,8 @@ using Data, # For parsing frequency and read files.
       Base.Threads, # for threads
       Distributed
 
-ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
-anchorpops = ["YRI", "CEU", "CHB", "KAR"]
+ancientpops = ["CEUS"] #["CHBS", "YRIS", "CEUS", "KARS"]
+anchorpops = ["CEU"] #["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = [1, 2, 4, 8]
 allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec] # 64 elementen. 
 
@@ -51,10 +51,11 @@ exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
 exeflags = ["--project=$dir", "--threads=4", "--optimize=3"]
 
 nodes = [
-    ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
+   #= ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
     ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+   =#
+    ("node03", 4) #6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+   #= ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
     ("node06", 5), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
     ("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
@@ -64,21 +65,22 @@ nodes = [
     ("node13", 3), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
     ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
     ("compute01", 26) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
+   =#
 ]
-
-numprocs = sum(item[2] for item in nodes)
-
-#@assert numprocs == 64
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
 numthreadsperprocess = 4
 exeflags = ["--project=$dir", "--threads=$numthreadsperprocess", "--optimize=3", "--banner=no"] 
 
+addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
+
+#=
 processes = Int[]
 for node in nodes 
     append!(processes, addprocs([node], dir=dir, exename=exename, exeflags=exeflags))
 end 
+=# 
 
 @everywhere using Data, # For parsing frequency and read files. 
       DataFrames, # work with data frames.
@@ -89,6 +91,7 @@ end
       Base.Threads, # for threads
       Distributed
 
+      #=
 @everywhere function forceprecompile()
     nchains = 2
     nsteps = 4 
@@ -108,7 +111,7 @@ forceprecompile()
 futures = [@spawnat process forceprecompile() for process in processes]
 fetch.(futures)
 
-#=
+
 @assert nworkers() == 64
 @assert nworkers() == length(processes)
 @assert numprocs == 64
@@ -121,9 +124,8 @@ projects = fetch.(futures3)
 @assert unique(projects) == [dir*"/Project.toml"]
 =#
 
-nsteps = 400_000 # number of steps in mcmc chain 
+nsteps = 800_000 # number of steps in mcmc chain 
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
-prioronn = DiscreteUniform(1, 10) # uniform prior on {1, 2, ..., 10}
 prioronϵ = Uniform(0, 0.5) # uniform prior on [0, 0.5]
 nchains = 4 # number of chains. 
 @assert nchains == numthreadsperprocess
@@ -133,10 +135,10 @@ trueϵ = 0.001 # true error rate used in the simulations.
 
 coverage = 64 # the coverage is 64 everywhere. 
 
-allcombinations2 = allcombinations[[38, 63, 36, 57]]
-factors = [10.0^(-k) for k in 4:10]#[0.001, 0.01, 0.1, 0.2 , 0.4 , 0.5, 0.6, 0.7, 0.9, 1.0 , 1.1, 1.2, 1.4, 1.5, 1.7,  2.0]
-allcombinations3 = [(tuple..., factor) for tuple in allcombinations2 for factor in factors]
-@sync @distributed for (anchorpop, ancientpop, truenumind, factor) in allcombinations3    
+#allcombinations2 = allcombinations[[38, 63, 36, 57]]
+#factors = [10.0^(-k) for k in 4:10]#[0.001, 0.01, 0.1, 0.2 , 0.4 , 0.5, 0.6, 0.7, 0.9, 1.0 , 1.1, 1.2, 1.4, 1.5, 1.7,  2.0]
+#allcombinations3 = [(tuple..., factor) for tuple in allcombinations2 for factor in factors]
+@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations   
     starttime = now()
     frequencyfile = "data/frequencies/freqanchor/Madsmodel_freq_anchor_$(anchorpop).txt.gz"
     if !isfile(frequencyfile)
@@ -177,7 +179,7 @@ allcombinations3 = [(tuple..., factor) for tuple in allcombinations2 for factor 
                    chainid = Int[]
                   )
     CSV.write(csvfile, df)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
-    results = MHsampler(nchains, nsteps, truenumind, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1000, factor = factor)
+    results = MHsampler(nchains, nsteps, truenumind, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1000)
     for chain in eachindex(results)
         τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[chain]
         local df = DataFrame(

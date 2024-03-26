@@ -72,6 +72,11 @@ for (anchorpop, ancientpop, truenumind) in allcombinations2
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
     results = ExactPosterior(truenumind, τrange, 0.001, coverage, derivedreadsvec, freqs, 1)
-    println(results)
+    df = DataFrame(τC = results[1,:], τA=results[2,:], logpost = results[3,:])
+    println(df)
+    csvfile = "test.csv"
+    CSV.write(csvfile, df)
+    command = `gzip -f $csvfile`
+    run(command)
 end # (anchorpop, ancientpop, truenumind)
 
