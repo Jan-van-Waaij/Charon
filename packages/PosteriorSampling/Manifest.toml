@@ -44,9 +44,9 @@ version = "1.16.0"
 
 [[DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
-git-tree-sha1 = "1fb174f0d48fe7d142e1109a10636bc1d14f5ac2"
+git-tree-sha1 = "0f4b5d62a88d8f59003e43c25a8a90de9eb76317"
 uuid = "864edb3b-99cc-5e75-8d2d-829cb0a9cfe8"
-version = "0.18.17"
+version = "0.18.18"
 
 [[Dates]]
 deps = ["Printf"]
@@ -97,10 +97,10 @@ deps = ["Markdown"]
 uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[InverseFunctions]]
-deps = ["Test"]
-git-tree-sha1 = "68772f49f54b479fa88ace904f6127f0a3bb2e46"
+deps = ["Dates", "Test"]
+git-tree-sha1 = "896385798a8d49a255c398bd49162062e4a4c435"
 uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.12"
+version = "0.1.13"
 
 [[IrrationalConstants]]
 git-tree-sha1 = "630b497eafcc20001bba38a4651b327dcfc491d2"
@@ -134,7 +134,7 @@ uuid = "8f399da3-3557-5675-b5ff-fb832c97cbdb"
 
 [[Likelihood]]
 deps = ["Distributions", "LinearAlgebra", "StaticArrays"]
-git-tree-sha1 = "226b5755d4fcba773bef649bef7132c0e5946612"
+git-tree-sha1 = "07a494778672973bc5fedeaa77707c852cbd8331"
 repo-rev = "master"
 repo-subdir = "packages/Likelihood"
 repo-url = "/net/node07/home/projects/SedaDNA_Demo/simulationsMSPRIME"
@@ -207,9 +207,9 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[PrecompileTools]]
 deps = ["Preferences"]
-git-tree-sha1 = "03b4c25b43cb84cee5c90aa9b5ea0a78fd848d2f"
+git-tree-sha1 = "5aa36f7049a63a1528fe8f7c3f2113413ffd4e1f"
 uuid = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
-version = "1.2.0"
+version = "1.2.1"
 
 [[Preferences]]
 deps = ["TOML"]

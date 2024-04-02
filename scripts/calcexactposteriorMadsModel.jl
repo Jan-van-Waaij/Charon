@@ -49,17 +49,17 @@ end
 nodes = [
     #("node01", 1),# 20), # not used. MAX CAP FOR ME: 5 ASO MODE 6
     #("node02", 1), #12), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    #("node03", 1), #20), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    #("node04", 1), #6), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    ("node05", 5) #20), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
-   # ("node06", 17), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
-    ##("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
-   # ("node08", 16), # not used MAX CAP FOR ME: 4 ASO MODE 5
-    ##("node11", 8), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
-   # ("node12", 12), # not used MAX CAP FOR ME: 3 ASO MODE 4 
-   # ("node13", 12), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
-   # ("node14", 12), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ##("compute01", 13) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
+    #("node03", 24), #20), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    #("node04", 24), #6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    #("node05", 20), #20), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
+    #("node06", 17), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
+    #("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
+    #("node08", 16), # not used MAX CAP FOR ME: 4 ASO MODE 5
+    #("node11", 8), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
+    #("node12", 12), # not used MAX CAP FOR ME: 3 ASO MODE 4 
+    #("node13", 12), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
+    #("node14", 12), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    ("compute01", 60) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
 ]
 
 numprocs = sum(item[2] for item in nodes)
@@ -88,8 +88,9 @@ coverage = 64 # the coverage is 64 everywhere.
 
 
 allcombinations2 = allcombinations[[38, 63, 36, 57]]
+allcombinations3 = setdiff(allcombinations, allcombinations2)
 starttime = now()
-@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations2    
+@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations3    
     starttime = now()
     frequencyfile = "data/frequencies/freqanchor/Madsmodel_freq_anchor_$(anchorpop).txt.gz"
     if !isfile(frequencyfile)

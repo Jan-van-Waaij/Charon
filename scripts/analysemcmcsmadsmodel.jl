@@ -30,14 +30,17 @@ ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = [1, 2, 4, 8]
 allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec] 
-nsteps = 400_000 # number of steps in mcmc chain 
+allow(t) = (t[1] != "CEU") | (t[2] != "CEUS")
+filter!(allow, allcombinations)
+
+nsteps = 800_000 # number of steps in mcmc chain 
 nchains = 4 # number of chains. 
 trueϵ = 0.001 # true error rate used in the simulations. 
 coverage = 64 # the coverage is 64 everywhere. 
 
-anchorpop = "CHB"
+anchorpop = "CEU"
 truenumind = 2
-ancientpop = "YRIS"
+ancientpop = "CEUS"
 
 csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
 zippedcsvfile = csvfile * ".gz"
@@ -77,12 +80,11 @@ end
 allcombinations2 = allcombinations[[38, 63, 36, 57]]
 temperatures = [200, 400, 1000, 10_000.0]
 allcombinations3 = [(tuple..., temperature) for tuple in allcombinations2 for temperature in temperatures]
-for (anchorpop, ancientpop, truenumind, temperature) in allcombinations3
-    if temperature != 10_000.0 
-        continue 
-    end 
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, "_temperature_", temperature, ".csv"))
+for (anchorpop, ancientpop, truenumind) in allcombinations
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
+    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "Madsmodel", string("Usual_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
+    
     if !isfile(zippedcsvfile)
         continue
     end 
@@ -90,10 +92,11 @@ for (anchorpop, ancientpop, truenumind, temperature) in allcombinations3
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     # chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     # chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
-    chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+    chainarray = cat((Matrix(gdf[k][200_000:400_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     chain = Chains(chainarray, [:τCsample, :τAsample, :ϵsample])
     p=plot(chain)
-    display(p)
+    savefig(p, plotfile)
+    #display(p)
 end 
 
 # calculate acceptancerate

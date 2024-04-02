@@ -9,9 +9,10 @@ module Likelihood
 
 import Base: ==, exp, isapprox # redefine exp, == and isapprox (≈) for EigenExpansion types. This requires an import statement.
 
-using Distributions
-using LinearAlgebra
-using StaticArrays 
+using Distributions, # for probability distributions
+      LinearAlgebra, # for Linear Algebra functions and data types.  
+      StaticArrays # for small matrices this can be faster, as it stores the size of the matrix in the type. Can apply some 
+      # optimisations for some matrices. 
 
 export logprobderivedreads!, # the log probability of the read vector. A.k.a. the likelihood.
        EigenExpansion, # Data type to store a decomposition A = XDX^{-1}, which allows for fast matrix exponentiation.

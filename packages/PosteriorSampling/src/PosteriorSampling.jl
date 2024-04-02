@@ -10,7 +10,6 @@ using Distributions, # for probability distributions
       StatsBase, # for countmap
       LinearAlgebra, # Needed for the identity matrix I. 
       StaticArrays, # for SizedVector and MVector, they are generally faster.
-      CSV, # for CSV files. 
       Base.Threads # for multithreading.
       
 export MHsampler, # The mcmc sampler.
@@ -410,8 +409,8 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                     end 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                #Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I)
-                Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-10*I
+                Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I)
+                #Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-10*I
                 if step % 100_000 == 0
                     @show Σ 
                 end 

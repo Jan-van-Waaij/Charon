@@ -3,7 +3,12 @@
 # You can install Primes, Test and BenchmarkTools as follows:
 #using Pkg
 #Pkg.add(["Primes", "Test", "BenchmarkTools"])
-using BenchmarkTools, Base.Threads, Primes, Test, BenchmarkTools, Base.Iterators
+#julia> timeremovingnonprimes
+#12.42199158668518
+
+#julia> timefilteringoutnumbers
+#0.4580650329589844
+using BenchmarkTools, Base.Threads, Primes, Test, BenchmarkTools, Base.Iterators, SharedArrays
  # look at Iterators.partition
 function primesieve(n::Integer)
     sieve = trues(n)
@@ -15,6 +20,268 @@ function primesieve(n::Integer)
     end 
     return (1:n)[sieve]
 end 
+
+#=
+function settofalse(sieve, part, locks)
+    for index in part 
+        if sieve[index] # still true, skip if already false. 
+            gotlocked = trylock(locks[index]) 
+            if gotlocked # skip if an other thread is already setting it to false.
+                sieve[index] = false
+                unlock(locks[index])
+            end 
+        end 
+    end 
+end 
+function settofalse(sieve, part)
+    atomic_xchg!.(view(sieve, part), false)
+end 
+=#
+
+function settofalse(sieve, part)
+    for index in part 
+        Base.@atomic sieve[index] = false 
+    end 
+end 
+function primesieveothertry(n::Integer)
+    numthreads = nthreads()
+    sieve = trues(n) #[Atomic{Bool}(true) for _ in 1:n]
+    sieve[1] = false # 1 is not prime. 
+    N = n÷(numthreads-1)
+    for i in 2:isqrt(n)
+        if sieve[i] # i is prime 
+            parts = partition(2i:i:n, N)
+            Threads.@sync for part in parts 
+                Threads.@spawn settofalse(sieve, part)  # number 2*i, 3*i, ... are not prime. 
+            end 
+        end 
+    end 
+    return (1:n)[sieve]
+end 
+
+maxnum = 1000
+trueprimes = primes(maxnum)
+@test primesieveothertry(maxnum) == trueprimes
+
+maxnum = 1000_000
+@btime primesieve($maxnum);
+@btime primesieveothertry($maxnum);
+
+function primesieveotheridea(n::Integer)
+    numthreads = nthreads()
+    sieve = SharedVector{Bool}(n)
+    for index in eachindex(sieve)
+        sieve[index] = true 
+    end 
+    sieve[1] = false # 1 is not prime.
+    sqrtn = isqrt(n) 
+    @sync for i in 2:sqrtn
+        if sieve[i] # i is prime 
+            nonprimetoberemoved = i + i 
+            while nonprimetoberemoved < sqrtn 
+                sieve[nonprimetoberemoved] = false 
+                nonprimetoberemoved += i 
+            end 
+            Threads.@spawn view(sieve, nonprimetoberemoved:i:n) .= false 
+        end 
+    end 
+    return (1:n)[sieve]
+end 
+
+maxnum = 1000
+trueprimes = primes(maxnum)
+@test primesieveotheridea(maxnum) == trueprimes
+
+for _ in 1:1000
+    @test primesieveotheridea(maxnum) == trueprimes
+end 
+maxnum = 1000_000_000 
+@btime primesieve($maxnum)
+@btime primesieveotheridea($maxnum)
+
+
+
+primesieve(1000);
+primesieveothertry(1000);
+@btime primesieve(10_000_000_000);
+@btime primesieveothertry(10_000_000_000);
+
+let 
+    vec = trues(1000_000_000)
+    t1 = Threads.@spawn vec .= false 
+    t2 = Threads.@spawn vec .= false 
+    wait(t1)
+    wait(t2)
+    println(sum(vec))
+end 
+
+
+
+
+
+function primesievetest(n::Integer)
+    sieve = trues(n)
+    sieve[1] = false # 1 is not prime. 
+    sqrtn = isqrt(n)
+    for i in 2:sqrtn
+        if sieve[i] # i is prime 
+            view(sieve, 2*i:i:sqrtn) .= false # number 2*i, 3*i, ... are not prime. 
+        end 
+    end 
+    return (1:n)[sieve]
+end 
+
+primesieve(1000);
+primesievetest(1000);
+@btime primesieve(1000_000_000);
+@btime primesievetest(1000_000_000);
+
+
+function removemultiples!(parts, firstindices, index, i)
+    firstindexmoduloi = firstindices[index] % i
+    if firstindexmoduloi == 0 
+        view(parts[index], 1:i:length(parts[index])) .= false 
+    else 
+        view(parts[index], i-firstindexmoduloi+1:i:length(parts[index])) .= false 
+    end 
+end  
+function primesievesmartidea(n::Integer)
+    sqrtn = isqrt(n)
+    before = time()
+    numthreads = nthreads()
+    @assert sqrtn ≤ n÷numthreads
+    if n % numthreads == 0 
+        sizepart =  n÷numthreads
+        parts = [trues(sizepart) for _ in 1:numthreads]
+        firstindices = [1 + k*sizepart for k in 0:numthreads-1]
+        numparts = numthreads 
+    elseif n % (numthreads-1) == 0
+        sizepart = n÷(numthreads-1) 
+        parts = [trues(sizepart) for _ in 1:numthreads-1]
+        firstindices = [1 + k*sizepart for k in 0:numthreads-2]
+        numparts = numthreads - 1 
+    else 
+        sizepart = n÷(numthreads-1) 
+        parts = [trues(sizepart) for _ in 1:numthreads-1]
+        lastpart = trues(n % (numthreads -1))
+        push!(parts, lastpart)
+        firstindices = [1 + k*sizepart for k in 0:numthreads-1]
+        numparts = numthreads
+    end 
+    tasksvec = Vector{Task}(undef, numparts)
+    timesplittinginparts = time() - before 
+    before = time()
+    parts[1][1] = false # 1 is not prime. 
+    for i in 2:isqrt(n)
+        if parts[1][i] # i is prime 
+            tasksvec[1] = Threads.@spawn view(parts[1], 2i:i:length(parts[1])) .= false 
+            for index in eachindex(parts, firstindices)[2:end]
+                tasksvec[index] = Threads.@spawn removemultiples!(parts, firstindices, index, i)
+            end 
+            wait.(tasksvec)
+        end 
+    end 
+    timeremovingnonprimes = time() - before 
+    before = time()
+    sieve = vcat(parts...)
+    primes = (1:n)[sieve]
+    timefilteringoutnumbers = time() - before 
+    return timesplittinginparts, timeremovingnonprimes, timefilteringoutnumbers, primes 
+end 
+
+maxnum = 1000
+timesplittinginparts, timeremovingnonprimes, timefilteringoutnumbers, theprimes  = primesievesmartidea(maxnum);
+maxnum = 1000_000_000
+timesplittinginparts, timeremovingnonprimes, timefilteringoutnumbers, theprimes  = primesievesmartidea(maxnum)
+
+maxnum = 100_000
+trueprimes = primes(maxnum)
+@test primesieve(maxnum) == trueprimes
+@test primesievesmartidea(maxnum)[4] == trueprimes
+
+maxnum = 1000_000_000
+@btime primes(maxnum) seconds=60;
+@btime primesievesmartidea(maxnum) seconds=60;
+
+primesieve(1000)
+primesieveinbounds(1000)
+maxnum = 1000_000_000
+@btime primesieve($maxnum) # seconds=600;
+@btime primesieveinbounds($maxnum) # seconds=600;
+
+
+
+function primesievecounttime(n::Integer)
+    sieve = trues(n)
+    sieve[1] = false # 1 is not prime. 
+    timeremovingnonprimes = 0.0 
+    timefilteringoutnumbers = 0.0 
+    for i in 2:isqrt(n)
+        if sieve[i] # i is prime 
+            before = time()
+            view(sieve, 2*i:i:length(sieve)) .= false # number 2*i, 3*i, ... are not prime. 
+            after = time()
+            timeremovingnonprimes += after - before 
+        end 
+    end 
+    before = time()
+    primes = (1:n)[sieve]
+    timefilteringoutnumbers = time() - before 
+    return timeremovingnonprimes, timefilteringoutnumbers, primes 
+end 
+
+maxnum = 1000
+trueprimes = primes(maxnum)
+_, _, myprimes = primesievecounttime(maxnum)
+@test myprimes == trueprimes
+
+maxnum = 1000_000_000
+trueprimes = primes(maxnum)
+timeremovingnonprimes, timefilteringoutnumbers, myprimes = primesievecounttime(maxnum)
+@test myprimes == trueprimes
+timeremovingnonprimes
+timefilteringoutnumbers
+
+
+function primesieve2(n::Integer)
+    sieve = trues(n)
+    sieve[1] = false # 1 is not prime. 
+    currentindex = 2 
+    sqrtn = isqrt(n)
+    while currentindex ≤ sqrtn
+        findnextprimetask = Threads.@spawn findnext(sieve, currentindex+1)
+        removenonprimestask = Threads.@spawn view(sieve, 2*currentindex:currentindex:length(sieve)) .= false
+        wait(removenonprimestask)
+        currentindex = fetch(findnextprimetask)
+    end 
+    return (1:n)[sieve]
+end 
+
+function primesieve3(n::Integer)
+    sieve = trues(n)
+    sieve[1] = false # 1 is not prime. 
+    currentindex = 2 
+    sqrtn = isqrt(n)
+    while currentindex ≤ sqrtn
+        view(sieve, 2*currentindex:currentindex:length(sieve)) .= false
+        currentindex = findnext(sieve, currentindex+1)
+    end 
+    return (1:n)[sieve]
+end 
+
+
+maxnum = 100_000
+trueprimes = primes(maxnum)
+@test primesieve1(maxnum) == trueprimes
+@test primesieve2(maxnum) == trueprimes
+@test primesieve3(maxnum) == trueprimes
+
+maxnum = 1000_000_000
+@btime primesieve1($maxnum) # seconds=600;
+@btime primesieve2($maxnum) # seconds=600;
+@btime primesieve3($maxnum) # seconds=600;
+
+
 
 function primesievethreaded1(n::Integer)
     sieve = trues(n)
@@ -50,7 +317,7 @@ function primesievethreaded2(n::Integer)
     return (1:n)[sieve]
 end 
 
-function primesievethreaded2(n::Integer, k::Integer)
+function primesievethreaded2(n::Integer, k::Integer) # is bijna voor elke k even langzaam/snel. getest van 9 tot en met 10*nthreads() = 160. 
     sieve = trues(n)
     sieve[1] = false # 1 is not prime.
     numthreads = nthreads() 
@@ -68,16 +335,9 @@ function primesievethreaded2(n::Integer, k::Integer)
     return (1:n)[sieve]
 end 
 
-println("num threads ", nthreads())
-trueprimes = primes(1000_000_000)
 for m in 1:10*nthreads()
-    for _ in 1:10
-        println("k is ", m )
-        @test primesievethreaded2(1000_000_000, m) == trueprimes
-    #@btime primesievethreaded2(1000_000_000, m) seconds=600
-    end 
+    @btime primesievethreaded2(1000_000_000, $m) seconds=600 
 end 
-
     
 maxnum = 100_000
 trueprimes = primes(maxnum)
