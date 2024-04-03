@@ -308,7 +308,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
     # Remove frequencies 0.0 and 1.0
     allowedindices = 0.0 .< y .< 1.0
     d = d[allowedindices]
-    d = SizedVector{length(d), Int}(d)
+    #d = SizedVector{length(d), Int}(d)
     #R = R[allowedindices]
     #R = SizedVector{length(R), Int}(R)
     y = y[allowedindices]
