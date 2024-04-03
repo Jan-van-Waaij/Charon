@@ -59,14 +59,14 @@ nodes = [
     ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
-    ("node06", 5), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
+    #("node06", 5), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
     ("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
-    ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
+    #("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
     ("node11", 10), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
     ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
     ("node13", 4), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
-    ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("compute01", 2) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
+    ("node14", 3), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    ("compute01", 13) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
 ]
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
@@ -158,7 +158,7 @@ coverage = 64 # the coverage is 64 everywhere.
     @assert coveragevec[1] == coverage
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Correlated_proposals_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("maxlik_init_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     #=
     if isfile(zippedcsvfile)

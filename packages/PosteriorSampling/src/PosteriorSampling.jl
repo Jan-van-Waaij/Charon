@@ -326,8 +326,12 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
     @assert cm == cm2 
     d = SizedVector{length(d), Int}(d)
 
+    likresults = ExactPosterior([fixedn], 0.1:0.1:1.0, 0.1:0.1:0.4, R, reads, y, 0)
+    maxlikindex = argmax(likresults[5, :])
+    τCmaxlik, τAmaxlik, ϵmaxlik = likresults[2:4, maxlikindex]
 
-
+    println("init value found")
+    
     Q, Qꜜ, hvals, binomialcoefficients = preparedata(fixedn, y)
     results = Vector{Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}, BitVector, Vector{Float64}}}(undef,nchains)
     @threads for chainindex in eachindex(results) 
@@ -341,6 +345,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         # (roughly, one bit per item, instead of one byte.)
         logjointprob = Vector{Float64}(undef, nsteps)
         # Initialise.
+        #=
         if init === nothing # draw initial value from the prior.
             #nprevious = rand(prioronn)
             τCprevious, τAprevious = rand(prioronτCτA)
@@ -349,6 +354,12 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
             #nprevious, 
             τCprevious, τAprevious, ϵprevious = init 
         end
+        =#
+
+        τCprevious = τCmaxlik 
+        τAprevious = τAmaxlik
+        ϵprevious = ϵmaxlik
+        
         #nsample[1] = nprevious
         τCsample[1] = τCprevious
         τAsample[1] = τAprevious
