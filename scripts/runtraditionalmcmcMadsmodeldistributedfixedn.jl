@@ -54,19 +54,19 @@ exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
 exeflags = ["--project=$dir", "--threads=4", "--optimize=3"]
 
 nodes = [
-    ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
-    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
+#    ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
+#    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
     ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    ("node05", 6), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
-    ("node06", 6), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
+    ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
+    ("node06", 5), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
     ("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
     ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
     ("node11", 10), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
     ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
     ("node13", 4), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
     ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("compute01", 26) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
+    ("compute01", 2) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
 ]
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"

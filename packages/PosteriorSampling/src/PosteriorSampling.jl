@@ -40,10 +40,12 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function ExactPosterior(fixedn::Int, τrange::AbstractVector{Float64}, fixedϵ::Float64, R::Int, reads::Vector{Int}, y::Vector{Float64}, messages::Int=length(τrange)^2÷100)
+function ExactPosterior(nrange::AbstractVector{<:Integer}, τrange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Int, reads::Vector{Int}, y::Vector{Float64}, messages::Int=length(nrange)*length(τrange)^2*length(ϵrange)÷100)
     # Check conditions.
-    0≤fixedϵ<0.5 || throw(DomainError("ϵ should be in [0.0,0.5)."))
+    all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
+    length(nrange) > 0 || throw(ArgumentError("τrange should have at least one element."))
     length(τrange) > 0 || throw(ArgumentError("τrange should have at least one element."))
+    length(ϵrange) > 0 || throw(ArgumentError("τrange should have at least one element."))
     R > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
     minimum(reads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
     all(reads .≤ R) || throw(DomainError("All reads should be at most the coverage."))
@@ -64,41 +66,44 @@ function ExactPosterior(fixedn::Int, τrange::AbstractVector{Float64}, fixedϵ::
     counts = collect(values(cm))
     reads = SizedVector{length(reads), Int}(reads)
 
-    Q, Qꜜ, hvals, binomialcoefficients = preparedata(fixedn, y)
-    p = MVector{2fixedn+1, Float64}(undef)
-    q = MMatrix{2fixedn+1, R+1, Float64}(undef)
-    M = Matrix{Float64}(undef, 2fixedn+1, 2fixedn+1)
-        
-    for k in 0:2fixedn
-        dist = Binomial(R, k*(1.0-fixedϵ)/(2fixedn) + (2fixedn-k)*fixedϵ/(2fixedn))
-        for d in 0:R
-            q[k+1, d+1] = pdf(dist, d)
-        end 
-    end 
-    
-    nrows = length(τrange)^2
-    results = Matrix{Float64}(undef, 3, nrows)
+    nrows = length(nrange)*length(τrange)^2*length(ϵrange)
+    results = Matrix{Float64}(undef, 5, nrows)
     columnindex = 1
-    for τC in τrange 
-        expτCQꜜ = exp(Qꜜ, τC)
-        for τA in τrange
-            expτAQ = exp(Q, τA)    
-            mul!(M, expτAQ, expτCQꜜ)
-            loglik = 0.0
-            for index in eachindex(reads, counts)
-                # update p
-                probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
-                loglik +=  counts[index]*log(dot(p, view(q, :, reads[index]+1))) 
-            end
-            results[:, columnindex] .= τC, τA, loglik 
-            if messages > 0 # No messages at all when messages ≤ 0.
-                if columnindex % messages == 0
-                    println("I did ", columnindex, " posterior calculations, ", round(Int, 100*columnindex / nrows, RoundDown), "% finished!")
-                end
-            end
-            columnindex += 1 
-        end
-    end 
+
+    for n in nrange
+        Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
+        p = MVector{2n+1, Float64}(undef)
+        q = MMatrix{2n+1, R+1, Float64}(undef)
+        M = Matrix{Float64}(undef, 2n+1, 2n+1)
+        for τC in τrange 
+            expτCQꜜ = exp(Qꜜ, τC)
+            for τA in τrange
+                expτAQ = exp(Q, τA)    
+                mul!(M, expτAQ, expτCQꜜ)
+                for ϵ in ϵrange
+                    for k in 0:2n
+                        dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+                        for d in 0:R
+                            q[k+1, d+1] = pdf(dist, d)
+                        end 
+                    end              
+                    loglik = 0.0
+                    for index in eachindex(reads, counts)
+                        # update p
+                        probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
+                        loglik +=  counts[index]*log(dot(p, view(q, :, reads[index]+1))) 
+                    end
+                    results[:, columnindex] .= n, τC, τA, ϵ, loglik 
+                    if messages > 0 # No messages at all when messages ≤ 0.
+                        if columnindex % messages == 0
+                            println("I did ", columnindex, " posterior calculations, ", round(Int, 100*columnindex / nrows, RoundDown), "% finished!")
+                        end
+                    end
+                    columnindex += 1 
+                end # ϵ
+            end # τA
+        end # τC 
+    end # n
     @assert columnindex == nrows + 1 
     return results
 end # function.
@@ -171,6 +176,9 @@ function SpecialSampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::C
         # covariance matrix Σ.
     distproposalϵ = Normal(0.0, stdϵ)
 
+    likresults = ExactPosterior([fixedn], 0.1:0.1:1.0, 0.1:0.1:0.4, R, reads, y, 0)
+    maxlikindex = argmax(likresults[5, :])
+    τCmaxlik, τAmaxlik, ϵmaxlik = likresults[2:4, maxlikindex]
     results = Vector{Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}, BitVector, Vector{Float64}}}(undef,nchains)        
     @threads for chainindex in eachindex(results) 
         p = MVector{2fixedn+1, Float64}(undef)
@@ -183,6 +191,10 @@ function SpecialSampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::C
         # (roughly, one bit per item, instead of one byte.)
         logjointprob = Vector{Float64}(undef, nsteps)
         # Initialise.
+        τCprevious = τCmaxlik 
+        τAprevious = τAmaxlik
+        ϵprevious = ϵmaxlik
+        #= 
         if init === nothing # draw initial value from the prior.
             #nprevious = rand(prioronn)
             τCprevious, τAprevious = rand(prioronτCτA)
@@ -191,6 +203,7 @@ function SpecialSampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::C
             #nprevious, 
             τCprevious, τAprevious, ϵprevious = init 
         end
+        =#
         #nsample[1] = nprevious
         τCsample[1] = τCprevious
         τAsample[1] = τAprevious
@@ -409,8 +422,8 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                     end 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I)
-                #Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-10*I
+                #Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I)
+                Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
                 if step % 100_000 == 0
                     @show Σ 
                 end 
@@ -596,8 +609,10 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                     end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
+                #Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                 # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
+                Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
+                
                 distproposalτCτA = MvNormal(Σ)
                 # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
                 # so not really necessary. 
@@ -773,8 +788,10 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                     end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
+                #Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                 # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
+                Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
+                
                 distproposalτCτA = MvNormal(Σ)
                 # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
                 # so not really necessary. 
@@ -984,8 +1001,9 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                         end # So do nothing when the acceptancerate is between 0.1 and 0.6.     
                     end 
                     # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                    Σ = scalefactor[n] * (cov([τCsample[1:10:step, n] τAsample[1:10:step, n]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
+                    #Σ = scalefactor[n] * (cov([τCsample[1:10:step, n] τAsample[1:10:step, n]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                     # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
+                    Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
                     distproposalτCτA[n] = MvNormal(Σ)
                     # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
                     # so not really necessary. 
@@ -1193,8 +1211,9 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                         end # So do nothing when the acceptancerate is between 0.1 and 0.6.     
                     end 
                     # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                    Σ = scalefactor[n] * (cov([τCsample[1:10:step, n] τAsample[1:10:step, n]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
+                    # Σ = scalefactor[n] * (cov([τCsample[1:10:step, n] τAsample[1:10:step, n]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                     # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
+                    Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
                     distproposalτCτA[n] = MvNormal(Σ)
                     # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
                     # so not really necessary. 
