@@ -25,6 +25,8 @@ using Data, # For parsing frequency and read files.
       Base.Threads, # for threads
       Distributed
 
+starttime = now()
+
 ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = [1, 2, 4, 8]
@@ -82,6 +84,7 @@ for node in nodes
     append!(processes, addprocs([node], dir=dir, exename=exename, exeflags=exeflags))
 end 
 =# 
+
 
 @everywhere using Data, # For parsing frequency and read files. 
       DataFrames, # work with data frames.
@@ -209,6 +212,13 @@ coverage = 64 # the coverage is 64 everywhere.
     println("Finished with ", csvfile)
 end # (anchorpop, ancientpop, truenumind)
 
+finishtime = now()
+timedifference = finishtime - starttime
+numhours = round(timedifference, Hour, RoundDown)
+remainingtime = timedifference - numhours
+remainingtimeinmilliseconds = Dates.Millisecond(Dates.toms(remainingtime))
+remainingtimeminutes = round(remainingtimeinmilliseconds, Minute)
+println("It took ", numhours, " and ", remainingtimeminutes, " to finish all files!")
 #=
 Finished duurde ongeveer 30-38 uur. 
 =#

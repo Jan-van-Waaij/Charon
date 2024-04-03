@@ -40,7 +40,7 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function ExactPosterior(nrange::AbstractVector{<:Integer}, τrange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Int, reads::Vector{Int}, y::Vector{Float64}, messages::Int=length(nrange)*length(τrange)^2*length(ϵrange)÷100)
+function ExactPosterior(nrange::AbstractVector{<:Integer}, τrange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Int, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int=length(nrange)*length(τrange)^2*length(ϵrange)÷100)
     # Check conditions.
     all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("τrange should have at least one element."))
