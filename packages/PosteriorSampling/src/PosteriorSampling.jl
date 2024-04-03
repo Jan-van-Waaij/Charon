@@ -313,6 +313,13 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
     #R = SizedVector{length(R), Int}(R)
     y = y[allowedindices]
 
+    likresults = ExactPosterior([fixedn], 0.1:0.1:1.0, 0.1:0.1:0.4, R, d, y, 0)
+    maxlikindex = argmax(likresults[5, :])
+    τCmaxlik, τAmaxlik, ϵmaxlik = likresults[2:4, maxlikindex]
+
+    println("init value found")
+
+
     tuples = zip(d, y)
     cm = countmap(tuples)
     thekeys = keys(cm)
@@ -325,12 +332,6 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
     cm2 = Dict((d[index], y[index]) => counts[index] for index in eachindex(d, y, counts))
     @assert cm == cm2 
     d = SizedVector{length(d), Int}(d)
-
-    likresults = ExactPosterior([fixedn], 0.1:0.1:1.0, 0.1:0.1:0.4, R, reads, y, 0)
-    maxlikindex = argmax(likresults[5, :])
-    τCmaxlik, τAmaxlik, ϵmaxlik = likresults[2:4, maxlikindex]
-
-    println("init value found")
     
     Q, Qꜜ, hvals, binomialcoefficients = preparedata(fixedn, y)
     results = Vector{Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}, BitVector, Vector{Float64}}}(undef,nchains)
