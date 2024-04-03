@@ -313,6 +313,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
     #R = SizedVector{length(R), Int}(R)
     y = y[allowedindices]
 
+    println("before init")
     likresults = ExactPosterior([fixedn], 0.1:0.1:1.0, 0.1:0.1:0.4, R, d, y, 0)
     maxlikindex = argmax(likresults[5, :])
     τCmaxlik, τAmaxlik, ϵmaxlik = likresults[2:4, maxlikindex]
