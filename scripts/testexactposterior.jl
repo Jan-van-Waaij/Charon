@@ -45,15 +45,15 @@ end
 =# 
 
 
-trueϵ = 0.001 # true error rate used in the simulations. 
+ϵrange = 0.1:0.1:0.4 # true error rate used in the simulations. 
 
 coverage = 64 # the coverage is 64 everywhere. 
 
 τrange = 0.1:0.1:1.0
 
-allcombinations2 = allcombinations[[38]]
-for (anchorpop, ancientpop, truenumind) in allcombinations2
-    starttime = now()
+timeresults = Vector{Minute}(undef, length(allcombinations))
+index = 1 
+for (anchorpop, ancientpop, truenumind) in allcombinations
     frequencyfile = "data/frequencies/freqanchor/Madsmodel_freq_anchor_$(anchorpop).txt.gz"
     if !isfile(frequencyfile)
         println(frequencyfile, " does not exist.")
@@ -71,12 +71,12 @@ for (anchorpop, ancientpop, truenumind) in allcombinations2
     @assert coveragevec[1] == coverage
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
-    results = ExactPosterior(truenumind, τrange, 0.001, coverage, derivedreadsvec, freqs, 1)
-    df = DataFrame(τC = results[1,:], τA=results[2,:], logpost = results[3,:])
-    println(df)
-    csvfile = "test.csv"
-    CSV.write(csvfile, df)
-    command = `gzip -f $csvfile`
-    run(command)
+    before = now() 
+    exactposterior([truenumind], τrange, τrange, ϵrange, coverage, derivedreadsvec, freqs)
+    after = now() 
+    timedifference = round(after - before, Minute)
+    timeresults[index] = timedifference
+    println("finished with ", index, "-th file.")
+    index += 1 
 end # (anchorpop, ancientpop, truenumind)
 

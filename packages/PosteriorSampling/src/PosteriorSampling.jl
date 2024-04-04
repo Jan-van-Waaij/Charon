@@ -14,8 +14,7 @@ using Distributions, # for probability distributions
       
 export MHsampler, # The mcmc sampler.
        MCMCSimProp, # More efficient mcmc sampler for low coverage with simulated proposal, at the cost of a longer run time. 
-       SpecialSampler, 
-       ExactPosterior
+       exactposterior
 
 ##
 ##
@@ -40,12 +39,13 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function ExactPosterior(nrange::AbstractVector{<:Integer}, τrange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Int, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int=length(nrange)*length(τrange)^2*length(ϵrange)÷100)
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Int, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int=length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
     # Check conditions.
     all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
-    length(nrange) > 0 || throw(ArgumentError("τrange should have at least one element."))
-    length(τrange) > 0 || throw(ArgumentError("τrange should have at least one element."))
-    length(ϵrange) > 0 || throw(ArgumentError("τrange should have at least one element."))
+    length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
+    length(τCrange) > 0 || throw(ArgumentError("τCrange should have at least one element."))
+    length(τArange) > 0 || throw(ArgumentError("τArange should have at least one element."))
+    length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
     R > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
     minimum(reads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
     all(reads .≤ R) || throw(DomainError("All reads should be at most the coverage."))
@@ -64,9 +64,24 @@ function ExactPosterior(nrange::AbstractVector{<:Integer}, τrange::AbstractVect
     reads = [key[1] for key in thekeys]
     y = [key[2] for key in thekeys]
     counts = collect(values(cm))
-    reads = SizedVector{length(reads), Int}(reads)
+    
+    return exactposterior(nrange, τCrange, τArange, ϵrange, R, reads, counts, y, messages)
+end # function.
+##
+##
+## End fixed R 
+##
 
-    nrows = length(nrange)*length(τrange)^2*length(ϵrange)
+
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Int, reads::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
+    # Check conditions.
+    all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
+    length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
+    length(τCrange) > 0 || throw(ArgumentError("τCrange should have at least one element."))
+    length(τArange) > 0 || throw(ArgumentError("τArange should have at least one element."))
+    length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
+    
+    nrows = length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)
     results = Matrix{Float64}(undef, 5, nrows)
     columnindex = 1
 
@@ -75,9 +90,9 @@ function ExactPosterior(nrange::AbstractVector{<:Integer}, τrange::AbstractVect
         p = MVector{2n+1, Float64}(undef)
         q = MMatrix{2n+1, R+1, Float64}(undef)
         M = Matrix{Float64}(undef, 2n+1, 2n+1)
-        for τC in τrange 
+        for τC in τCrange 
             expτCQꜜ = exp(Qꜜ, τC)
-            for τA in τrange
+            for τA in τArange
                 expτAQ = exp(Q, τA)    
                 mul!(M, expτAQ, expτCQꜜ)
                 for ϵ in ϵrange
@@ -109,162 +124,121 @@ function ExactPosterior(nrange::AbstractVector{<:Integer}, τrange::AbstractVect
 end # function.
 ##
 ##
-## End fixed R, error model, fixed n. 
+## End fixed R with counts
 ##
 
-##
-##
-## fixed R, error model, fixed n. 
-##
-##
-"""
-    SpecialSampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Float64, Float64, Float64}}=nothing)
 
-Adaptive Metropolis (Haario et al. 2001, mentioned in Rosenthal 2010 "Optimal proposal distributions and adaptive MCMC, section 3.2), with prior on τC, τA and ϵ, the true number of individuals is assumed to be known. Instead of using the recommended scaling factor 1.4161, we use the first nsteps÷4 steps to find a scaling factor that results in an acceptance ratio between 0.1 and 0.6. Setting messages ≤ 0, results in no messages being print, if message>0, then every message steps, a message is print, updating the progress.
-
-If not specified, the initial values are choosen from the prior.
-
-This function returns a vector of length nchains. Each element contains the results of one chain; it is a tuple of five vectors: a vector containing the a vector containing the τC-values, a vector containing the τA-values, a vector containing the ϵ values, a vector telling whether a certain proposal was accepted or not and a vector with unnormalised posterior log-densities. So for example 
-
-```julia
-results = MHsampler(nchains, nsteps, prioronn, prioronτCτA, R, d, y, messages)
-τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[1]
-```
-
-gives the results of the first chain.
-
-Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
-"""
-function SpecialSampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Float64, Float64, Float64}}=nothing, stdτ::Float64, stdϵ::Float64)
+#
+#
+# begin variable R. 
+#
+#
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
     # Check conditions.
-    length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
-    minimum(prioronϵ) ≥ 0 || throw(ArgumentError("prioronϵ should have support on [0, 0.5], but the minimum is negative."))
-    maximum(prioronϵ) ≤ 0.5 || throw(ArgumentError("prioronϵ should have support on [0, 0.5], but the maximum exceeds 0.5."))
-    nchains > 0 || throw(ArgumentError("There should be at least one chain."))
-    nsteps > 0 || throw(ArgumentError("nsteps should be positive."))
-    #R > 0 || throw(DomainError("All coverages should be positive.")) # Are zero coverages allowed?
-    minimum(d) ≥ 0 || throw(DomainError("All reads should be non-negative."))
-    all(d .≤ R) || throw(DomainError("All reads should be at most the coverage."))
+    all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
+    length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
+    minimum(nrange) > 0 || throw(ArgumentError("all n values in nrange should be positive."))
+    length(τCrange) > 0 || throw(ArgumentError("τCrange should have at least one element."))
+    minimum(τCrange) > 0 || throw(ArgumentError("All values in τCrange should be positive."))
+    length(τArange) > 0 || throw(ArgumentError("τArange should have at least one element."))
+    minimum(τArange) > 0 || throw(ArgumentError("All values in τArange should be positive."))
+    length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
+    minimum(ϵrange) > 0 || throw(ArgumentError("All values in ϵrange should be positive."))
+    maximum(R) || throw(ArgumentError("Inference is impossible when all coverages are zero."))
+    minimum(reads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
+    all(reads .≤ R) || throw(DomainError("All reads should be at most the coverage."))
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
-    length(d) == length(y) || throw(DimensionMismatch("d and y should be of the same length."))
-    R > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
+    length(reads) == length(y) == length(R) || throw(DimensionMismatch("d, R and y should be of the same length."))
     
-    # Remove frequencies 0.0 and 1.0
-    allowedindices = 0.0 .< y .< 1.0
-    d = d[allowedindices]
-    d = SizedVector{length(d), Int}(d)
-    #R = R[allowedindices]
-    #R = SizedVector{length(R), Int}(R)
+    # Remove frequencies 0.0 and 1.0 and zero coverages. 
+    allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
+    any(allowedindices) || throw(ArgumentError("At least one element of y with positive coverage should be strictly between 0 and 1."))
+    
+    reads = reads[allowedindices]
+    R = R[allowedindices]
     y = y[allowedindices]
-
-    tuples = zip(d, y)
+    tuples = zip(reads, R, y)
     cm = countmap(tuples)
-    thekeys = keys(cm)
-    d = [key[1] for key in thekeys]
-    y = [key[2] for key in thekeys]
+    reads = [key[1] for key in keys(cm)]
+    R = [key[2] for key in keys(cm)]
+    y = [key[3] for key in keys(cm)]
     counts = collect(values(cm))
-    for index in eachindex(d, y, counts)
-        @assert cm[(d[index], y[index])] == counts[index]
-    end 
-    cm2 = Dict((d[index], y[index]) => counts[index] for index in eachindex(d, y, counts))
-    @assert cm == cm2 
-    d = SizedVector{length(d), Int}(d)
-    Q, Qꜜ, hvals, binomialcoefficients = preparedata(fixedn, y)
 
-    Σ = stdτ^2*I(2)#10.0^(-10)*I(2)
-    distproposalτCτA = MvNormal(Σ)# Multivariate normal distribution with mean zero and 
-        # covariance matrix Σ.
-    distproposalϵ = Normal(0.0, stdϵ)
+    return exactposterior(nrange, τCrange, τArange, ϵrange, R, reads, counts, y, messages)
+end # function.
+#
+#
+# End variable R. 
+#
+#
 
-    likresults = ExactPosterior([fixedn], 0.1:0.1:1.0, 0.1:0.1:0.4, R, reads, y, 0)
-    maxlikindex = argmax(likresults[5, :])
-    τCmaxlik, τAmaxlik, ϵmaxlik = likresults[2:4, maxlikindex]
-    results = Vector{Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}, BitVector, Vector{Float64}}}(undef,nchains)        
-    @threads for chainindex in eachindex(results) 
-        p = MVector{2fixedn+1, Float64}(undef)
-        q = MMatrix{2fixedn+1, R+1, Float64}(undef)
-        #nsample = Vector{Int}(undef, nsteps)
-        τCsample = Vector{Float64}(undef, nsteps)
-        τAsample = Vector{Float64}(undef, nsteps)
-        ϵsample = Vector{Float64}(undef, nsteps)
-        acceptedvec = BitVector(undef, nsteps) # BitVector is more efficient than Vector{Bool} 
-        # (roughly, one bit per item, instead of one byte.)
-        logjointprob = Vector{Float64}(undef, nsteps)
-        # Initialise.
-        τCprevious = τCmaxlik 
-        τAprevious = τAmaxlik
-        ϵprevious = ϵmaxlik
-        #= 
-        if init === nothing # draw initial value from the prior.
-            #nprevious = rand(prioronn)
-            τCprevious, τAprevious = rand(prioronτCτA)
-            ϵprevious = rand(prioronϵ)
-        else
-            #nprevious, 
-            τCprevious, τAprevious, ϵprevious = init 
-        end
-        =#
-        #nsample[1] = nprevious
-        τCsample[1] = τCprevious
-        τAsample[1] = τAprevious
-        ϵsample[1] = ϵprevious
-        acceptedvec[1] = true
-        loglikprevious = logprobderivedreads!(p, q, d, counts, τCprevious, τAprevious, ϵprevious, fixedn, R, Q, Qꜜ, binomialcoefficients, hvals)
-        # check if the initial value is valid. 
-        loglikprevious == -Inf && throw(DomainError("The data does not support the initial value."))
-        logpdfpriorprevious = logpdf(prioronτCτA, [τCprevious, τAprevious]) + logpdf(prioronϵ, ϵprevious)
-        logpdfpriorprevious == -Inf && throw(DomainError("The initial value is outside the support of the prior."))
-        logjointprob[1] = loglikprevious + logpdfpriorprevious 
-        for step in 2:nsteps  
-            # draw proposals. 
-            τCproposal, τAproposal = [τCprevious, τAprevious] + rand(distproposalτCτA)
-            # The distribution of the next line is symmetric, i.e. P(a;b)=P(b;a), 
-            # even for a,b equal or near 1 or n.  
-            #nproposalprobvec = vcat(repeat([0.2 / (nmax-1)], nprevious-1), [0.8], repeat([0.2 / (nmax-1)], nmax - nprevious))
-            #nproposal = rand(Categorical(nproposalprobvec)) # so with 80% chance nproposal is 
-            # equal to nprevious. 
-            ϵproposal = ϵprevious + rand(distproposalϵ)
-            # calculate the loglikelihood
-            loglikproposal = logprobderivedreads!(p, q, d, counts, τCproposal, τAproposal, ϵproposal, fixedn, R, Q, Qꜜ, binomialcoefficients, hvals)
-            logpdfpriorproposal = logpdf(prioronτCτA, [τCproposal, τAproposal]) + logpdf(prioronϵ, ϵproposal)
-            # calculate the acceptance probability. 
-            # Note that our proposal function for n, τC, τA, ϵ is symmetric, i.e. q(x|y)=q(y|x).
-            logacceptanceprobability = loglikproposal - loglikprevious + 
-                logpdfpriorproposal - logpdfpriorprevious 
-            acceptanceprobability = exp(logacceptanceprobability)
-            # accept or reject the proposal with probability max(1, acceptanceprobability), note that rand() samples from the uniform distribution.
-            accepted = rand() ≤ acceptanceprobability
-            if accepted
-                τCsample[step] = τCprevious = τCproposal
-                τAsample[step] = τAprevious = τAproposal
-                ϵsample[step] = ϵprevious = ϵproposal
-                acceptedvec[step] = true
-                logjointprob[step] = loglikproposal + logpdfpriorproposal
-                # Update everything for the next cycle. 
-                loglikprevious = loglikproposal
-                logpdfpriorprevious = logpdfpriorproposal
-            else
-                τCsample[step] = τCprevious
-                τAsample[step] = τAprevious
-                ϵsample[step] = ϵprevious
-                acceptedvec[step] = false
-                logjointprob[step] = loglikprevious + logpdfpriorprevious 
-                # no updating: loglikprevious and logpdfpriorprevious remain the same.
-            end 
-            if messages > 0 # No messages at all when messages ≤ 0.
-                if step % messages == 0
-                    println("Chain ", chainindex, " talking, I finished step ", step, " of ", nsteps, ", ", round(Int, 100*step / nsteps, RoundDown), " percent finished.")
-                end
-            end
-        end # MCMC step
-        results[chainindex] = (τCsample, τAsample, ϵsample, acceptedvec, logjointprob)
-    end # Chains. 
+
+#
+#
+# begin variable R. 
+#
+#
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real})
+    # Check conditions.
+    all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
+    length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
+    length(τCrange) > 0 || throw(ArgumentError("τCrange should have at least one element."))
+    length(τArange) > 0 || throw(ArgumentError("τArange should have at least one element."))
+    length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
+    Rmax = maximum(R)
+    
+    # Remove frequencies 0.0 and 1.0 and zero coverages. 
+    
+    nrows = length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)
+    results = Matrix{Float64}(undef, 5, nrows)
+    columnindex = 1
+
+    for n in nrange
+        Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
+        p = MVector{2n+1, Float64}(undef)
+        q = [MMatrix{2n+1, R+1, Float64}(undef) for R in 1:Rmax]
+        M = Matrix{Float64}(undef, 2n+1, 2n+1)
+        for τC in τCrange 
+            expτCQꜜ = exp(Qꜜ, τC)
+            for τA in τArange
+                expτAQ = exp(Q, τA)    
+                mul!(M, expτAQ, expτCQꜜ)
+                for ϵ in ϵrange
+                    for Rval in 1:Rmax
+                        for k in 0:2n
+                            dist = Binomial(Rval, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+                            for d in 0:Rval
+                                q[Rval][k+1, d+1] = pdf(dist, d)
+                            end 
+                        end     
+                    end          
+                    loglik = 0.0
+                    for index in eachindex(reads, R, counts)
+                        # update p
+                        probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
+                        loglik +=  counts[index]*log(dot(p, view(q[R[index]], :, reads[index]+1))) 
+                    end
+                    results[:, columnindex] .= n, τC, τA, ϵ, loglik 
+                    if messages > 0 # No messages at all when messages ≤ 0.
+                        if columnindex % messages == 0
+                            println("I did ", columnindex, " posterior calculations, ", round(Int, 100*columnindex / nrows, RoundDown), "% finished!")
+                        end
+                    end
+                    columnindex += 1 
+                end # ϵ
+            end # τA
+        end # τC 
+    end # n
+    @assert columnindex == nrows + 1 
     return results
 end # function.
-##
-##
-## End SpecialSampler 
-##
+#
+#
+# End variable R, with counts. 
+#
+#
+
+
 
 ##
 ##
@@ -289,37 +263,23 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Float64, Float64, Float64}}=nothing, factor::Union{Nothing, Float64}=nothing, temperature::Float64=1.0)
+function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronϵ) ≥ 0 || throw(ArgumentError("prioronϵ should have support on [0, 0.5], but the minimum is negative."))
     maximum(prioronϵ) ≤ 0.5 || throw(ArgumentError("prioronϵ should have support on [0, 0.5], but the maximum exceeds 0.5."))
     nchains > 0 || throw(ArgumentError("There should be at least one chain."))
     nsteps > 0 || throw(ArgumentError("nsteps should be positive."))
-    #R > 0 || throw(DomainError("All coverages should be positive.")) # Are zero coverages allowed?
     minimum(d) ≥ 0 || throw(DomainError("All reads should be non-negative."))
     all(d .≤ R) || throw(DomainError("All reads should be at most the coverage."))
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
     length(d) == length(y) || throw(DimensionMismatch("d and y should be of the same length."))
     R > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
-    1.0 ≤ temperature < Inf || throw(DomainError("temperature should be larger than 1.0 and finite."))
-    inversetemperature = 1/temperature
-
+    
     # Remove frequencies 0.0 and 1.0
     allowedindices = 0.0 .< y .< 1.0
     d = d[allowedindices]
-    #d = SizedVector{length(d), Int}(d)
-    #R = R[allowedindices]
-    #R = SizedVector{length(R), Int}(R)
     y = y[allowedindices]
-
-    println("before init")
-    likresults = ExactPosterior([fixedn], 0.1:0.1:1.0, 0.1:0.1:0.4, R, d, y, 0)
-    maxlikindex = argmax(likresults[5, :])
-    τCmaxlik, τAmaxlik, ϵmaxlik = likresults[2:4, maxlikindex]
-
-    println("init value found")
-
 
     tuples = zip(d, y)
     cm = countmap(tuples)
@@ -327,13 +287,20 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
     d = [key[1] for key in thekeys]
     y = [key[2] for key in thekeys]
     counts = collect(values(cm))
-    for index in eachindex(d, y, counts)
-        @assert cm[(d[index], y[index])] == counts[index]
-    end 
-    cm2 = Dict((d[index], y[index]) => counts[index] for index in eachindex(d, y, counts))
-    @assert cm == cm2 
-    d = SizedVector{length(d), Int}(d)
     
+    d = SizedVector{length(d), Int}(d)
+    counts = SizedVector{length(counts), Int}(counts)
+    
+    smallestτC, smallestτA = minimum(prioronτCτA)
+    largestτC, largestτA = maximum(prioronτCτA)
+    smallestϵ, largestϵ = extrema(prioronϵ)
+    gridτC = range(smallestτC, largestτC, length=10)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(smallestτA, largestτA, length=10)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(smallestϵ, largestϵ, length=10)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    likresults = exactposterior([fixedn], gridτC, gridτA, gridϵ, R, d, counts, y, 0)
+    maxlikindex = argmax(likresults[5, :])
+    τCmaxlik, τAmaxlik, ϵmaxlik = likresults[2:4, maxlikindex]
+
     Q, Qꜜ, hvals, binomialcoefficients = preparedata(fixedn, y)
     results = Vector{Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}, BitVector, Vector{Float64}}}(undef,nchains)
     @threads for chainindex in eachindex(results) 
@@ -346,23 +313,12 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         acceptedvec = BitVector(undef, nsteps) # BitVector is more efficient than Vector{Bool} 
         # (roughly, one bit per item, instead of one byte.)
         logjointprob = Vector{Float64}(undef, nsteps)
+        
         # Initialise.
-        #=
-        if init === nothing # draw initial value from the prior.
-            #nprevious = rand(prioronn)
-            τCprevious, τAprevious = rand(prioronτCτA)
-            ϵprevious = rand(prioronϵ)
-        else
-            #nprevious, 
-            τCprevious, τAprevious, ϵprevious = init 
-        end
-        =#
-
         τCprevious = τCmaxlik 
         τAprevious = τAmaxlik
         ϵprevious = ϵmaxlik
         
-        #nsample[1] = nprevious
         τCsample[1] = τCprevious
         τAsample[1] = τAprevious
         ϵsample[1] = ϵprevious
@@ -379,27 +335,17 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         # covariance matrix Σ.
         σ = 0.001
         distproposalϵ = Normal(0.0, σ)
-        if factor === nothing 
-            scalefactor = 1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
-        else 
-            scalefactor = factor * 1.8881
-        end  
+        scalefactor = 1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
         for step in 2:nsteps  
             # draw proposals. 
             τCproposal, τAproposal = [τCprevious, τAprevious] + rand(distproposalτCτA)
-            # The distribution of the next line is symmetric, i.e. P(a;b)=P(b;a), 
-            # even for a,b equal or near 1 or n.  
-            #nproposalprobvec = vcat(repeat([0.2 / (nmax-1)], nprevious-1), [0.8], repeat([0.2 / (nmax-1)], nmax - nprevious))
-            #nproposal = rand(Categorical(nproposalprobvec)) # so with 80% chance nproposal is 
-            # equal to nprevious. 
             ϵproposal = ϵprevious + rand(distproposalϵ)
             # calculate the loglikelihood
             loglikproposal = logprobderivedreads!(p, q, d, counts, τCproposal, τAproposal, ϵproposal, fixedn, R, Q, Qꜜ, binomialcoefficients, hvals)
             logpdfpriorproposal = logpdf(prioronτCτA, [τCproposal, τAproposal]) + logpdf(prioronϵ, ϵproposal)
             # calculate the acceptance probability. 
             # Note that our proposal function for n, τC, τA, ϵ is symmetric, i.e. q(x|y)=q(y|x).
-            logacceptanceprobability = inversetemperature * ( loglikproposal - loglikprevious + 
-                logpdfpriorproposal - logpdfpriorprevious )
+            logacceptanceprobability = loglikproposal - loglikprevious + logpdfpriorproposal - logpdfpriorprevious 
             acceptanceprobability = exp(logacceptanceprobability)
             # accept or reject the proposal with probability max(1, acceptanceprobability), note that rand() samples from the uniform distribution.
             accepted = rand() ≤ acceptanceprobability
@@ -422,24 +368,18 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
             end 
             if step % 1000 == 0
                 # the covariance is calculated from the previous steps and used in the next iteration.
-                if factor === nothing 
-                    if step < nsteps÷4 && step > 1000  
-                        acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
-                        if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
-                            scalefactor = 3*scalefactor/4
-                            println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
-                        elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
-                            scalefactor = 4*scalefactor/3
-                            println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
-                        end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
-                    end 
+                if step < nsteps÷4 && step > 1000  
+                    acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
+                    if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
+                        scalefactor = 3*scalefactor/4
+                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                    elseif acceptancerate > 0.6 # acceptancerate too large, take bigger steps.
+                        scalefactor = 4*scalefactor/3
+                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
+                    end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                #Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I)
                 Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
-                if step % 100_000 == 0
-                    @show Σ 
-                end 
                 # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                 # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
                 distproposalτCτA = MvNormal(Σ)
@@ -483,7 +423,7 @@ gives the results of the first chain.
 
 Here we assume that all coverages are the same.
 """
-function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
+function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronn) ≥ 1 || throw(ArgumentError("prioronn should have support on positive integers. There is always at least one individual."))
@@ -497,6 +437,9 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     maximum(d) ≤  R || throw(DomainError("All reads should be at most the coverage."))
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
     length(d) == length(y) || throw(DimensionMismatch("d and y should be of the same length."))
+    nmax = maximum(prioronn)
+    nmax ≤ 10 || throw(ArgumentError("The current implementation can handle at most 10 individuals."))
+
 
     # Remove frequencies 0.0 and 1.0
     allowedindices = 0.0 .< y .< 1.0
@@ -512,12 +455,22 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     for index in eachindex(d, y, counts)
         @assert cm[(d[index], y[index])] == counts[index]
     end 
-    cm2 = Dict((d[index], y[index]) => counts[index] for index in eachindex(d, y, counts))
-    @assert cm == cm2 
-    d = SizedVector{length(d), Int}(d)
 
-    nmax = maximum(prioronn)
-    nmax ≤ 10 || throw(ArgumentError("The current implementation can handle at most 10 individuals."))
+    smallestn, largestn = extrema(prioronn)
+    smallestτC, smallestτA = minimum(prioronτCτA)
+    largestτC, largestτA = maximum(prioronτCτA)
+    smallestϵ, largestϵ = extrema(prioronϵ)
+    gridτC = range(smallestτC, largestτC, length=10)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(smallestτA, largestτA, length=10)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(smallestϵ, largestϵ, length=10)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
+    maxlikindex = argmax(likresults[5, :])
+    nmaxlik, τCmaxlik, τAmaxlik, ϵmaxlik = likresults[1:4, maxlikindex]
+    nmaxlik = Int(nmaxlik)
+
+    d = SizedVector{length(d), Int}(d)
+    counts = SizedVector{length(counts), Int}(counts)
+
     Qs = Vector{EigenExpansion}(undef, nmax)
     Qꜜs = Vector{EigenExpansion}(undef, nmax)
     hvals = Vector{Any}(undef, nmax) # contains the matrices with values y^k(1-y)^{2n-k}.
@@ -542,13 +495,11 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
         # (roughly, one bit per item, instead of one byte.)
         logjointprob = Vector{Float64}(undef, nsteps)
         # Initialise.
-        if init === nothing # draw initial value from the prior.
-            nprevious = rand(prioronn)
-            τCprevious, τAprevious = rand(prioronτCτA)
-            ϵprevious = rand(prioronϵ)
-        else 
-            nprevious, τCprevious, τAprevious, ϵprevious = init 
-        end 
+        nprevious = nmaxlik
+        τCprevious = τCmaxlik
+        τAprevious = τAmaxlik
+        ϵprevious = ϵmaxlik
+        
         nsample[1] = nprevious
         τCsample[1] = τCprevious
         τAsample[1] = τAprevious 
@@ -622,14 +573,10 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                     end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                #Σ = scalefactor * (cov([τCsample[1:10:step] τAsample[1:10:step]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
-                # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
                 Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
                 
                 distproposalτCτA = MvNormal(Σ)
-                # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
-                # so not really necessary. 
-                σ = std(ϵsample[1:10:step], corrected=true) + 1.0e-5 # small threshold to prevent getting zero variance. 
+                σ = std(ϵsample[1:10:step], corrected=true) + 1.0e-14 # small threshold to prevent getting zero variance. 
                 distproposalϵ = Normal(0.0, sqrt(scalefactor) * σ)
             end
             if messages > 0 # No messages at all when messages ≤ 0.
@@ -690,11 +637,18 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     R = [key[2] for key in keys(cm)]
     y = [key[3] for key in keys(cm)]
     counts = collect(values(cm))
-    for index in eachindex(d, R, y, counts)
-        @assert cm[(d[index], R[index], y[index])] == counts[index]
-    end 
-    cm2 = Dict((d[index], R[index], y[index]) => counts[index] for index in eachindex(d, R, y, counts))
-    @assert cm == cm2 
+    
+    smallestn, largestn = extrema(prioronn)
+    smallestτC, smallestτA = minimum(prioronτCτA)
+    largestτC, largestτA = maximum(prioronτCτA)
+    smallestϵ, largestϵ = extrema(prioronϵ)
+    gridτC = range(smallestτC, largestτC, length=10)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(smallestτA, largestτA, length=10)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(smallestϵ, largestϵ, length=10)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
+    maxlikindex = argmax(likresults[5, :])
+    nmaxlik, τCmaxlik, τAmaxlik, ϵmaxlik = likresults[1:4, maxlikindex]
+    nmaxlik = Int(nmaxlik)
 
     d = SizedVector{length(d), Int}(d)
     R = SizedVector{length(R), Int}(R)
@@ -705,8 +659,6 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     for n in 1:nmax
         Qs[n], Qꜜs[n], hvals[n], binomialcoefficients[n] = preparedata(n, y)
     end
-    #p = Vector{Any}(undef, nmax)
-    #binomialprobs = Vector{Any}(undef, nmax)
     hvals = [item for item in hvals] # change type of hvals to more specific one then Any.
     binomialcoefficients = [item for item in binomialcoefficients] # same.
     # Each item in results contains a tuple 
@@ -724,13 +676,11 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
         # (roughly, one bit per item, instead of one byte.)
         logjointprob = Vector{Float64}(undef, nsteps)
         # Initialise.
-        if init === nothing # draw initial value from the prior.
-            nprevious = rand(prioronn)
-            τCprevious, τAprevious = rand(prioronτCτA)
-            ϵprevious = rand(prioronϵ)
-        else
-            nprevious, τCprevious, τAprevious, ϵprevious = init 
-        end
+        nprevious = nmaxlik 
+        τCprevious = τCmaxlik
+        τAprevious = τAmaxlik
+        ϵmaxlik = ϵprevious
+
         nsample[1] = nprevious
         τCsample[1] = τCprevious
         τAsample[1] = τAprevious
@@ -829,7 +779,7 @@ end # function.
 ##
 ## MCMC with simulated proposals. 
 # function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
-function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
+function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronn) ≥ 1 || throw(ArgumentError("prioronn should have support on positive integers. There is always at least one individual."))
@@ -850,18 +800,25 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     allowedindices = 0.0 .< y .< 1.0
     d = d[allowedindices]
     y = y[allowedindices]
-
     tuples = zip(d, y)
     cm = countmap(tuples)
     thekeys = keys(cm)
     d = [key[1] for key in thekeys]
     y = [key[2] for key in thekeys]
     counts = collect(values(cm))
-    for index in eachindex(d, y, counts)
-        @assert cm[(d[index], y[index])] == counts[index]
-    end 
-    cm2 = Dict((d[index], y[index]) => counts[index] for index in eachindex(d, y, counts))
-    @assert cm == cm2 
+    
+    smallestn, largestn = extrema(prioronn)
+    smallestτC, smallestτA = minimum(prioronτCτA)
+    largestτC, largestτA = maximum(prioronτCτA)
+    smallestϵ, largestϵ = extrema(prioronϵ)
+    gridτC = range(smallestτC, largestτC, length=10)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(smallestτA, largestτA, length=10)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(smallestϵ, largestϵ, length=10)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
+    maxlikindex = argmax(likresults[5, :])
+    nmaxlik, τCmaxlik, τAmaxlik, ϵmaxlik = likresults[1:4, maxlikindex]
+    nmaxlik = Int(nmaxlik)
+
     
     d = SizedVector{length(d), Int}(d)
     #R = SizedVector{length(R), Int}(R)
@@ -891,21 +848,11 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         # (roughly, one bit per item, instead of one byte.)
         logjointprob = Matrix{Float64}(undef, nsteps, nmax+1)
         # Initialise.
-        τCprevious = Vector{Float64}(undef, nmax)
-        τAprevious = Vector{Float64}(undef, nmax)
-        ϵprevious = Vector{Float64}(undef, nmax)
-        if init === nothing # draw initial value from the prior.
-            nprevious = rand(prioronn)
-            for index in eachindex(τCprevious, τAprevious)
-                τCprevious[index], τAprevious[index] = rand(prioronτCτA)
-                ϵprevious[index] = rand(prioronϵ)
-            end 
-        else 
-            nprevious = init[1]
-            for index in eachindex(τCprevious, τAprevious)
-                _, τCprevious[index], τAprevious[index], ϵprevious[index] = init
-            end
-        end 
+        nprevious = nmaxlik
+        τCprevious = fill(τCmaxlik, nmax)
+        τAprevious = fill(τAmaxlik, nmax)
+        ϵprevious = fill(ϵmaxlik, nmax)
+        
         nsample[1] = nprevious
         τCsample[1,:] = τCprevious
         τAsample[1,:] = τAprevious 
@@ -1067,11 +1014,19 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     R = [key[2] for key in keys(cm)]
     y = [key[3] for key in keys(cm)]
     counts = collect(values(cm))
-    for index in eachindex(d, R, y, counts)
-        @assert cm[(d[index], R[index], y[index])] == counts[index]
-    end 
-    cm2 = Dict((d[index], R[index], y[index]) => counts[index] for index in eachindex(d, R, y, counts))
-    @assert cm == cm2 
+
+    smallestn, largestn = extrema(prioronn)
+    smallestτC, smallestτA = minimum(prioronτCτA)
+    largestτC, largestτA = maximum(prioronτCτA)
+    smallestϵ, largestϵ = extrema(prioronϵ)
+    gridτC = range(smallestτC, largestτC, length=10)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(smallestτA, largestτA, length=10)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(smallestϵ, largestϵ, length=10)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
+    maxlikindex = argmax(likresults[5, :])
+    nmaxlik, τCmaxlik, τAmaxlik, ϵmaxlik = likresults[1:4, maxlikindex]
+    nmaxlik = Int(nmaxlik)
+
 
     d = SizedVector{length(d), Int}(d)
     R = SizedVector{length(R), Int}(R)
@@ -1099,21 +1054,11 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         # (roughly, one bit per item, instead of one byte.)
         logjointprob = Matrix{Float64}(undef, nsteps, nmax+1)
         # Initialise.
-        τCprevious = Vector{Float64}(undef, nmax)
-        τAprevious = Vector{Float64}(undef, nmax)
-        ϵprevious = Vector{Float64}(undef, nmax)
-        if init === nothing # draw initial value from the prior.
-            nprevious = rand(prioronn)
-            for index in eachindex(τCprevious, τAprevious)
-                τCprevious[index], τAprevious[index] = rand(prioronτCτA)
-                ϵprevious[index] = rand(prioronϵ)
-            end 
-        else 
-            nprevious = init[1]
-            for index in eachindex(τCprevious, τAprevious)
-                _, τCprevious[index], τAprevious[index], ϵprevious[index] = init
-            end
-        end 
+        nprevious = nmaxlik
+        τCprevious = fill(τCmaxlik, nmax)
+        τAprevious = fill(τAmaxlik, nmax)
+        ϵprevious = fill(ϵmaxlik, nmax)
+
         nsample[1] = nprevious
         τCsample[1,:] = τCprevious
         τAsample[1,:] = τAprevious 
