@@ -13,12 +13,9 @@ trueϵ = 0.001 # true error rate used in the simulations.
 coverage = 64 # the coverage is 64 everywhere. 
 τrange = 0.001:0.001:1.0
 
-
 allcombinations2 = allcombinations[[38, 63, 36, 57]]
-
-anchorpop, ancientpop, truenumind = allcombinations2[1]
-
-for (anchorpop, ancientpop, truenumind) in allcombinations2
+allcombinations3 = setdiff(allcombinations, allcombinations2)
+for (anchorpop, ancientpop, truenumind) in allcombinations3
     csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "exactposterior", string("Madsmodel_ancient_pop_exact_posterior_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     df = CSV.read(zippedcsvfile, DataFrame)

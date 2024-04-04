@@ -288,19 +288,19 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
     y = [key[2] for key in thekeys]
     counts = collect(values(cm))
     
-    d = SizedVector{length(d), Int}(d)
-    counts = SizedVector{length(counts), Int}(counts)
-    
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
     smallestϵ, largestϵ = extrema(prioronϵ)
-    gridτC = range(smallestτC, largestτC, length=10)[begin+1:end] # avoid a 0.0 value
-    gridτA = range(smallestτA, largestτA, length=10)[begin+1:end] # avoid a 0.0 value
-    gridϵ = range(smallestϵ, largestϵ, length=10)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    gridτC = range(smallestτC, largestτC, length=23)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(smallestτA, largestτA, length=23)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(smallestϵ, largestϵ, length=24)[begin+1:end-1] # avoid a 0.0 and 0.5 value
     likresults = exactposterior([fixedn], gridτC, gridτA, gridϵ, R, d, counts, y, 0)
     maxlikindex = argmax(likresults[5, :])
     τCmaxlik, τAmaxlik, ϵmaxlik = likresults[2:4, maxlikindex]
 
+    d = SizedVector{length(d), Int}(d)
+    counts = SizedVector{length(counts), Int}(counts)
+    
     Q, Qꜜ, hvals, binomialcoefficients = preparedata(fixedn, y)
     results = Vector{Tuple{Vector{Float64}, Vector{Float64}, Vector{Float64}, BitVector, Vector{Float64}}}(undef,nchains)
     @threads for chainindex in eachindex(results) 
@@ -313,6 +313,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         acceptedvec = BitVector(undef, nsteps) # BitVector is more efficient than Vector{Bool} 
         # (roughly, one bit per item, instead of one byte.)
         logjointprob = Vector{Float64}(undef, nsteps)
+        firsttimecalculatingΣ = true # first time calculating the covariance matrix. 
         
         # Initialise.
         τCprevious = τCmaxlik 
@@ -335,7 +336,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         # covariance matrix Σ.
         σ = 0.001
         distproposalϵ = Normal(0.0, σ)
-        scalefactor = 1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
+        scalefactor = 0.1 #1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
         for step in 2:nsteps  
             # draw proposals. 
             τCproposal, τAproposal = [τCprevious, τAprevious] + rand(distproposalτCτA)
@@ -379,13 +380,22 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                     end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
+                if firsttimecalculatingΣ
+                    Σ = Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
+                    largestvalue = maximum(Σ)
+                    scalefactor = 0.00001 / largestvalue
+                    @show scalefactor
+                    Σ = scalefactor * Σ + 1.0e-14*I 
+                    firsttimecalculatingΣ = false 
+                else 
+                    Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
+                end 
                 # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                 # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
                 distproposalτCτA = MvNormal(Σ)
                 # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
                 # so not really necessary. 
-                σ = std(ϵsample[1:10:step], corrected=true) + 1.0e-10 # small threshold to prevent getting zero variance. 
+                σ = std(ϵsample[1:10:step], corrected=true) + 1.0e-14 # small threshold to prevent getting zero variance. 
                 distproposalϵ = Normal(0.0, sqrt(scalefactor) * σ)
             end
             if messages > 0 # No messages at all when messages ≤ 0.
@@ -816,9 +826,19 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     gridϵ = range(smallestϵ, largestϵ, length=10)[begin+1:end-1] # avoid a 0.0 and 0.5 value
     likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
     maxlikindex = argmax(likresults[5, :])
-    nmaxlik, τCmaxlik, τAmaxlik, ϵmaxlik = likresults[1:4, maxlikindex]
+    nmaxlik = likresults[1, maxlikindex]
     nmaxlik = Int(nmaxlik)
-
+    τAmaxliksconditionedonn = Vector{Float64}(undef, nmax)
+    τCmaxliksconditionedonn = Vector{Float64}(undef, nmax)
+    ϵmaxliksconditionedonn = Vector{Float64}(undef, nmax)
+    for n in 1:nmax 
+        filteronn = likresults[1, :] .== n 
+        likresultsconditionedonn = likresults[:, filteronn]
+        maxlikindex = argmax(likresultsconditionedonn[5, :])
+        τCmaxliksconditionedonn[n] = likresultsconditionedonn[2, maxlikindex]
+        τAmaxliksconditionedonn[n] = likresultsconditionedonn[3, maxlikindex]
+        ϵmaxliksconditionedonn[n] = likresultsconditionedonn[4, maxlikindex]
+    end 
     
     d = SizedVector{length(d), Int}(d)
     #R = SizedVector{length(R), Int}(R)
@@ -849,9 +869,9 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         logjointprob = Matrix{Float64}(undef, nsteps, nmax+1)
         # Initialise.
         nprevious = nmaxlik
-        τCprevious = fill(τCmaxlik, nmax)
-        τAprevious = fill(τAmaxlik, nmax)
-        ϵprevious = fill(ϵmaxlik, nmax)
+        τCprevious = copy(τCmaxliksconditionedonn)
+        τAprevious = copy(τCmaxliksconditionedonn)
+        ϵprevious = copy(τCmaxliksconditionedonn)
         
         nsample[1] = nprevious
         τCsample[1,:] = τCprevious

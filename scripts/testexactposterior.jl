@@ -45,11 +45,11 @@ end
 =# 
 
 
-ϵrange = 0.1:0.1:0.4 # true error rate used in the simulations. 
+ϵrange = range(0.0, 0.5, length=48)[begin+1:end-1] # remove 0.0 and 0.5
 
 coverage = 64 # the coverage is 64 everywhere. 
 
-τrange = 0.1:0.1:1.0
+τrange = range(0.0, 1.0, length=47)[begin+1:end] # remove 0.0. 
 
 timeresults = Vector{Minute}(undef, length(allcombinations))
 index = 1 
@@ -72,11 +72,12 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
     before = now() 
-    exactposterior([truenumind], τrange, τrange, ϵrange, coverage, derivedreadsvec, freqs)
+    exactposterior([truenumind], τrange, τrange, ϵrange, coverage, derivedreadsvec, freqs, 0)
     after = now() 
     timedifference = round(after - before, Minute)
     timeresults[index] = timedifference
     println("finished with ", index, "-th file.")
+    println("it took", timedifference)
     index += 1 
 end # (anchorpop, ancientpop, truenumind)
 
