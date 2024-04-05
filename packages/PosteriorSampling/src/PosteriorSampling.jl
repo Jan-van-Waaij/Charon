@@ -465,10 +465,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     d = [key[1] for key in thekeys]
     y = [key[2] for key in thekeys]
     counts = collect(values(cm))
-    for index in eachindex(d, y, counts)
-        @assert cm[(d[index], y[index])] == counts[index]
-    end 
-
+    
     smallestn, largestn = extrema(prioronn)
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
