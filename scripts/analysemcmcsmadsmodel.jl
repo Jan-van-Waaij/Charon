@@ -33,7 +33,7 @@ allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpo
 allow(t) = (t[1] != "CEU") | (t[2] != "CEUS")
 filter!(allow, allcombinations)
 
-nsteps = 800_000 # number of steps in mcmc chain 
+nsteps = 200_000 # number of steps in mcmc chain 
 nchains = 4 # number of chains. 
 trueϵ = 0.001 # true error rate used in the simulations. 
 coverage = 64 # the coverage is 64 everywhere. 
@@ -81,9 +81,12 @@ allcombinations2 = allcombinations[[38, 63, 36, 57]]
 temperatures = [200, 400, 1000, 10_000.0]
 allcombinations3 = [(tuple..., temperature) for tuple in allcombinations2 for temperature in temperatures]
 for (anchorpop, ancientpop, truenumind) in allcombinations
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("maxlik_init_with_improvements_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("everything_improved_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
-    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "Madsmodel", string("maxlik_init_improved_last_half_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
+    if !isfile(zippedcsvfile)
+        continue
+    end 
+    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "Madsmodel", string("everything_improved_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
     
     if !isfile(zippedcsvfile)
         continue
@@ -92,7 +95,7 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     # chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     # chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
-    chainarray = cat((Matrix(gdf[k][400_000:800_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+    chainarray = cat((Matrix(gdf[k][100_000:200_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     chain = Chains(chainarray, [:τCsample, :τAsample, :ϵsample])
     p=plot(chain)
     savefig(p, plotfile)
@@ -101,7 +104,7 @@ end
 
 # calculate acceptancerate
 for (anchorpop, ancientpop, truenumind) in allcombinations
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("maxlik_init_with_second_improvements_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("everything_improved_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     if !isfile(zippedcsvfile)
         continue
@@ -109,9 +112,11 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     df = CSV.read(zippedcsvfile, DataFrame)
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     for df in gdf 
-        rate = mean(df.:accepted[400_000:800_000])
-
-        println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", df.:chainid[1], " rate ", rate)
+        rates = [mean(df.:accepted[1+k*1000:(k+1)*1000]) for k in 0:9]
+        println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", df.:chainid[1])
+        for rate in rates 
+            println(rate)
+        end  
     end 
     #=
     for df in gdf

@@ -374,7 +374,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                     if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
                         scalefactor = 3*scalefactor/4
                         println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
-                    elseif acceptancerate > 0.2 # acceptancerate too large, take bigger steps.
+                    elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
                         scalefactor = 4*scalefactor/3
                         println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
                     end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
@@ -384,7 +384,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                     Σ = Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
                     σ = std(ϵsample[1:10:step], corrected=true) + 1.0e-14 
                     largestvalue = maximum(Σ)
-                    scalefactor = min(0.000001 / largestvalue, (0.0001/σ)^2 )
+                    scalefactor = 0.1*min(0.000001 / largestvalue, (0.0001/σ)^2 )
                     Σ = scalefactor * Σ + 1.0e-14*I 
                     σ = sqrt(scalefactor)*σ 
 
