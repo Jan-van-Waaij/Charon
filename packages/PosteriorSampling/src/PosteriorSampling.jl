@@ -331,10 +331,10 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         logpdfpriorprevious == -Inf && throw(DomainError("The initial value is outside the support of the prior."))
         logjointprob[1] = loglikprevious + logpdfpriorprevious
         # Define proposal densities. 
-        Σ = [0.00001 0.0; 0.0 0.00001]
+        Σ = [0.000001 0.0; 0.0 0.000001]
         distproposalτCτA = MvNormal(Σ)# Multivariate normal distribution with mean zero and 
         # covariance matrix Σ.
-        σ = 0.001
+        σ = 0.0001
         distproposalϵ = Normal(0.0, σ)
         scalefactor = 0.1 #1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
         for step in 2:nsteps  
@@ -383,7 +383,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                 if firsttimecalculatingΣ
                     Σ = Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
                     largestvalue = maximum(Σ)
-                    scalefactor = 0.00001 / largestvalue
+                    scalefactor = 0.000001 / largestvalue
                     @show scalefactor
                     Σ = scalefactor * Σ + 1.0e-14*I 
                     firsttimecalculatingΣ = false 

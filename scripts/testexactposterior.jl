@@ -45,11 +45,11 @@ end
 =# 
 
 
-ϵrange = range(0.0, 0.5, length=48)[begin+1:end-1] # remove 0.0 and 0.5
+ϵrange = range(0.0, 0.5, length=34)[begin+1:end-1] # remove 0.0 and 0.5
 
 coverage = 64 # the coverage is 64 everywhere. 
 
-τrange = range(0.0, 1.0, length=47)[begin+1:end] # remove 0.0. 
+τrange = range(0.0, 1.0, length=33)[begin+1:end] # remove 0.0. 
 
 timeresults = Vector{Minute}(undef, length(allcombinations))
 index = 1 
@@ -76,6 +76,7 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     after = now() 
     timedifference = round(after - before, Minute)
     timeresults[index] = timedifference
+    println("In the middle attempt.")
     println("finished with ", index, "-th file.")
     println("it took", timedifference)
     index += 1 

@@ -81,9 +81,9 @@ allcombinations2 = allcombinations[[38, 63, 36, 57]]
 temperatures = [200, 400, 1000, 10_000.0]
 allcombinations3 = [(tuple..., temperature) for tuple in allcombinations2 for temperature in temperatures]
 for (anchorpop, ancientpop, truenumind) in allcombinations
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("maxlik_init_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("maxlik_init_with_improvements_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
-    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "Madsmodel", string("maxlik_init_everything_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
+    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "Madsmodel", string("maxlik_init_improved_last_half_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
     
     if !isfile(zippedcsvfile)
         continue
@@ -92,7 +92,7 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     # chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     # chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
-    chainarray = cat((Matrix(gdf[k][:, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+    chainarray = cat((Matrix(gdf[k][20_000:40_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     chain = Chains(chainarray, [:τCsample, :τAsample, :ϵsample])
     p=plot(chain)
     savefig(p, plotfile)
@@ -101,14 +101,23 @@ end
 
 # calculate acceptancerate
 for (anchorpop, ancientpop, truenumind) in allcombinations
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("maxlik_init_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("maxlik_init_with_improvements_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     df = CSV.read(zippedcsvfile, DataFrame)
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
-    for df in gdf
-        rate = mean(df.:accepted[end÷2:end])
+    for df in gdf 
+        rate = mean(df.:accepted[400_000:800_000])
+
         println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", df.:chainid[1], " rate ", rate)
     end 
+    #=
+    for df in gdf
+        varτC =  var(df.:τCsample[1:10:1000])
+        varτA =  var(df.:τAsample[1:10:1000])
+        varϵ =  var(df.:ϵsample[1:10:1000])
+        println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", df.:chainid[1], " var τC ", varτC, " var τA ", varτA, " var ϵ ", varϵ )
+    end
+    =# 
 end 
 
 # calculate acceptancerate
