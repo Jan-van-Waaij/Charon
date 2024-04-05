@@ -382,21 +382,24 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                 if firsttimecalculatingΣ
                     Σ = Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
+                    σ = std(ϵsample[1:10:step], corrected=true) + 1.0e-14 
                     largestvalue = maximum(Σ)
-                    scalefactor = 0.000001 / largestvalue
-                    @show scalefactor
+                    scalefactor = min(0.000001 / largestvalue, (0.0001/σ)^2 )
                     Σ = scalefactor * Σ + 1.0e-14*I 
+                    σ = sqrt(scalefactor)*σ 
+
                     firsttimecalculatingΣ = false 
                 else 
                     Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
+                    σ = sqrt(scalefactor) * std(ϵsample[1:10:step], corrected=true) + 1.0e-14
                 end 
                 # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                 # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
                 distproposalτCτA = MvNormal(Σ)
                 # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
                 # so not really necessary. 
-                σ = std(ϵsample[1:10:step], corrected=true) + 1.0e-14 # small threshold to prevent getting zero variance. 
-                distproposalϵ = Normal(0.0, sqrt(scalefactor) * σ)
+                # small threshold to prevent getting zero variance. 
+                distproposalϵ = Normal(0.0, σ)
             end
             if messages > 0 # No messages at all when messages ≤ 0.
                 if step % messages == 0

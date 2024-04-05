@@ -32,6 +32,8 @@ anchorpops = ["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = [1, 2, 4, 8]
 allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec] # 64 elementen. 
 
+allcombinations = sample(allcombinations, 32, replace=false)
+
 #allow(t) = (t[1] != "CEU") | (t[2] != "CEUS")
 #filter!(allow, allcombinations)
 
@@ -56,19 +58,19 @@ exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
 exeflags = ["--project=$dir", "--threads=4", "--optimize=3"]
 
 nodes = [
-    ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
+    ("node01", 2), # not used. MAX CAP FOR ME: 5 ASO MODE 6
 #    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("node03", 4), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    ("node04", 5), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
-    #("node06", 5), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
-    ("node07", 8), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
-    ("node08", 4), # not used MAX CAP FOR ME: 4 ASO MODE 5
-    #("node11", 10), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
-    #("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
-    #("node13", 3), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
-    #("node14", 2), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("compute01", 32) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
+    ("node03", 2), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node04", 1), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node05", 2), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
+    ("node06", 5), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
+    ("node07", 3), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
+    ##("node08", 4), # not used MAX CAP FOR ME: 4 ASO MODE 5
+    ("node11", 7), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
+    ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
+    ("node13", 3), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
+    ("node14", 3), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    ##("compute01", 32) # 50 percent used. MAX CAP FOR ME: 26 ASO MODE 32 
 ]
 sum(node[2] for node in nodes)
 
@@ -162,7 +164,7 @@ coverage = 64 # the coverage is 64 everywhere.
     @assert coveragevec[1] == coverage
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("maxlik_init_with_second_improvements_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("better_acceptance_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     #=
     if isfile(zippedcsvfile)

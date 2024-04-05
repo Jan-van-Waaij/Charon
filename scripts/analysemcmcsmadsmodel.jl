@@ -101,8 +101,11 @@ end
 
 # calculate acceptancerate
 for (anchorpop, ancientpop, truenumind) in allcombinations
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("maxlik_init_with_improvements_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("maxlik_init_with_second_improvements_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
+    if !isfile(zippedcsvfile)
+        continue
+    end 
     df = CSV.read(zippedcsvfile, DataFrame)
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     for df in gdf 
