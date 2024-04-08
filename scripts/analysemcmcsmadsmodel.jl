@@ -95,7 +95,7 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     # chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     # chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
-    chainarray = cat((Matrix(gdf[k][1:10_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+    chainarray = cat((Matrix(gdf[k][100_000:200_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     chain = Chains(chainarray, [:τCsample, :τAsample, :ϵsample])
     p=plot(chain)
     savefig(p, plotfile)
@@ -112,18 +112,13 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     df = CSV.read(zippedcsvfile, DataFrame)
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     for df in gdf 
-        rate = mean(df.:accepted[100_000:200_000])
         println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", df.:chainid[1])
-        println(rate) 
+        rates = [mean(df.:accepted[1+k*1000:(k+1)*1000]) for k in 0:9]
+        println(rates)
+        println("48 000 and up") 
+        rates = [mean(df.:accepted[48_001+ k*1000:48_000+(k+1)*1000]) for k in 0:10]
+        println(rates) 
     end 
-    #=
-    for df in gdf
-        varτC =  var(df.:τCsample[1:10:1000])
-        varτA =  var(df.:τAsample[1:10:1000])
-        varϵ =  var(df.:ϵsample[1:10:1000])
-        println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", df.:chainid[1], " var τC ", varτC, " var τA ", varτA, " var ϵ ", varϵ )
-    end
-    =# 
 end 
 
 # calculate acceptancerate

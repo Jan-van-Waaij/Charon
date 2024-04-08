@@ -367,9 +367,9 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                 logjointprob[step] = loglikprevious + logpdfpriorprevious 
                 # no updating: loglikprevious and logpdfpriorprevious remain the same.
             end 
-            if step % 1000 == 0 && step > 50_000
+            if step % 1000 == 0 && step > nstep÷16
                 # the covariance is calculated from the previous steps and used in the next iteration.
-                if step < nsteps÷4 && step > 51_000  
+                if nsteps÷8 < step < nsteps÷4  
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
                     if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
                         scalefactor = 3*scalefactor/4
