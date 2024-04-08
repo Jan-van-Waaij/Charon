@@ -381,8 +381,9 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                 if firsttimecalculatingΣ
-                    Σ = Diagonal([var(τCsample[nsteps÷16:10:step], corrected=true), var(τAsample[30_000:10:step], corrected=true)]) + 1.0e-14*I
+                    Σ = Diagonal([var(τCsample[nsteps÷16:10:step], corrected=true), var(τAsample[nsteps÷16:10:step], corrected=true)]) + 1.0e-14*I
                     σ = std(ϵsample[nsteps÷16:10:step], corrected=true) + 1.0e-14 
+                    
                     largestvalue = maximum(Σ)
                     scalefactor = 0.1*min(0.000001 / largestvalue, (0.0001/σ)^2 )
                     Σ = scalefactor * Σ + 1.0e-14*I 
