@@ -38,11 +38,11 @@ nchains = 4 # number of chains.
 trueϵ = 0.001 # true error rate used in the simulations. 
 coverage = 64 # the coverage is 64 everywhere. 
 
-anchorpop = "CEU"
-truenumind = 2
-ancientpop = "CEUS"
+anchorpop = "CHB"
+truenumind = 8
+ancientpop = "CHBS"
 
-csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("everything_improved_even_better_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
 zippedcsvfile = csvfile * ".gz"
 
 zippedcsvfile = "data/mcmcsamples/Madsmodel_ancient_pop_KARS_anchor_pop_KAR_true_num_ind_4_factor_1.0.csv.gz"
@@ -50,6 +50,10 @@ zippedcsvfile = "data/mcmcsamples/Madsmodel_ancient_pop_KARS_anchor_pop_KAR_true
 df = CSV.read(zippedcsvfile, DataFrame)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
 
 gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
+
+chainarray = cat((Matrix(gdf[k][49_000:50_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+chain = Chains(chainarray, [:τCsample, :τAsample, :ϵsample])
+p=plot(chain)
 
 # make plots
 #allcombinations = allcombinations[[38, 63, 36, 57]]
@@ -113,8 +117,8 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     for df in gdf 
         println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", df.:chainid[1])
-        rate = mean(df.:accepted[100_000:110_000]) 
-        println(rate) 
+        rates = [mean(df.:accepted[1+k*1000:(k+1)*1000]) for k in 0:9] 
+        println(rates) 
     end 
 end 
 
