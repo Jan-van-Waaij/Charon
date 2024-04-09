@@ -388,8 +388,8 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                     Σ = scalefactor * Σ + 1.0e-14*I 
                     σ = sqrt(scalefactor)*σ 
                 else 
-                    Σ = scalefactor *  Diagonal([var(τCsample[covariancecalculationeverynsteps:100:step], corrected=true), var(τAsample[covariancecalculationeverynsteps:100:step], corrected=true)]) + 1.0e-14*I
-                    σ = sqrt(scalefactor) * std(ϵsample[covariancecalculationeverynsteps:100:step], corrected=true) + 1.0e-14
+                    Σ = scalefactor *  Diagonal([var(τCsample[1:100:step], corrected=true), var(τAsample[1:100:step], corrected=true)]) + 1.0e-14*I
+                    σ = sqrt(scalefactor) * std(ϵsample[1:100:step], corrected=true) + 1.0e-14
                 end 
                 # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                 # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
