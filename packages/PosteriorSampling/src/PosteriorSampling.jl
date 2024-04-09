@@ -384,7 +384,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                     σ = std(ϵsample[1:100:step], corrected=true) + 1.0e-14 
                     
                     largestvalue = maximum(Σ)
-                    scalefactor = 0.1*min(0.000001 / largestvalue, (0.0001/σ)^2 )
+                    scalefactor = min(0.000001 / largestvalue, (0.0001/σ)^2 )
                     Σ = scalefactor * Σ + 1.0e-14*I 
                     σ = sqrt(scalefactor)*σ 
                 else 

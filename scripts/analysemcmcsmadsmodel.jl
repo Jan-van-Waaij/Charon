@@ -117,8 +117,17 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     for df in gdf 
         println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", df.:chainid[1])
-        rates = [mean(df.:accepted[1+k*1000:(k+1)*1000]) for k in 0:9] 
-        println(rates) 
+        before = mean(df.:accepted[900:1000])
+        after = mean(df.:accepted[1000:1100])
+        whileafter = [mean(df.:accepted[1900+k*100:1900+(k+1)*100]) for k in 0:4]
+        @show before 
+        @show after 
+        @show whileafter
+        #rates = [mean(df.:accepted[1+k*1000:(k+1)*1000]) for k in 0:9] 
+        #println(rates)
+        #rate = mean(df.:accepted[100_000:200_000]) 
+        #println(rate) 
+        println()
     end 
 end 
 
