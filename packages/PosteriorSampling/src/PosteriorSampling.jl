@@ -334,7 +334,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         # covariance matrix Σ.
         σ = 0.0001
         distproposalϵ = Normal(0.0, σ)
-        scalefactor = 0.1 #1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
+        scalefactor = 2.38^2/3.0 #0.1 #1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
         for step in 2:nsteps  
             # draw proposals. 
             τCproposal, τAproposal = [τCprevious, τAprevious] + rand(distproposalτCτA)
@@ -367,6 +367,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
             end 
             if step % 1000 == 0 && step ≥ 5000
                 # the covariance is calculated from the previous steps and used in the next iteration.
+                #=
                 if 5000 < step < nsteps÷4   
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
                     if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
@@ -377,13 +378,14 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                         println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
                     end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end 
+                =#
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                 if step == 5000
                     Σ = Diagonal([var(τCsample[3000:20:step], corrected=true), var(τAsample[3000:20:step], corrected=true)]) + 1.0e-14*I
                     σ = std(ϵsample[3000:20:step], corrected=true) + 1.0e-14 
                     
-                    largestvalue = maximum(Σ)
-                    scalefactor = min(0.000001 / largestvalue, (0.0001/σ)^2 )
+                    #largestvalue = maximum(Σ)
+                    #scalefactor = min(0.000001 / largestvalue, (0.0001/σ)^2 )
                     Σ = scalefactor * Σ + 1.0e-14*I 
                     σ = sqrt(scalefactor)*σ 
                 else 
