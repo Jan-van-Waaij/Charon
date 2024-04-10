@@ -166,6 +166,7 @@ coverage = 64 # the coverage is 64 everywhere.
     csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("novarianceupdatingvoortaus_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     #=
+    bla
     if isfile(zippedcsvfile)
         println(zippedcsvfile, " does already exist. Do not overwrite existing files!")
         continue 
