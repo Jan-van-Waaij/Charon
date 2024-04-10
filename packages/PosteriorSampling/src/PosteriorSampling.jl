@@ -275,7 +275,6 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
     length(d) == length(y) || throw(DimensionMismatch("d and y should be of the same length."))
     R > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
-    covariancecalculationeverynsteps = 10_000
     # Remove frequencies 0.0 and 1.0
     allowedindices = 0.0 .< y .< 1.0
     d = d[allowedindices]
@@ -366,9 +365,9 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                 logjointprob[step] = loglikprevious + logpdfpriorprevious 
                 # no updating: loglikprevious and logpdfpriorprevious remain the same.
             end 
-            if step % covariancecalculationeverynsteps == 0
+            if step % 1000 == 0 && step ≥ 5000
                 # the covariance is calculated from the previous steps and used in the next iteration.
-                if covariancecalculationeverynsteps < step < nsteps÷4   
+                if 5000 < step < nsteps÷4   
                     acceptancerate = mean(acceptedvec[step-covariancecalculationeverynsteps+1:step]) # acceptance rate in the last 1000 steps.
                     if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
                         scalefactor = 3*scalefactor/4
@@ -379,17 +378,17 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                     end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end 
                 # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                if step == covariancecalculationeverynsteps
-                    Σ = Diagonal([var(τCsample[1:100:step], corrected=true), var(τAsample[1:100:step], corrected=true)]) + 1.0e-14*I
-                    σ = std(ϵsample[1:100:step], corrected=true) + 1.0e-14 
+                if step == 5000
+                    Σ = Diagonal([var(τCsample[3000:20:step], corrected=true), var(τAsample[3000:20:step], corrected=true)]) + 1.0e-14*I
+                    σ = std(ϵsample[3000:20:step], corrected=true) + 1.0e-14 
                     
                     largestvalue = maximum(Σ)
                     scalefactor = min(0.000001 / largestvalue, (0.0001/σ)^2 )
                     Σ = scalefactor * Σ + 1.0e-14*I 
                     σ = sqrt(scalefactor)*σ 
                 else 
-                    Σ = scalefactor *  Diagonal([var(τCsample[1:100:step], corrected=true), var(τAsample[1:100:step], corrected=true)]) + 1.0e-14*I
-                    σ = sqrt(scalefactor) * std(ϵsample[1:100:step], corrected=true) + 1.0e-14
+                    Σ = scalefactor *  Diagonal([var(τCsample[3000:20:step], corrected=true), var(τAsample[3000:20:step], corrected=true)]) + 1.0e-14*I
+                    σ = sqrt(scalefactor) * std(ϵsample[3000:20:step], corrected=true) + 1.0e-14
                 end 
                 # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                 # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
