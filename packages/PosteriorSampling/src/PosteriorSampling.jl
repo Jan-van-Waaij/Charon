@@ -368,7 +368,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
             if step % 1000 == 0 && step ≥ 5000
                 # the covariance is calculated from the previous steps and used in the next iteration.
                 if 5000 < step < nsteps÷4   
-                    acceptancerate = mean(acceptedvec[step-covariancecalculationeverynsteps+1:step]) # acceptance rate in the last 1000 steps.
+                    acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
                     if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
                         scalefactor = 3*scalefactor/4
                         println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
