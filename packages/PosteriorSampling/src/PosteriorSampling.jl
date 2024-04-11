@@ -517,7 +517,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
         # covariance matrix Σ.
         σ = 0.001
         distproposalϵ = Normal(0.0, σ)
-        scalefactor = 1.4161 # = 2.38^2/4, as we have dimension of prior equal to 4.
+        scalefactor = 2.38^2/4 # = 2.38^2/4, as we have dimension of prior equal to 4.
         for step in 2:nsteps  
             # draw proposals. 
             τCproposal, τAproposal = [τCprevious, τAprevious] + rand(distproposalτCτA)
@@ -556,25 +556,27 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                 logjointprob[step] = loglikprevious + logpdfpriorprevious 
                 # no updating: loglikprevious and logpdfpriorprevious remain the same.
             end 
-            if step % 1000 == 0
-                # the covariance is calculated from the previous steps and used in the next iteration.
-                if step < nsteps÷4 && step > 1000  
-                    percentage = round(Int, 100*step / nsteps)
+            if step % 1000 == 0 && step ≥ 5000
+                Σ = Diagonal([var(τCsample[3000:20:step], corrected=true), var(τAsample[3000:20:step], corrected=true)])# + 1.0e-14*I
+                σ = std(ϵsample[3000:20:step], corrected=true) # + 1.0e-14     
+                # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
+                # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
+                if 10_000 < step < nsteps÷4   
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
                     if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
                         scalefactor = 3*scalefactor/4
-                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
                     elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
                         scalefactor = 4*scalefactor/3
-                        println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
+                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
                     end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
-                end 
-                # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
-                
-                distproposalτCτA = MvNormal(Σ)
-                σ = std(ϵsample[1:10:step], corrected=true) + 1.0e-14 # small threshold to prevent getting zero variance. 
-                distproposalϵ = Normal(0.0, sqrt(scalefactor) * σ)
+                end
+                distproposalτCτA = MvNormal(scalefactor*Σ+1.0e-14*I)
+                # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
+                # so not really necessary. 
+                # small threshold to prevent getting zero variance. 
+                distproposalϵ = Normal(0.0, sqrt(scalefactor)*σ + 1.0e-14) 
+                # the covariance is calculated from the previous steps and used in the next iteration.
             end
             if messages > 0 # No messages at all when messages ≤ 0.
                 if step % messages == 0
