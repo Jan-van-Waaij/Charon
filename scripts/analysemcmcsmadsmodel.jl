@@ -24,7 +24,43 @@ using GZip, # to work with zipped files,
       StatsBase, # for the mean function
       Plots, 
       StatsPlots,
-      MCMCChains
+      MCMCChains, 
+      Distributed
+
+dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
+exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
+exeflags = ["--project=$dir", "--threads=4", "--optimize=3"]
+      
+nodes = [
+    ("compute01", 10), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
+    ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
+    ("node03", 5), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node04", 5), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node12", 5), # not used MAX CAP FOR ME: 3 ASO MODE 4 
+    ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
+#    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    ("node06", 5), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
+    #("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
+    ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
+    ("node11", 10), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
+    ("node13", 4), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
+    ("node14", 4) # not used MAX CAP FOR ME: 3 ASO MODE 4
+]
+sum(node[2] for node in nodes)
+
+
+addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
+
+@everywhere using GZip, # to work with zipped files,
+DataFrames, # to work with DataFrames,
+CSV, # for CSV files.
+StatsBase, # for the mean function
+Plots, 
+StatsPlots,
+MCMCChains, 
+Distributed
+
+
 
 ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
@@ -38,9 +74,9 @@ nchains = 4 # number of chains.
 trueϵ = 0.001 # true error rate used in the simulations. 
 coverage = 64 # the coverage is 64 everywhere. 
 
-anchorpop = "CHB"
-truenumind = 8
-ancientpop = "CHBS"
+anchorpop = "CEU"
+truenumind = 2
+ancientpop = "CEUS"
 
 csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("everything_improved_even_better_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
 zippedcsvfile = csvfile * ".gz"
@@ -84,13 +120,15 @@ end
 allcombinations2 = allcombinations[[38, 63, 36, 57]]
 temperatures = [200, 400, 1000, 10_000.0]
 allcombinations3 = [(tuple..., temperature) for tuple in allcombinations2 for temperature in temperatures]
-for (anchorpop, ancientpop, truenumind) in allcombinations
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("everything_improved_even_better_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+# novarianceupdatingvoortaus_
+# constantfromarticle_
+@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("novarianceupdatingvoortaus_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     if !isfile(zippedcsvfile)
         continue
     end 
-    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "Madsmodel", string("everything_improved_even_better_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
+    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "Madsmodel", string("novarianceupdatingvoortaus_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
     
     if !isfile(zippedcsvfile)
         continue
@@ -99,16 +137,17 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     # chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     # chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
-    chainarray = cat((Matrix(gdf[k][100_000:200_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+    chainarray = cat((Matrix(gdf[k][50_000:100_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     chain = Chains(chainarray, [:τCsample, :τAsample, :ϵsample])
-    p=plot(chain)
+    p=plot(chain, show=false)
     savefig(p, plotfile)
     #display(p)
 end 
 
 # calculate acceptancerate
+@sync @distributed 
 for (anchorpop, ancientpop, truenumind) in allcombinations
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("everything_improved_even_better_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("constantfromarticle_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     if !isfile(zippedcsvfile)
         continue
@@ -117,8 +156,8 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     for df in gdf 
         println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", df.:chainid[1])
-        rates = [mean(df.:accepted[k*100+1:(k+1)*100]) for k in 0:19]
-        println(rates)
+        rate = mean(df.:accepted[50_000:100_000])
+        println(rate)
         
         #rates = [mean(df.:accepted[1+k*1000:(k+1)*1000]) for k in 0:9] 
         #println(rates)
