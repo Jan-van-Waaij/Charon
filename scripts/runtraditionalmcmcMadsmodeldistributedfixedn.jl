@@ -57,8 +57,8 @@ exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
 exeflags = ["--project=$dir", "--threads=4", "--optimize=3"]
 
 nodes = [
-    ("compute01", 10), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
-    ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
+    ("compute01", 64), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
+#=    ("node05", 5), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
     ("node03", 5), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node04", 5), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node12", 5), # not used MAX CAP FOR ME: 3 ASO MODE 4 
@@ -70,6 +70,7 @@ nodes = [
     ("node11", 10), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
     ("node13", 4), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
     ("node14", 4) # not used MAX CAP FOR ME: 3 ASO MODE 4
+=#
 ]
 sum(node[2] for node in nodes)
 
@@ -163,7 +164,7 @@ coverage = 64 # the coverage is 64 everywhere.
     @assert coveragevec[1] == coverage
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("novarianceupdatingvoortaus_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("combinationofthetwo_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     #=
     bla

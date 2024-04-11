@@ -334,7 +334,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         # covariance matrix Σ.
         σ = 0.0001
         distproposalϵ = Normal(0.0, σ)
-        scalefactor = 1.0 #2.38^2/3.0 #0.1 #1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
+        scalefactor = 2.38^2/3.0 #0.1 #1.8881 # = 2.38^2/3, as we have dimension of prior equal to 3.
         for step in 2:nsteps  
             # draw proposals. 
             τCproposal, τAproposal = [τCprevious, τAprevious] + rand(distproposalτCτA)
