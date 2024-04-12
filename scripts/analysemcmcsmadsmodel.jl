@@ -78,7 +78,7 @@ anchorpop = "CEU"
 truenumind = 2
 ancientpop = "CEUS"
 
-csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("everything_improved_even_better_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("prioronn_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
 zippedcsvfile = csvfile * ".gz"
 
 zippedcsvfile = "data/mcmcsamples/Madsmodel_ancient_pop_KARS_anchor_pop_KAR_true_num_ind_4_factor_1.0.csv.gz"
@@ -90,6 +90,27 @@ gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :ch
 chainarray = cat((Matrix(gdf[k][49_000:50_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
 chain = Chains(chainarray, [:τCsample, :τAsample, :ϵsample])
 p=plot(chain)
+
+
+@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("prioronn_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    zippedcsvfile = csvfile * ".gz"
+    if !isfile(zippedcsvfile)
+        continue
+    end 
+    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "Madsmodel", string("prioronn_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
+
+    df = CSV.read(zippedcsvfile, DataFrame)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
+    gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
+    # chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+    # chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
+    chainarray = cat((Matrix(gdf[k][1:15_000, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+    chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
+    p=plot(chain, show=false);
+    savefig(p, plotfile);
+    #display(p)
+end 
+
 
 # make plots
 #allcombinations = allcombinations[[38, 63, 36, 57]]
@@ -135,17 +156,21 @@ allcombinations3 = [(tuple..., temperature) for tuple in allcombinations2 for te
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     # chainarray = cat((Matrix(gdf[k][nsteps÷2:nsteps, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     # chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
-    chainarray = cat((Matrix(gdf[k][50_000:100_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+    chainarray = cat((Matrix(gdf[k][1:15_000, [:τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
     chain = Chains(chainarray, [:τCsample, :τAsample, :ϵsample])
     p=plot(chain, show=false);
     savefig(p, plotfile);
     #display(p)
 end 
 
+@everywhere function printresults(anchorpop, ancientpop, truenumind, chainid, rate)
+    output = string("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", chainid)
+    output = output * string('\n', rate, "\n")
+    println(output)
+end 
 # calculate acceptancerate
-@sync @distributed 
-for (anchorpop, ancientpop, truenumind) in allcombinations
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("combinationofthetwo_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("prioronn_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     if !isfile(zippedcsvfile)
         continue
@@ -153,15 +178,8 @@ for (anchorpop, ancientpop, truenumind) in allcombinations
     df = CSV.read(zippedcsvfile, DataFrame)
     gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
     for df in gdf 
-        println("anchor population ", anchorpop, " ancient population ", ancientpop, " true number of individuals ", truenumind, " chain ", df.:chainid[1])
-        rate = mean(df.:accepted[50_000:100_000])
-        println(rate)
-        
-        #rates = [mean(df.:accepted[1+k*1000:(k+1)*1000]) for k in 0:9] 
-        #println(rates)
-        #rate = mean(df.:accepted[100_000:200_000]) 
-        #println(rate) 
-        println()
+        rate = mean(df.:accepted[1:15_000])
+        printresults(anchorpop, ancientpop, truenumind, df.:chainid[1], rate)
     end 
 end 
 

@@ -216,7 +216,7 @@ try
         println("Finished with ", csvfile)
     end # (anchorpop, ancientpop, truenumind)
 catch
-    kill.(myworkers)
+    interrupt()
     println("I killed all the workers!")
 end  
 

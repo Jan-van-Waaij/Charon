@@ -457,9 +457,9 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
     smallestϵ, largestϵ = extrema(prioronϵ)
-    gridτC = range(smallestτC, largestτC, length=10)[begin+1:end] # avoid a 0.0 value
-    gridτA = range(smallestτA, largestτA, length=10)[begin+1:end] # avoid a 0.0 value
-    gridϵ = range(smallestϵ, largestϵ, length=10)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    gridτC = range(smallestτC, largestτC, length=23)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(smallestτA, largestτA, length=23)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(smallestϵ, largestϵ, length=24)[begin+1:end-1] # avoid a 0.0 and 0.5 value
     likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
     maxlikindex = argmax(likresults[5, :])
     nmaxlik, τCmaxlik, τAmaxlik, ϵmaxlik = likresults[1:4, maxlikindex]
@@ -641,9 +641,9 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
     smallestϵ, largestϵ = extrema(prioronϵ)
-    gridτC = range(smallestτC, largestτC, length=10)[begin+1:end] # avoid a 0.0 value
-    gridτA = range(smallestτA, largestτA, length=10)[begin+1:end] # avoid a 0.0 value
-    gridϵ = range(smallestϵ, largestϵ, length=10)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    gridτC = range(smallestτC, largestτC, length=23)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(smallestτA, largestτA, length=23)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(smallestϵ, largestϵ, length=24)[begin+1:end-1] # avoid a 0.0 and 0.5 value
     likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
     maxlikindex = argmax(likresults[5, :])
     nmaxlik, τCmaxlik, τAmaxlik, ϵmaxlik = likresults[1:4, maxlikindex]
@@ -810,9 +810,9 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
     smallestϵ, largestϵ = extrema(prioronϵ)
-    gridτC = range(smallestτC, largestτC, length=10)[begin+1:end] # avoid a 0.0 value
-    gridτA = range(smallestτA, largestτA, length=10)[begin+1:end] # avoid a 0.0 value
-    gridϵ = range(smallestϵ, largestϵ, length=10)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    gridτC = range(smallestτC, largestτC, length=23)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(smallestτA, largestτA, length=23)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(smallestϵ, largestϵ, length=24)[begin+1:end-1] # avoid a 0.0 and 0.5 value
     likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
     maxlikindex = argmax(likresults[5, :])
     nmaxlik = likresults[1, maxlikindex]
@@ -859,8 +859,8 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         # Initialise.
         nprevious = nmaxlik
         τCprevious = copy(τCmaxliksconditionedonn)
-        τAprevious = copy(τCmaxliksconditionedonn)
-        ϵprevious = copy(τCmaxliksconditionedonn)
+        τAprevious = copy(τAmaxliksconditionedonn)
+        ϵprevious = copy(ϵmaxliksconditionedonn)
         
         nsample[1] = nprevious
         τCsample[1,:] = τCprevious
@@ -883,12 +883,14 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         logjointprob[1,2:end] .= loglikprevious .+ logpdfpriorprevious
         logjointprob[1,1] = loglikprevious[nprevious] + logpdfpriorprevious[nprevious] + logpdf(prioronn, nprevious)
         # Define proposal densities. 
-        Σ = [0.00001 0.0; 0.0 0.00001]
-        distproposalτCτA = repeat([MvNormal(Σ)], nmax)# Multivariate normal distribution with mean zero and 
+        Σ = [0.000001 0.0; 0.0 0.000001]
+        distproposalτCτA = fill(MvNormal(Σ), nmax)# Multivariate normal distribution with mean zero and 
         # covariance matrix Σ.
-        σ = 0.001
-        distproposalϵ = repeat([Normal(0.0, σ)],nmax)
-        scalefactor = repeat([1.8881], nmax) # = 2.38^2/4, as we have dimension of prior equal to 4.
+        σ = 0.0001
+        distproposalϵ = fill(Normal(0.0, σ),nmax)
+        nproposalprobvec = vcat(fill(0.2 / (nmax-1), nprevious-1), 0.8, fill(0.2 / (nmax-1), nmax - nprevious))
+        distproposaln = Categorical(nproposalprobvec) # so with 80% chance nproposal is 
+        scalefactor = fill(2.38^2/4, nmax) # = 2.38^2/4, as we have dimension of prior equal to 4.
         τCproposal = Vector{Float64}(undef, nmax)
         τAproposal = Vector{Float64}(undef, nmax)
         ϵproposal = Vector{Float64}(undef, nmax)
@@ -933,8 +935,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                     # no updating: loglikprevious and logpdfpriorprevious remain the same.
                 end 
             end
-            nproposalprobvec = vcat(repeat([0.2 / (nmax-1)], nprevious-1), [0.8], repeat([0.2 / (nmax-1)], nmax - nprevious))
-            nproposal = rand(Categorical(nproposalprobvec)) # so with 80% chance nproposal is 
+            nproposal = rand(distproposaln) # so with 80% chance nproposal is 
             # equal to nprevious. 
             logpdfnprev = logpdf(prioronn, nprevious)
             if nproposal == nprevious
@@ -945,39 +946,40 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                 logpdfnprop = logpdf(prioronn, nproposal)
                 logacceptprobn = logjointprob[step, nproposal+1] - logjointprob[step, nprevious+1] + logpdfnprop - logpdfnprev
                 acceptprobn = exp(logacceptprobn)
-                if rand() ≤ acceptprobn
-                    nsample[step] = nproposal
-                    nprevious = nproposal
+                if rand() ≤ acceptprobn # proposal accepted 
+                    nsample[step] = nprevious = nproposal
                     acceptedvec[step, 1] = true
                     logjointprob[step, 1] = logjointprob[step, nproposal+1] + logpdfnprop
-                else
+                    nproposalprobvec = fill(0.2/(nmax-1), nmax)
+                    nproposalprobvec[nprevious] = 0.8
+                    distproposaln = Categorical(nproposalprobvec) # update the proposal distribution for n.
+                else # proposal rejected 
                     nsample[step] = nprevious
                     acceptedvec[step, 1] = false 
                     logjointprob[step, 1] = logjointprob[step, nprevious+1] + logpdfnprev
                 end 
-            end             
-            if step % 1000 == 0
+            end                         
+            if step % 1_000 == 0 && step ≥ 5_000
                 # the covariance is calculated from the previous steps and used in the next iteration.
                 for n in 1:nmax
-                    if step < nsteps÷4 && step > 1000  
+                    Σ = Diagonal([var(τCsample[3_000:20:step, n], corrected=true), var(τAsample[3_000:20:step, n], corrected=true)]) σ = std(ϵsample[3000:20:step, n], corrected=true)
+                    if 10_000 < step < nsteps÷4  
                         acceptancerate = mean(acceptedvec[step-999:step, n+1]) # acceptance rate in the last 1000 steps.
                         if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
-                            scalefactor = 3*scalefactor/4
+                            scalefactor[n] = 3*scalefactor[n]/4
                             println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
                         elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
-                            scalefactor = 4*scalefactor/3
+                            scalefactor[n] = 4*scalefactor[n]/3
                             println("Chain ", chainindex, " talking, I NEW scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
                         end # So do nothing when the acceptancerate is between 0.1 and 0.6.     
                     end 
                     # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
                     #Σ = scalefactor[n] * (cov([τCsample[1:10:step, n] τAsample[1:10:step, n]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
                     # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
-                    Σ = scalefactor *  Diagonal([var(τCsample[1:10:step], corrected=true), var(τAsample[1:10:step], corrected=true)]) + 1.0e-14*I
-                    distproposalτCτA[n] = MvNormal(Σ)
+                    distproposalτCτA[n] = MvNormal(scalefactor[n]*Σ+1.0e-14*I)
                     # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
                     # so not really necessary. 
-                    σ = std(ϵsample[1:10:step, n], corrected=true) + 1.0e-10 # small threshold to prevent getting zero variance. 
-                    distproposalϵ[n] = Normal(0.0, sqrt(scalefactor[n]) * σ)
+                    distproposalϵ[n] = Normal(0.0, sqrt(scalefactor[n]) * σ + 1.0e-14)
                 end 
             end
             if messages > 0 # No messages at all when messages ≤ 0.
