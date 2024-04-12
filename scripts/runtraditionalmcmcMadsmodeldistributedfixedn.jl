@@ -1,3 +1,4 @@
+
 # runmcmconallfiles.jl
 # Author: Jan van Waaij
 # Created: 26 February 2024
@@ -31,10 +32,6 @@ ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = [1, 2, 4, 8]
 allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec] # 64 elementen. 
-
-
-#allow(t) = (t[1] != "CEU") | (t[2] != "CEUS")
-#filter!(allow, allcombinations)
 
 #randomselection = sample(1:64, 4, replace=false)
 
@@ -71,22 +68,12 @@ nodes = [
     ("node13", 4), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
     ("node14", 4) # not used MAX CAP FOR ME: 3 ASO MODE 4
 ]
-sum(node[2] for node in nodes)
 
-dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
-exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
-numthreadsperprocess = 4
-exeflags = ["--project=$dir", "--threads=$numthreadsperprocess", "--optimize=3", "--banner=no"] 
+numprocs = sum(item[2] for item in nodes)
 
-myworkers = addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
+@assert numprocs == 64
 
-#=
-processes = Int[]
-for node in nodes 
-    append!(processes, addprocs([node], dir=dir, exename=exename, exeflags=exeflags))
-end 
-=# 
-
+addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
 
 @everywhere using Data, # For parsing frequency and read files. 
       DataFrames, # work with data frames.
@@ -97,128 +84,89 @@ end
       Base.Threads, # for threads
       Distributed
 
-      #=
-@everywhere function forceprecompile()
-    nchains = 2
-    nsteps = 4 
-    prioronn = DiscreteUniform(1, 2)
-    prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
-    prioronϵ = Uniform(0, 0.5) # uniform prior on [0, 0.5]
-    coverage = 4 
-    derivedreadsvec = [1, 1, 3, 2]
-    freqs = [0.1, 0.2, 0.1, 0.15]
-    MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1)
-    return nothing 
-end 
-
-forceprecompile()
-    
-
-futures = [@spawnat process forceprecompile() for process in processes]
-fetch.(futures)
-
-
-@assert nworkers() == 64
-@assert nworkers() == length(processes)
-@assert numprocs == 64
-futures2 = [@spawnat process Threads.nthreads() for process in processes]
-num_threads = fetch.(futures2)
-#@show num_threads # weghalen en nog een test toevoegen om te bepalen of de project goed is. 
-@assert unique(num_threads) == [numthreadsperprocess]
-futures3 = [@spawnat process Base.active_project() for process in processes]
-projects = fetch.(futures3)
-@assert unique(projects) == [dir*"/Project.toml"]
-=#
-
-nsteps = 200_000 # number of steps in mcmc chain 
+nsteps = 100_000 # number of steps in mcmc chain 
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
+prioronn = DiscreteUniform(1, 10) # uniform prior on {1, 2, ..., 10}
 prioronϵ = Uniform(0, 0.5) # uniform prior on [0, 0.5]
 nchains = 4 # number of chains. 
-@assert nchains == numthreadsperprocess
 
 
 trueϵ = 0.001 # true error rate used in the simulations. 
 
 coverage = 64 # the coverage is 64 everywhere. 
 
-#allcombinations2 = allcombinations[[38, 63, 36, 57]]
-#factors = [10.0^(-k) for k in 4:10]#[0.001, 0.01, 0.1, 0.2 , 0.4 , 0.5, 0.6, 0.7, 0.9, 1.0 , 1.1, 1.2, 1.4, 1.5, 1.7,  2.0]
-#allcombinations3 = [(tuple..., factor) for tuple in allcombinations2 for factor in factors]
-try 
-    @sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations   
-        starttime = now()
-        frequencyfile = "data/frequencies/freqanchor/Madsmodel_freq_anchor_$(anchorpop).txt.gz"
-        if !isfile(frequencyfile)
-            println(frequencyfile, " does not exist.")
-            continue
-        end 
-        freqs = parsefreqfile(frequencyfile)
-        readsfile = string("data/reads/Mads_model_pop_", ancientpop, "_num_ind_",
-        truenumind, "_cov_", coverage, "_reads_with_errors.txt.gz")
-        if !isfile(readsfile)
-            println(readsfile, " does not exist.")
-            continue
-        end 
-        derivedreadsvec, coveragevec = parsereadfile(readsfile)
-        @assert length(unique(coveragevec)) == 1
-        @assert coveragevec[1] == coverage
-        @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
+@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations    
+    starttime = now()
+    frequencyfile = "data/frequencies/freqanchor/Madsmodel_freq_anchor_$(anchorpop).txt.gz"
+    if !isfile(frequencyfile)
+        println(frequencyfile, " does not exist.")
+        continue
+    end 
+    freqs = parsefreqfile(frequencyfile)
+    readsfile = string("data/reads/Mads_model_pop_", ancientpop, "_num_ind_",
+    truenumind, "_cov_", coverage, "_reads_with_errors.txt.gz")
+    if !isfile(readsfile)
+        println(readsfile, " does not exist.")
+        continue
+    end 
+    derivedreadsvec, coveragevec = parsereadfile(readsfile)
+    @assert length(unique(coveragevec)) == 1
+    @assert coveragevec[1] == coverage
+    @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
-        csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("combinationofthetwo_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
-        zippedcsvfile = csvfile * ".gz"
-        #=
-        bla
-        if isfile(zippedcsvfile)
-            println(zippedcsvfile, " does already exist. Do not overwrite existing files!")
-            continue 
-        end
-        =# #pid 614428
-        df = DataFrame(anchorpop = String[],
-                    ancientpop = String[],
-                    trueϵ = Float64[],
-                    truenumind = Int[],
-                    coverage = Int[],
-                    τCsample = Float64[],
-                    τAsample = Float64[],
-                    ϵsample = Float64[],
-                    accepted = Bool[],
-                    logjointprob = Float64[],
-                    chainid = Int[]
-                    )
-        CSV.write(csvfile, df)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
-        results = MHsampler(nchains, nsteps, truenumind, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 100_000)
-        for chain in eachindex(results)
-            τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[chain]
-            local df = DataFrame(
-                                anchorpop = repeat([anchorpop], nsteps),
-                                ancientpop = repeat([ancientpop], nsteps),
-                                trueϵ = repeat([trueϵ], nsteps),
-                                truenumind = repeat([truenumind], nsteps),
-                                coverage = repeat([coverage], nsteps),
-                                τCsample = τCsample,
-                                τAsample = τAsample,
-                                ϵsample = ϵsample,
-                                accepted = acceptedvec,
-                                logjointprob = logjointprob,
-                                chainid = repeat([Int(chain)], nsteps)
-                                )
-            CSV.write(csvfile, df, append=true)
-        end # chain 
-        command = `gzip -f $csvfile`
-        run(command)
-        finishtime = now()
-        timedifference = finishtime - starttime
-        numhours = round(timedifference, Hour, RoundDown)
-        remainingtime = timedifference - numhours
-        remainingtimeinmilliseconds = Dates.Millisecond(Dates.toms(remainingtime))
-        remainingtimeminutes = round(remainingtimeinmilliseconds, Minute)
-        println("It took ", numhours, " and ", remainingtimeminutes, '.')
-        println("Finished with ", csvfile)
-    end # (anchorpop, ancientpop, truenumind)
-catch
-    interrupt()
-    println("I killed all the workers!")
-end  
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("simprop_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    zippedcsvfile = csvfile * ".gz"
+    #=
+    if isfile(zippedcsvfile)
+        println(zippedcsvfile, " does already exist. Do not overwrite existing files!")
+        continue 
+    end
+    =#
+    df = DataFrame(anchorpop = String[],
+                ancientpop = String[],
+                trueϵ = Float64[],
+                truenumind = Int[],
+                coverage = Int[],
+                nsample = Int[],
+                τCsample = Float64[],
+                τAsample = Float64[],
+                ϵsample = Float64[],
+                accepted = Bool[],
+                logjointprob = Float64[],
+                chainid = Int[]
+                )
+    CSV.write(csvfile, df)
+    #results = MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 2000)
+    chains = MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 100_000)
+    for index in eachindex(chains)
+        nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob = chains[index]
+        local df = DataFrame(
+                            anchorpop = repeat([anchorpop], nsteps),
+                            ancientpop = repeat([ancientpop], nsteps),
+                            trueϵ = repeat([trueϵ], nsteps),
+                            truenumind = repeat([truenumind], nsteps),
+                            coverage = repeat([coverage], nsteps),
+                            nsample = nsample,
+                            τCsample = τCsample,
+                            τAsample = τAsample,
+                            ϵsample = ϵsample,
+                            accepted = acceptedvec,
+                            logjointprob = logjointprob,
+                            chainid = repeat([Int(index)], nsteps)
+                            )
+        CSV.write(csvfile, df, append=true)
+    end  
+    command = `gzip -f $csvfile`
+    run(command)
+    finishtime = now()
+    timedifference = finishtime - starttime
+    numhours = round(timedifference, Hour, RoundDown)
+    remainingtime = timedifference - numhours
+    remainingtimeinmilliseconds = Dates.Millisecond(Dates.toms(remainingtime))
+    remainingtimeminutes = round(remainingtimeinmilliseconds, Minute)
+    println("It took ", numhours, " and ", remainingtimeminutes, '.')
+    println("Finished with ", csvfile)
+end # (anchorpop, ancientpop, truenumind)
 
 finishtime = now()
 timedifference = finishtime - starttime
@@ -227,6 +175,7 @@ remainingtime = timedifference - numhours
 remainingtimeinmilliseconds = Dates.Millisecond(Dates.toms(remainingtime))
 remainingtimeminutes = round(remainingtimeinmilliseconds, Minute)
 println("It took ", numhours, " and ", remainingtimeminutes, " to finish all files!")
+
 #=
 Finished duurde ongeveer 30-38 uur. 
 =#

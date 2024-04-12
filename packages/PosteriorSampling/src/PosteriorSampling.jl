@@ -962,7 +962,8 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
             if step % 1_000 == 0 && step ≥ 5_000
                 # the covariance is calculated from the previous steps and used in the next iteration.
                 for n in 1:nmax
-                    Σ = Diagonal([var(τCsample[3_000:20:step, n], corrected=true), var(τAsample[3_000:20:step, n], corrected=true)]) σ = std(ϵsample[3000:20:step, n], corrected=true)
+                    Σ = Diagonal([var(τCsample[3_000:20:step, n], corrected=true), var(τAsample[3_000:20:step, n], corrected=true)]) 
+                    σ = std(ϵsample[3_000:20:step, n], corrected=true)
                     if 10_000 < step < nsteps÷4  
                         acceptancerate = mean(acceptedvec[step-999:step, n+1]) # acceptance rate in the last 1000 steps.
                         if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
