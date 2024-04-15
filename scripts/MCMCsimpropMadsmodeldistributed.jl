@@ -28,6 +28,7 @@ ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = [1, 2, 4, 8]
 allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec] # 64 elementen. 
+allcombinations = allcombinations[1:10]
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
@@ -35,9 +36,9 @@ exeflags = ["--project=$dir", "--threads=4", "--optimize=3"]
 
 nodes = [
     ("compute01", 32), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
-    ("node05", 6), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
+    #("node05", 6), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
     ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    #("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
     ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
 #    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
