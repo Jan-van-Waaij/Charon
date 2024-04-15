@@ -67,7 +67,7 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
       Base.Threads, # for threads
       Distributed
 
-nsteps = 12 #100_000 # number of steps in mcmc chain 
+nsteps = 100_000 # number of steps in mcmc chain 
 prioronn = DiscreteUniform(1,10)
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
 prioronϵ = Uniform(0, 0.5) # uniform prior on [0, 0.5]
@@ -112,7 +112,7 @@ coverage = 64 # the coverage is 64 everywhere.
                 chainid = Int[]
                 )
     CSV.write(csvfile, df)
-    results = MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 1)
+    results = MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 10_000)
     for chain in eachindex(results)
         nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[chain]
         τCsampleunpacked = Vector{Float64}(undef, nsteps)
