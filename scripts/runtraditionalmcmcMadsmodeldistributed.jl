@@ -136,7 +136,7 @@ coverage = 64 # the coverage is 64 everywhere.
                 )
     CSV.write(csvfile, df)
     #results = MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 2000)
-    chains = MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 100_000)
+    chains = MHsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverage, derivedreadsvec, freqs, 50_000)
     for index in eachindex(chains)
         nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob = chains[index]
         local df = DataFrame(

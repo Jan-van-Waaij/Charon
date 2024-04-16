@@ -22,13 +22,13 @@ using Data, # For parsing frequency and read files.
       Base.Threads, # for threads
       Distributed
 
-starttime = now()
+global starttime = now()
 
 ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
 anchorpops = ["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = [1, 2, 4, 8]
 allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec] # 64 elementen. 
-allcombinations = allcombinations[1:10]
+allcombinations = allcombinations[1:1]
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
@@ -43,7 +43,7 @@ nodes = [
     ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
 #    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
     ("node06", 4), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
-    #("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
+    ("node07", 12), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
     #("node13", 4), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
     #("node11", 10), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
     #("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
@@ -57,6 +57,7 @@ exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
 numthreadsperprocess = 4
 exeflags = ["--project=$dir", "--threads=$numthreadsperprocess", "--optimize=3", "--banner=no"] 
 
+#=
 addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
 
 @everywhere using Data, # For parsing frequency and read files. 
@@ -67,6 +68,7 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
       Dates, # for the now function 
       Base.Threads, # for threads
       Distributed
+=#
 
 nsteps = 100_000 # number of steps in mcmc chain 
 prioronn = DiscreteUniform(1,10)
@@ -78,8 +80,9 @@ trueϵ = 0.001 # true error rate used in the simulations.
 
 coverage = 64 # the coverage is 64 everywhere. 
 
-@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations   
-    starttime = now()
+#@sync @distributed 
+for (anchorpop, ancientpop, truenumind) in allcombinations   
+    local starttime = now()
     frequencyfile = "data/frequencies/freqanchor/Madsmodel_freq_anchor_$(anchorpop).txt.gz"
     if !isfile(frequencyfile)
         println(frequencyfile, " does not exist.")

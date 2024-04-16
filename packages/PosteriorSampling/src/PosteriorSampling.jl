@@ -330,7 +330,7 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
         logpdfpriorprevious == -Inf && throw(DomainError("The initial value is outside the support of the prior."))
         logjointprob[1] = loglikprevious + logpdfpriorprevious
         # Define proposal densities. 
-        Σ = [0.000001 0.0; 0.0 0.000001]
+        Σ = Diagonal(fill(0.000001, 2))
         distproposalτCτA = MvNormal(Σ)# Multivariate normal distribution with mean zero and 
         # covariance matrix Σ.
         σ = 0.0001
@@ -542,7 +542,6 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
         ϵsample[1] = ϵprevious
         acceptedvec[1] = true 
         # Calculate log likelihood and log prior density with initial values.
-        # HIER MOET IK DUS logprobderivedreads GAAN VERANDEREN!!!!
         loglikprevious = logprobderivedreads!(p[nprevious], q[nprevious], d, R, Rmax, counts, τCprevious, τAprevious, ϵprevious, nprevious, Qs[nprevious], Qꜜs[nprevious], binomialcoefficients[nprevious], hvals[nprevious])
         # check if the initial value is valid. 
         loglikprevious == -Inf && throw(DomainError("The data does not support the initial value."))
@@ -638,7 +637,7 @@ end # function.
 ##
 ## MCMC with simulated proposals. 
 # function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
-function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100)
+function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronn) ≥ 1 || throw(ArgumentError("prioronn should have support on positive integers. There is always at least one individual."))
@@ -680,6 +679,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         τCmaxliksconditionedonn[n] = likresultsconditionedonn[2, maxlikindex]
         τAmaxliksconditionedonn[n] = likresultsconditionedonn[3, maxlikindex]
         ϵmaxliksconditionedonn[n] = likresultsconditionedonn[4, maxlikindex]
+        @assert unique(likresultsconditionedonn[1,:]) == [n]
     end 
     
     d, R = makesizedvectors(d, R)
@@ -734,11 +734,11 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         logpdfnprev = logpdf(prioronn, nprevious)
                 
         any(logpdfpriorprevious .== -Inf) && throw(DomainError("The initial value is outside the support of the prior."))
-        any(logpdfnprev == -Inf) && throw(DomainError("The initial value is outside the support of the prior on n."))
+        logpdfnprev == -Inf && throw(DomainError("The initial value is outside the support of the prior on n."))
         logjointprob[1,2:end] .= loglikprevious .+ logpdfpriorprevious
         logjointprob[1,1] = loglikprevious[nprevious] + logpdfpriorprevious[nprevious] + logpdfnprev
         # Define proposal densities. 
-        Σ = [0.000001 0.0; 0.0 0.000001]
+        Σ = Diagonal(fill(0.000001, 2))
         distproposalτCτA = fill(MvNormal(Σ), nmax)# Multivariate normal distribution with mean zero and 
         # covariance matrix Σ.
         σ = 0.0001
@@ -817,7 +817,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
             if step % 1_000 == 0 && step ≥ 5_000
                 # the covariance is calculated from the previous steps and used in the next iteration.
                 for n in 1:nmax
-                    Σ = Diagonal([var(τCsample[3_000:20:step, n], corrected=true), var(τAsample[3_000:20:step, n], corrected=true)]) 
+                    Σ = Diagonal([var(τCsample[3_000:20:step, n], corrected=true), var(τAsample[3_000:20:step, n], corrected=true)])
                     σ = std(ϵsample[3_000:20:step, n], corrected=true)
                     if 10_000 < step < nsteps÷4  
                         acceptancerate = mean(acceptedvec[step-999:step, n+1]) # acceptance rate in the last 1000 steps.
