@@ -247,4 +247,42 @@ function logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractVector{<:Ab
 end
 ## End implementation voor verschillende coverages.
 
+#= 
+
+=#
+function probderivedalleles!(p::AbstractVector{Float64}, h::AbstractVector{Float64}, M::AbstractMatrix{Float64}, binomialcoefficients::AbstractVector{Int})
+    # mul! is 60% faster. 
+    mul!(p, M, h) # equivalent to p = M*h, but in place, without allocating new vectors.
+    p .*= binomialcoefficients # in place computation of p = p*binomialcoefficients
+    p .= max.(0.0, p)
+    @assert isprobvec(p)
+    return p  
+end
+
+function logprobderivedreadsrewrite!(p::AbstractVector{Float64}, q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, Rmax::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+    if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
+        return -Inf 
+    else
+        M = calcmatrix(Q, Qꜜ, τC, τA)
+        # update q. q[k+1, d+1] is the probability of d derived alleles given k derived alleles (out of 2n)
+        # and error probability ϵ.
+        for k in 0:2n
+            dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+            for d in 0:R
+                q[k+1, d+1] = pdf(dist, d)
+            end 
+        end 
+        loglik = 0.0
+        for index in eachindex(reads, counts)
+            # update p
+            p .= view(q, :, reads[index]+1) .* binomialcoefficients 
+            loglik += counts[index] * dot(p, M, view(hvals, :, index))
+            #probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
+            #loglik +=  counts[index]*log(dot(p, view(q, :, reads[index]+1))) 
+        end
+        return loglik
+    end 
+end # Constant coverage and with errors. 
+
+
 end # module Likelihood
