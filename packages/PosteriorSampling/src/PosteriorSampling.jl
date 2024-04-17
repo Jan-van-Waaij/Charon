@@ -441,7 +441,7 @@ function makeq(nmax::Int, R::Int)
     return [MMatrix{2n+1, R+1, Float64}(undef) for n in 1:nmax]
 end 
 
-function makeq(nmax::Int, R::Vector{Int})
+function makeq(nmax::Int, R::AbstractVector{<:Integer})
     Rmax = maximum(R)
     return [[MMatrix{2n+1, R+1, Float64}(undef) for R in 1:Rmax] for n in 1:nmax]
 end 
