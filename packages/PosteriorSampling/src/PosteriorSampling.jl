@@ -453,15 +453,6 @@ function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::AbstractVector{<:Inte
     return [Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs) for n in 1:nmax]
 end 
 
-
-
-@time [[MMatrix{2n+1, R+1, Float64}(undef) for R in 1:Rmax] for n in 1:nmax];
-
-@time [[SizedMatrix{2n+1, R+1, Float64}(undef) for R in 1:Rmax] for n in 1:nmax];
-
-@time [[Matrix{Float64}(undef, 2n+1, R+1) for R in 1:Rmax] for n in 1:nmax];
-
-
 checklength(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}) = length(y) == length(d) == length(R)
 
 checklength(y::Vector{Float64}, d::Vector{Int}, R::Int) = length(y) == length(d)
