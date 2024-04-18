@@ -247,10 +247,39 @@ function logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractVector{<:Ab
 end
 ## End implementation voor verschillende coverages.
 
+function logprobderivedreads!(p::AbstractVector{Float64}, q::Dict{Tuple{Int64, Int64}, Vector{Float64}}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, maxcoverage::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+    if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
+        return -Inf
+    else
+        M = calcmatrix(Q, Qꜜ, τC, τA) 
+        for R in unique(coverages)
+            for k in 0:2n
+                dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+                for d in 0:R
+                    if haskey(q, (d, R))
+                        q[d, R][k+1] = pdf(dist, d)
+                    end 
+                end 
+            end 
+        end 
+        loglik = 0.0
+        for index in eachindex(reads, coverages, counts)
+            # update p
+            probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
+            # p[k+1] now contains the probability of k derived alleles at locus index,
+            # with n individuals and model parameters τC and τA and anchor frequency y[index].
+            loglik += counts[index]*log(dot(p, q[reads[index], coverages[index]]))
+        end
+        return loglik
+    end 
+end
+## End implementation voor verschillende coverages.
+
+
 #= 
 
 =#
-function probderivedalleles!(p::AbstractVector{Float64}, h::AbstractVector{Float64}, M::AbstractMatrix{Float64}, binomialcoefficients::AbstractVector{Int})
+function probderivedallelesreminder!(p::AbstractVector{Float64}, h::AbstractVector{Float64}, M::AbstractMatrix{Float64}, binomialcoefficients::AbstractVector{Int})
     # mul! is 60% faster. 
     mul!(p, M, h) # equivalent to p = M*h, but in place, without allocating new vectors.
     p .*= binomialcoefficients # in place computation of p = p*binomialcoefficients

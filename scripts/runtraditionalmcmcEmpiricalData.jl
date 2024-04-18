@@ -165,3 +165,17 @@ remainingtime = timedifference - numhours
 remainingtimeinmilliseconds = Dates.Millisecond(Dates.toms(remainingtime))
 remainingtimeminutes = round(remainingtimeinmilliseconds, Minute)
 println("It took ", numhours, " and ", remainingtimeminutes, " to finish all files!")
+
+
+
+for (anchorpop, truenumind) in allcombinations  
+    ancientpop = "IBS"  
+    
+    readsfile = "/home/projects/gabriel/Jan_allelefreq/hg38/bams/IBS_ind$(truenumind)_basecount_IBS_ind$(truenumind).gz"
+    if !isfile(readsfile)
+        println(readsfile, " does not exist.")
+        continue
+    end 
+    derivedreadsvec, coveragevec = parsereadfile(readsfile, ' ')
+    @show extrema(coveragevec)
+end # (anchorpop, ancientpop, truenumind)

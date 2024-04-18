@@ -437,14 +437,30 @@ function makesizedvectors(d::Vector{Int}, R::Int)
     return d, R 
 end 
 
-function makeq(nmax::Int, R::Int)
+function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::Int)
     return [MMatrix{2n+1, R+1, Float64}(undef) for n in 1:nmax]
 end 
 
+#=
 function makeq(nmax::Int, R::AbstractVector{<:Integer})
     Rmax = maximum(R)
-    return [[MMatrix{2n+1, R+1, Float64}(undef) for R in 1:Rmax] for n in 1:nmax]
+    return [[Matrix{Float64}(2n+1, R+1, undef) for R in 1:Rmax] for n in 1:nmax]
 end 
+=#
+
+function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
+    uniquedandRs = unique(zip(d, R))
+    return [Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs) for n in 1:nmax]
+end 
+
+
+
+@time [[MMatrix{2n+1, R+1, Float64}(undef) for R in 1:Rmax] for n in 1:nmax];
+
+@time [[SizedMatrix{2n+1, R+1, Float64}(undef) for R in 1:Rmax] for n in 1:nmax];
+
+@time [[Matrix{Float64}(undef, 2n+1, R+1) for R in 1:Rmax] for n in 1:nmax];
+
 
 checklength(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}) = length(y) == length(d) == length(R)
 
@@ -522,7 +538,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     results = Vector{Tuple{Vector{Int}, Vector{Float64}, Vector{Float64}, Vector{Float64}, BitVector, Vector{Float64}}}(undef,nchains)
     @threads for chainindex in eachindex(results) 
         p = [MVector{2n+1, Float64}(undef) for n in 1:nmax]
-        q = makeq(nmax, R)
+        q = makeq(nmax, d, R)
         nsample = Vector{Int}(undef, nsteps)
         τCsample = Vector{Float64}(undef, nsteps)
         τAsample = Vector{Float64}(undef, nsteps)
@@ -700,7 +716,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     results = Vector{Tuple{Vector{Int}, Matrix{Float64}, Matrix{Float64}, Matrix{Float64}, BitMatrix, Matrix{Float64}}}(undef,nchains)
     @threads for chainindex in eachindex(results) 
         p = [MVector{2n+1, Float64}(undef) for n in 1:nmax]
-        q = makeq(nmax, R)
+        q = makeq(nmax, d, R)
         nsample = Vector{Int}(undef, nsteps)
         τCsample = Matrix{Float64}(undef, nsteps, nmax)
         τAsample = Matrix{Float64}(undef, nsteps, nmax)
