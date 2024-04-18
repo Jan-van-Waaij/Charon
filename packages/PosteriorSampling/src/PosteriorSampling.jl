@@ -16,6 +16,70 @@ export MHsampler, # The mcmc sampler.
        MCMCSimProp, # More efficient mcmc sampler for low coverage with simulated proposal, at the cost of a longer run time. 
        exactposterior
 
+function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}, allowedindices::BitVector)
+    y, d, R = y[allowedindices], d[allowedindices], R[allowedindices]
+    tuples = zip(d, R, y)
+    cm = countmap(tuples)
+    d = [key[1] for key in keys(cm)]
+    R = [key[2] for key in keys(cm)]
+    y = [key[3] for key in keys(cm)]
+    counts = collect(values(cm))
+    return y, d, R, counts
+end 
+
+function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Int, allowedindices::BitVector)
+    y, d = y[allowedindices], d[allowedindices]
+    tuples = zip(d, y)
+    cm = countmap(tuples)
+    thekeys = keys(cm)
+    d = [key[1] for key in thekeys]
+    y = [key[2] for key in thekeys]
+    counts = collect(values(cm))
+    return y, d, R, counts
+end 
+
+function makesizedvectors(d::Vector{Int}, R::Vector{Int})
+    d = SizedVector{length(d), Int}(d)
+    R = SizedVector{length(R), Int}(R)
+    return d, R 
+end 
+
+function makesizedvectors(d::Vector{Int}, R::Int)
+    d = SizedVector{length(d), Int}(d)
+    return d, R 
+end 
+
+function makeqfixedn(n::Integer, d::AbstractVector{<:Integer}, R::Integer)
+    MMatrix{2n+1, R+1, Float64}(undef)
+end 
+
+function makeqfixedn(n::Integer, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
+    uniquedandRs = unique(zip(d, R))
+    return Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs)
+end 
+
+function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::Int)
+    return [MMatrix{2n+1, R+1, Float64}(undef) for n in 1:nmax]
+end 
+
+#=
+function makeq(nmax::Int, R::AbstractVector{<:Integer})
+    Rmax = maximum(R)
+    return [[Matrix{Float64}(2n+1, R+1, undef) for R in 1:Rmax] for n in 1:nmax]
+end 
+=#
+
+function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
+    uniquedandRs = unique(zip(d, R))
+    return [Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs) for n in 1:nmax]
+end 
+
+checklength(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}) = length(y) == length(d) == length(R)
+
+checklength(y::Vector{Float64}, d::Vector{Int}, R::Int) = length(y) == length(d)
+
+    
+
 ##
 ##
 ## fixed R, error model, fixed n. 
@@ -39,48 +103,16 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Int, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int=length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
+
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::Integer, reads::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
     # Check conditions.
-    all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
+    all(0 .≤ ϵrange .< 0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
     length(τCrange) > 0 || throw(ArgumentError("τCrange should have at least one element."))
     length(τArange) > 0 || throw(ArgumentError("τArange should have at least one element."))
     length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
-    R > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
-    minimum(reads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
-    all(reads .≤ R) || throw(DomainError("All reads should be at most the coverage."))
-    all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
-    length(reads) == length(y) || throw(DimensionMismatch("d and y should be of the same length."))
-    
-    # Remove frequencies 0.0 and 1.0
-    allowedindices = 0.0 .< y .< 1.0
-    any(allowedindices) || throw(ArgumentError("At least one element of y should be strictly between 0 and 1."))
-    reads = reads[allowedindices]
-    y = y[allowedindices]
+    uniquecoverages = unique(coverages)
 
-    tuples = zip(reads, y)
-    cm = countmap(tuples)
-    thekeys = keys(cm)
-    reads = [key[1] for key in thekeys]
-    y = [key[2] for key in thekeys]
-    counts = collect(values(cm))
-    
-    return exactposterior(nrange, τCrange, τArange, ϵrange, R, reads, counts, y, messages)
-end # function.
-##
-##
-## End fixed R 
-##
-
-
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Int, reads::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
-    # Check conditions.
-    all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
-    length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
-    length(τCrange) > 0 || throw(ArgumentError("τCrange should have at least one element."))
-    length(τArange) > 0 || throw(ArgumentError("τArange should have at least one element."))
-    length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
-    
     nrows = length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)
     results = Matrix{Float64}(undef, 5, nrows)
     columnindex = 1
@@ -88,7 +120,7 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     for n in nrange
         Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
         p = MVector{2n+1, Float64}(undef)
-        q = MMatrix{2n+1, R+1, Float64}(undef)
+        q = makeqfixedn(n, reads, coverages)
         M = Matrix{Float64}(undef, 2n+1, 2n+1)
         for τC in τCrange 
             expτCQꜜ = exp(Qꜜ, τC)
@@ -96,9 +128,10 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
                 expτAQ = exp(Q, τA)    
                 mul!(M, expτAQ, expτCQꜜ)
                 for ϵ in ϵrange
+                    # update q
                     for k in 0:2n
-                        dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
-                        for d in 0:R
+                        dist = Binomial(coverages, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+                        for d in 0:coverages
                             q[k+1, d+1] = pdf(dist, d)
                         end 
                     end              
@@ -128,12 +161,7 @@ end # function.
 ##
 
 
-#
-#
-# begin variable R. 
-#
-#
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Union{Integer, AbstractVector{<:Integer}}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
     # Check conditions.
     all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
@@ -148,21 +176,13 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     minimum(reads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
     all(reads .≤ R) || throw(DomainError("All reads should be at most the coverage."))
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
-    length(reads) == length(y) == length(R) || throw(DimensionMismatch("d, R and y should be of the same length."))
+    checklength(y, reads, R) || throw(DimensionMismatch("y, reads (and, in case R is a vector, also R) should be of the same length."))
     
     # Remove frequencies 0.0 and 1.0 and zero coverages. 
     allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
     any(allowedindices) || throw(ArgumentError("At least one element of y with positive coverage should be strictly between 0 and 1."))
     
-    reads = reads[allowedindices]
-    R = R[allowedindices]
-    y = y[allowedindices]
-    tuples = zip(reads, R, y)
-    cm = countmap(tuples)
-    reads = [key[1] for key in keys(cm)]
-    R = [key[2] for key in keys(cm)]
-    y = [key[3] for key in keys(cm)]
-    counts = collect(values(cm))
+    y, reads, R, counts = filtervectorsandapplycountmap(y, reads, R, allowedindices)
 
     return exactposterior(nrange, τCrange, τArange, ϵrange, R, reads, counts, y, messages)
 end # function.
@@ -172,22 +192,19 @@ end # function.
 #
 #
 
-
 #
 #
 # begin variable R. 
 #
 #
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
     # Check conditions.
-    all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
+    all(0 .≤ ϵrange .< 0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
     length(τCrange) > 0 || throw(ArgumentError("τCrange should have at least one element."))
     length(τArange) > 0 || throw(ArgumentError("τArange should have at least one element."))
     length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
-    Rmax = maximum(R)
-    
-    # Remove frequencies 0.0 and 1.0 and zero coverages. 
+    uniquecoverages = unique(coverages)
     
     nrows = length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)
     results = Matrix{Float64}(undef, 5, nrows)
@@ -196,7 +213,7 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     for n in nrange
         Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
         p = MVector{2n+1, Float64}(undef)
-        q = [MMatrix{2n+1, R+1, Float64}(undef) for R in 1:Rmax]
+        q = makeqfixedn(n, reads, coverages)
         M = Matrix{Float64}(undef, 2n+1, 2n+1)
         for τC in τCrange 
             expτCQꜜ = exp(Qꜜ, τC)
@@ -204,19 +221,22 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
                 expτAQ = exp(Q, τA)    
                 mul!(M, expτAQ, expτCQꜜ)
                 for ϵ in ϵrange
-                    for Rval in 1:Rmax
+                    # update q. 
+                    for R in uniquecoverages
                         for k in 0:2n
-                            dist = Binomial(Rval, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
-                            for d in 0:Rval
-                                q[Rval][k+1, d+1] = pdf(dist, d)
-                            end 
+                            dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+                            for d in 0:R
+                                if haskey(q, (d, R))
+                                    q[d, R][k+1] = pdf(dist, d)
+                                end 
+                            end
                         end     
                     end          
                     loglik = 0.0
-                    for index in eachindex(reads, R, counts)
+                    for index in eachindex(reads, coverages, counts)
                         # update p
                         probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
-                        loglik +=  counts[index]*log(dot(p, view(q[R[index]], :, reads[index]+1))) 
+                        loglik +=  counts[index]*log(dot(p, q[reads[index], coverages[index]])) 
                     end
                     results[:, columnindex] .= n, τC, τA, ϵ, loglik 
                     if messages > 0 # No messages at all when messages ≤ 0.
@@ -403,59 +423,6 @@ end # function.
 ##
 ## End fixed R, error model, fixed n. 
 ##
-
-function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}, allowedindices::BitVector)
-    y, d, R = y[allowedindices], d[allowedindices], R[allowedindices]
-    tuples = zip(d, R, y)
-    cm = countmap(tuples)
-    d = [key[1] for key in keys(cm)]
-    R = [key[2] for key in keys(cm)]
-    y = [key[3] for key in keys(cm)]
-    counts = collect(values(cm))
-    return y, d, R, counts
-end 
-
-function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Int, allowedindices::BitVector)
-    y, d = y[allowedindices], d[allowedindices]
-    tuples = zip(d, y)
-    cm = countmap(tuples)
-    thekeys = keys(cm)
-    d = [key[1] for key in thekeys]
-    y = [key[2] for key in thekeys]
-    counts = collect(values(cm))
-    return y, d, R, counts
-end 
-
-function makesizedvectors(d::Vector{Int}, R::Vector{Int})
-    d = SizedVector{length(d), Int}(d)
-    R = SizedVector{length(R), Int}(R)
-    return d, R 
-end 
-
-function makesizedvectors(d::Vector{Int}, R::Int)
-    d = SizedVector{length(d), Int}(d)
-    return d, R 
-end 
-
-function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::Int)
-    return [MMatrix{2n+1, R+1, Float64}(undef) for n in 1:nmax]
-end 
-
-#=
-function makeq(nmax::Int, R::AbstractVector{<:Integer})
-    Rmax = maximum(R)
-    return [[Matrix{Float64}(2n+1, R+1, undef) for R in 1:Rmax] for n in 1:nmax]
-end 
-=#
-
-function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
-    uniquedandRs = unique(zip(d, R))
-    return [Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs) for n in 1:nmax]
-end 
-
-checklength(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}) = length(y) == length(d) == length(R)
-
-checklength(y::Vector{Float64}, d::Vector{Int}, R::Int) = length(y) == length(d)
 
 # fixed R, error model, unknown n.
 """
