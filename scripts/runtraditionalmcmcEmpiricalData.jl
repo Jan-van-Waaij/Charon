@@ -113,7 +113,7 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
                 chainid = Int[]
                 )
     CSV.write(csvfile, df)
-    results = MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coveragevec, derivedreadsvec, freqs, 0)
+    results = MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coveragevec, derivedreadsvec, freqs, 0, false)
     for chain in eachindex(results)
         nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[chain]
         τCsampleunpacked = Vector{Float64}(undef, nsteps)

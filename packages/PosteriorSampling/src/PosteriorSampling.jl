@@ -619,7 +619,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     checklength(y, d, R) || throw(DimensionMismatch("d, y  and/or R (in case R is a vector) should be of the same length."))
     
     # Remove frequencies 0.0 and 1.0
-    allowedindices = 0.0 .< y .< 1.0 .& (R .> 0)
+    allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
     any(allowedindices) || throw(ArgumentError("At least one element of y with corresponding positive coverage should be strictly between 0 and 1."))
 
     y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
