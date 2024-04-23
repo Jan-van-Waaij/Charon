@@ -191,6 +191,7 @@ function preparedata(n::Int, y::AbstractVector{<:Real})
 end
 
 ## With errors and constant coverage.
+#=
 """
     logprobderivedreads!(p::AbstractVector{Float64}, q::AbstractArray{Float64}, reads::AbstractVector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, R::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
 
@@ -274,11 +275,12 @@ function logprobderivedreads!(p::AbstractVector{Float64}, q::Dict{Tuple{Int64, I
     end 
 end
 ## End implementation voor verschillende coverages.
-
+=#
 
 #= 
 
 =#
+#=
 function probderivedallelesreminder!(p::AbstractVector{Float64}, h::AbstractVector{Float64}, M::AbstractMatrix{Float64}, binomialcoefficients::AbstractVector{Int})
     # mul! is 60% faster. 
     mul!(p, M, h) # equivalent to p = M*h, but in place, without allocating new vectors.
@@ -287,8 +289,9 @@ function probderivedallelesreminder!(p::AbstractVector{Float64}, h::AbstractVect
     @assert isprobvec(p)
     return p  
 end
+=#
 
-function logprobderivedreadsrewrite!(p::AbstractVector{Float64}, q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, Rmax::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+function logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Vector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
     if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
         return -Inf 
     else
@@ -298,20 +301,43 @@ function logprobderivedreadsrewrite!(p::AbstractVector{Float64}, q::AbstractArra
         for k in 0:2n
             dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
             for d in 0:R
-                q[k+1, d+1] = pdf(dist, d)
-            end 
+                q[k+1, d+1] = binomialcoefficients[k+1] * pdf(dist, d)
+            end
         end 
         loglik = 0.0
         for index in eachindex(reads, counts)
             # update p
-            p .= view(q, :, reads[index]+1) .* binomialcoefficients 
-            loglik += counts[index] * dot(p, M, view(hvals, :, index))
+            loglik += counts[index] * log(max(0.0, dot(view(q, :, reads[index]+1), M, view(hvals, :, index))))
             #probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
             #loglik +=  counts[index]*log(dot(p, view(q, :, reads[index]+1))) 
         end
         return loglik
     end 
 end # Constant coverage and with errors. 
+
+function logprobderivedreads!(q::Dict{Tuple{Int64, Int64}, Vector{Float64}}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, uniquecoverages::AbstractVector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+    if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
+        return -Inf
+    else
+        M = calcmatrix(Q, Qꜜ, τC, τA) 
+        for R in uniquecoverages
+            for k in 0:2n
+                dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+                for d in 0:R
+                    if haskey(q, (d, R))
+                        q[d, R][k+1] = binomialcoefficients[k+1]*pdf(dist, d)
+                    end 
+                end 
+            end 
+        end 
+        loglik = 0.0
+        for index in eachindex(reads, coverages, counts)
+            loglik += counts[index]*log(max(0.0, dot(q[reads[index], coverages[index]], M, view(hvals, :, index))))
+        end
+        return loglik
+    end
+end
+
 
 
 end # module Likelihood

@@ -86,7 +86,17 @@ zippedcsvfile = csvfile * ".gz"
 
 zippedcsvfile = "data/mcmcsamples/Madsmodel_ancient_pop_KARS_anchor_pop_KAR_true_num_ind_4_factor_1.0.csv.gz"
 
+csvfile = "/home/projects/SedaDNA_Demo/simulationsMSPRIME/data/mcmcsamples/EmpericalData_anchor_pop_ACB_true_num_ind_8.csv"
+zippedcsvfile = csvfile*".gz"
+
 df = CSV.read(zippedcsvfile, DataFrame)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
+
+gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :chainid])
+
+chainarray = cat((Matrix(gdf[k][5000:6000, [:nsample, :τCsample, :τAsample, :ϵsample ]]) for  k in 1:nchains)..., dims=3)
+chain = Chains(chainarray, [:nsample, :τCsample, :τAsample, :ϵsample])
+p=plot(chain)
+
 
 gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :chainid])
 

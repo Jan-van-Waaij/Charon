@@ -602,15 +602,6 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
 end # function.
 ## end new, adding error model.
 
-###
-### IK HEB DE TWEE VERSIES VAN MCMCSIMPROP MET ELKAAR VERGELEKEN EN DIE KAN IK GEMAKKELIJK SAMENVOEGEN TOT EEN FUNCTIE. 
-# Voor het maken van q moet ik een aparte functie schrijven. 
-###
-
-##
-##
-## MCMC with simulated proposals. 
-# function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100; init::Union{Nothing, Tuple{Int64, Float64, Float64, Float64}}=nothing)
 function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
@@ -621,17 +612,18 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     maximum(prioronϵ) ≤ 0.5 || throw(ArgumentError("prioronϵ should have support on [0,0.5], but the maximum exceeds 0.5."))
     nchains > 0 || throw(ArgumentError("There should be at least one chain."))
     nsteps > 0 || throw(ArgumentError("nsteps should be positive."))
-    Rmax = maximum(R)
-    Rmax > 0 || throw(DomainError("At least some coverages should be positive.")) # Are zero coverages allowed?
+    any(r -> r>0, R) || throw(DomainError("At least some coverages should be positive.")) # Are zero coverages allowed?
     minimum(d) ≥ 0 || throw(DomainError("All reads should be non-negative."))
     all(d .≤ R) || throw(DomainError("All reads should be at most the coverage."))
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
     checklength(y, d, R) || throw(DimensionMismatch("d, y  and/or R (in case R is a vector) should be of the same length."))
     
     # Remove frequencies 0.0 and 1.0
-    allowedindices = 0.0 .< y .< 1.0
-    y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
+    allowedindices = 0.0 .< y .< 1.0 .& (R .> 0)
+    any(allowedindices) || throw(ArgumentError("At least one element of y with corresponding positive coverage should be strictly between 0 and 1."))
 
+    y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
+    uniqueR = unique(R)
     smallestn, largestn = extrema(prioronn)
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
@@ -639,6 +631,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     gridτC = range(smallestτC, largestτC, length=23)[begin+1:end] # avoid a 0.0 value
     gridτA = range(smallestτA, largestτA, length=23)[begin+1:end] # avoid a 0.0 value
     gridϵ = range(smallestϵ, largestϵ, length=24)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    # ook nog aanpassen. 
     likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
     maxlikindex = argmax(likresults[5, :])
     nmaxlik = likresults[1, maxlikindex]
@@ -664,8 +657,6 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     for n in 1:nmax
         Qs[n], Qꜜs[n], hvals[n], binomialcoefficients[n] = preparedata(n, y)
     end
-    #p = Vector{Any}(undef, nmax)
-    #binomialprobs = Vector{Any}(undef, nmax)
     hvals = [item for item in hvals] # change type of hvals to more specific one then Any.
     binomialcoefficients = [item for item in binomialcoefficients] # same.
     # Each item in results contains a tuple 
@@ -673,7 +664,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     # which contain the states of the Markov chain. 
     results = Vector{Tuple{Vector{Int}, Matrix{Float64}, Matrix{Float64}, Matrix{Float64}, BitMatrix, Matrix{Float64}}}(undef,nchains)
     @threads for chainindex in eachindex(results) 
-        p = [MVector{2n+1, Float64}(undef) for n in 1:nmax]
+        #p = [MVector{2n+1, Float64}(undef) for n in 1:nmax]
         q = makeq(nmax, d, R)
         nsample = Vector{Int}(undef, nsteps)
         τCsample = Matrix{Float64}(undef, nsteps, nmax)
@@ -697,7 +688,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
         loglikprevious = Vector{Float64}(undef, nmax)
         loglikproposal = Vector{Float64}(undef, nmax)
         for n in 1:nmax
-            loglikprevious[n] = logprobderivedreads!(p[n], q[n], d, R, Rmax, counts, τCprevious[n], τAprevious[n], ϵprevious[n], n, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
+            loglikprevious[n] = logprobderivedreads!(q[n], d, R, uniqueR, counts, τCprevious[n], τAprevious[n], ϵprevious[n], n, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
         end
         # check if the initial value is valid. 
         any(loglikprevious .== -Inf) && throw(DomainError("The data does not support the initial value."))
@@ -735,7 +726,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
                 ϵproposal[index] = ϵprevious[index] + rand(distproposalϵ[index])
             end
             for n in 1:nmax
-                loglikproposal[n] = logprobderivedreads!(p[n], q[n], d, R, Rmax, counts, τCproposal[n], τAproposal[n], ϵproposal[n], n, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
+                loglikproposal[n] = logprobderivedreads!(q[n], d, R, uniqueR, counts, τCproposal[n], τAproposal[n], ϵproposal[n], n, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
             end 
             for n in 1:nmax
                 logpdfpriorproposal[n] = logpdf(prioronτCτA, [τCproposal[n], τAproposal[n]]) + logpdf(prioronϵ, ϵproposal[n])
@@ -743,7 +734,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
             logacceptanceprobability .= loglikproposal .- loglikprevious .+ logpdfpriorproposal .- logpdfpriorprevious
             acceptanceprobability .= exp.(logacceptanceprobability)
             # accept or reject the proposal with probability max(1, acceptanceprobability), note that rand() samples from the uniform distribution.
-            for index in eachindex(acceptanceprobability)
+            for index in eachindex(accepted, acceptanceprobability)
                 accepted[index] = rand() ≤ acceptanceprobability[index]
             end 
             for n in 1:nmax

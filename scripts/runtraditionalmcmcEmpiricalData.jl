@@ -32,9 +32,8 @@ global starttime = now()
 anchorpops = ["ACB", "ASW", "BEB", "CDX", "CEU", "CHB", "CHS", "CLM", "ESN", "FIN", "GBR", "GIH", "GWD", "IBS", "ITU", "JPT", "KHV", "LWK", "MSL", "MXL", "PEL", "PJL", "PUR", "STU", "TSI", "YRI"]
 truenumindvec = [1, 2, 4, 8]
 allcombinations = [(anchorpop, truenumind) for anchorpop in anchorpops for truenumind in truenumindvec] # 104 elementen. 4*104=416 threads
-allcombinations = allcombinations[1:1]
 
-nsteps = 11_000 # number of steps in mcmc chain 
+nsteps = 100_000 # number of steps in mcmc chain 
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
 prioronn = DiscreteUniform(1, 10) # uniform prior on {1, 2, ..., 10}
 prioronϵ = Uniform(0, 0.5) # uniform prior on [0, 0.5]
@@ -57,7 +56,7 @@ nodes = [
     ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
     ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
 ]
-nodes = [("compute01", 1)]
+#nodes = [("compute01", 1)]
 sum(node[2] for node in nodes)
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
@@ -114,7 +113,7 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
                 chainid = Int[]
                 )
     CSV.write(csvfile, df)
-    results = MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coveragevec, derivedreadsvec, freqs, 1)
+    results = MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coveragevec, derivedreadsvec, freqs, 0)
     for chain in eachindex(results)
         nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[chain]
         τCsampleunpacked = Vector{Float64}(undef, nsteps)
@@ -166,16 +165,5 @@ remainingtimeinmilliseconds = Dates.Millisecond(Dates.toms(remainingtime))
 remainingtimeminutes = round(remainingtimeinmilliseconds, Minute)
 println("It took ", numhours, " and ", remainingtimeminutes, " to finish all files!")
 
+rmprocs(workers())
 
-
-for (anchorpop, truenumind) in allcombinations  
-    ancientpop = "IBS"  
-    
-    readsfile = "/home/projects/gabriel/Jan_allelefreq/hg38/bams/IBS_ind$(truenumind)_basecount_IBS_ind$(truenumind).gz"
-    if !isfile(readsfile)
-        println(readsfile, " does not exist.")
-        continue
-    end 
-    derivedreadsvec, coveragevec = parsereadfile(readsfile, ' ')
-    @show extrema(coveragevec)
-end # (anchorpop, ancientpop, truenumind)
