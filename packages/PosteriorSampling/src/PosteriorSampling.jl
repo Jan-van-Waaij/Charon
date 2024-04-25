@@ -77,9 +77,7 @@ end
 checklength(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}) = length(y) == length(d) == length(R)
 
 checklength(y::Vector{Float64}, d::Vector{Int}, R::Int) = length(y) == length(d)
-
     
-
 ##
 ##
 ## fixed R, error model, fixed n. 
@@ -104,22 +102,55 @@ gives the results of the first chain.
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
 
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::Integer, reads::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
+function updateq!(q::AbstractMatrix{<:Real}, binomialcoefficients::AbstractVector{<:Integer}, uniquecoverages::Integer, n::Integer, ϵ::Real)
+    for k in 0:2n
+        dist = Binomial(uniquecoverages, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+        for d in 0:uniquecoverages
+            q[k+1, d+1] = binomialcoefficients[k+1] * pdf(dist, d)
+        end 
+    end              
+end 
+
+function updateq!(q::AbstractDict, binomialcoefficients::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, n::Integer, ϵ::Real)
+    for R in uniquecoverages
+        for k in 0:2n
+            dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+            for d in 0:R
+                if haskey(q, (d, R))
+                    q[d, R][k+1] = binomialcoefficients[k+1] * pdf(dist, d)
+                end 
+            end
+        end     
+    end          
+end 
+
+calcloglik(counts, q::AbstractMatrix, reads, coverages, M, hvals, index) = counts[index] * log(max(0.0, dot(view(q, :, reads[index]+1), M, view(hvals, :, index))))
+
+calcloglik(counts, q::AbstractDict, reads, coverages, M, hvals, index) = counts[index]*log(max(0.0, dot(q[reads[index], coverages[index]], M, view(hvals, :, index))))
+
+myunique(R::Integer) = R 
+
+myunique(R::AbstractVector{<:Integer}) = unique(R)
+
+
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{AbstractVector{<:Integer}, Integer}, uniquecoverages::Union{AbstractVector{<:Integer}, Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
     # Check conditions.
     all(0 .≤ ϵrange .< 0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
     length(τCrange) > 0 || throw(ArgumentError("τCrange should have at least one element."))
     length(τArange) > 0 || throw(ArgumentError("τArange should have at least one element."))
     length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
-    uniquecoverages = unique(coverages)
-
+    
     nrows = length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)
-    results = Matrix{Float64}(undef, 5, nrows)
-    columnindex = 1
+    ns = Vector{Int}(undef, nrows)
+    τCs = Vector{Float64}(undef, nrows)
+    τAs = Vector{Float64}(undef, nrows)
+    ϵs = Vector{Float64}(undef, nrows)
+    logliks = Vector{Float64}(undef, nrows)
 
+    index = 1
     for n in nrange
         Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
-        p = MVector{2n+1, Float64}(undef)
         q = makeqfixedn(n, reads, coverages)
         M = Matrix{Float64}(undef, 2n+1, 2n+1)
         for τC in τCrange 
@@ -129,37 +160,33 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
                 mul!(M, expτAQ, expτCQꜜ)
                 for ϵ in ϵrange
                     # update q
-                    for k in 0:2n
-                        dist = Binomial(coverages, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
-                        for d in 0:coverages
-                            q[k+1, d+1] = pdf(dist, d)
-                        end 
-                    end              
+                    updateq!(q, binomialcoefficients, uniquecoverages, n, ϵ)
                     loglik = 0.0
                     for index in eachindex(reads, counts)
-                        # update p
-                        probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
-                        loglik +=  counts[index]*log(dot(p, view(q, :, reads[index]+1))) 
+                        loglik += calcloglik(counts, q, reads, coverages, M, hvals, index)
                     end
-                    results[:, columnindex] .= n, τC, τA, ϵ, loglik 
+                    ns[index] = n 
+                    τCs[index] = τC 
+                    τAs[index] = τA
+                    ϵs[index] = ϵ
+                    logliks[index] = loglik 
                     if messages > 0 # No messages at all when messages ≤ 0.
-                        if columnindex % messages == 0
-                            println("I did ", columnindex, " posterior calculations, ", round(Int, 100*columnindex / nrows, RoundDown), "% finished!")
+                        if index % messages == 0
+                            println("I did ", index, " posterior calculations, ", round(Int, 100*index / nrows, RoundDown), "% finished!")
                         end
                     end
-                    columnindex += 1 
+                    index += 1 
                 end # ϵ
             end # τA
         end # τC 
     end # n
-    @assert columnindex == nrows + 1 
-    return results
+    @assert index == nrows + 1 
+    return (ns, τCs, τAs, ϵs, logliks)
 end # function.
 ##
 ##
 ## End fixed R with counts
 ##
-
 
 function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Union{Integer, AbstractVector{<:Integer}}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
     # Check conditions.
@@ -172,7 +199,7 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     minimum(τArange) > 0 || throw(ArgumentError("All values in τArange should be positive."))
     length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
     minimum(ϵrange) > 0 || throw(ArgumentError("All values in ϵrange should be positive."))
-    maximum(R) || throw(ArgumentError("Inference is impossible when all coverages are zero."))
+    maximum(R) > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
     minimum(reads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
     all(reads .≤ R) || throw(DomainError("All reads should be at most the coverage."))
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
@@ -184,27 +211,24 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     
     y, reads, R, counts = filtervectorsandapplycountmap(y, reads, R, allowedindices)
 
-    return exactposterior(nrange, τCrange, τArange, ϵrange, R, reads, counts, y, messages)
+    uniqueR = myunique(R)
+
+    return exactposterior(nrange, τCrange, τArange, ϵrange, reads, R, uniqueR, counts, y, messages)
 end # function.
-#
-#
-# End variable R. 
-#
-#
 
 #
 #
 # begin variable R. 
 #
 #
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
+#=
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
     # Check conditions.
     all(0 .≤ ϵrange .< 0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
     length(τCrange) > 0 || throw(ArgumentError("τCrange should have at least one element."))
     length(τArange) > 0 || throw(ArgumentError("τArange should have at least one element."))
     length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
-    uniquecoverages = unique(coverages)
     
     nrows = length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)
     results = Matrix{Float64}(undef, 5, nrows)
@@ -212,7 +236,7 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
 
     for n in nrange
         Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
-        p = MVector{2n+1, Float64}(undef)
+        #p = MVector{2n+1, Float64}(undef)
         q = makeqfixedn(n, reads, coverages)
         M = Matrix{Float64}(undef, 2n+1, 2n+1)
         for τC in τCrange 
@@ -222,21 +246,13 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
                 mul!(M, expτAQ, expτCQꜜ)
                 for ϵ in ϵrange
                     # update q. 
-                    for R in uniquecoverages
-                        for k in 0:2n
-                            dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
-                            for d in 0:R
-                                if haskey(q, (d, R))
-                                    q[d, R][k+1] = pdf(dist, d)
-                                end 
-                            end
-                        end     
-                    end          
+                    updateq!(q, uniquecoverages, n, ϵ)
                     loglik = 0.0
                     for index in eachindex(reads, coverages, counts)
                         # update p
-                        probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
-                        loglik +=  counts[index]*log(dot(p, q[reads[index], coverages[index]])) 
+                        #probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
+                        #loglik +=  counts[index]*log(dot(p, q[reads[index], coverages[index]])) 
+                        loglik += calcloglik(counts, q, reads, coverages, M, hvals, index)
                     end
                     results[:, columnindex] .= n, τC, τA, ϵ, loglik 
                     if messages > 0 # No messages at all when messages ≤ 0.
@@ -252,6 +268,7 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     @assert columnindex == nrows + 1 
     return results
 end # function.
+=#
 #
 #
 # End variable R, with counts. 
@@ -623,7 +640,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     any(allowedindices) || throw(ArgumentError("At least one element of y with corresponding positive coverage should be strictly between 0 and 1."))
 
     y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
-    uniqueR = unique(R)
+    uniqueR = myunique(R)
     smallestn, largestn = extrema(prioronn)
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
@@ -632,21 +649,24 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     gridτA = range(smallestτA, largestτA, length=23)[begin+1:end] # avoid a 0.0 value
     gridϵ = range(smallestϵ, largestϵ, length=24)[begin+1:end-1] # avoid a 0.0 and 0.5 value
     # ook nog aanpassen. 
-    likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
-    maxlikindex = argmax(likresults[5, :])
-    nmaxlik = likresults[1, maxlikindex]
-    nmaxlik = Int(nmaxlik)
+    ns, τCs, τAs, ϵs, logliks = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, d, R, uniqueR, counts, y, 0)
+    maxlikindex = argmax(logliks)
+    nmaxlik = ns[maxlikindex]
     τAmaxliksconditionedonn = Vector{Float64}(undef, nmax)
     τCmaxliksconditionedonn = Vector{Float64}(undef, nmax)
     ϵmaxliksconditionedonn = Vector{Float64}(undef, nmax)
     for n in 1:nmax 
-        filteronn = likresults[1, :] .== n 
-        likresultsconditionedonn = likresults[:, filteronn]
-        maxlikindex = argmax(likresultsconditionedonn[5, :])
-        τCmaxliksconditionedonn[n] = likresultsconditionedonn[2, maxlikindex]
-        τAmaxliksconditionedonn[n] = likresultsconditionedonn[3, maxlikindex]
-        ϵmaxliksconditionedonn[n] = likresultsconditionedonn[4, maxlikindex]
-        @assert unique(likresultsconditionedonn[1,:]) == [n]
+        filteronn = ns .== n 
+        τCsconditionedonn = τCs[filteron]
+        τAsconditionedonn = τAs[filteron]
+        ϵsconditionedonn = ϵs[filteron]
+        logliksconditionedonn = logliks[filteronn]
+        maxlikindex = argmax(logliksconditionedonn)
+        τCmaxliksconditionedonn[n] = τCsconditionedonn[maxlikindex]
+        τAmaxliksconditionedonn[n] = τAsconditionedonn[maxlikindex]
+        ϵmaxliksconditionedonn[n] = ϵsconditionedonn[maxlikindex]
+        @assert unique(ns[filteronn]) == [n]
+        @assert n ∉ ns[.!filteronn]
     end 
     
     d, R = makesizedvectors(d, R)

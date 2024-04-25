@@ -77,11 +77,9 @@ trueϵ = 0.001 # true error rate used in the simulations.
         continue
     end 
     plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "empirical_data", string("EmpericalData_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".png"))
-    #=
     if isfile(plotfile) # plot is already made. 
         continue 
     end 
-    =#
     println("Working on ", plotfile)
     df = CSV.read(zippedcsvfile, DataFrame)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
     gdf = groupby(df, [:anchorpop, :trueϵ, :truenumind, :chainid])

@@ -16,8 +16,8 @@ using Distributions, # for probability distributions
 
 export logprobderivedreads!, # the log probability of the read vector. A.k.a. the likelihood.
        EigenExpansion, # Data type to store a decomposition A = XDX^{-1}, which allows for fast matrix exponentiation.
-       preparedata, # prepare the data needed for logprobderivedreads!, for fixed n. 
-       probderivedalleles! 
+       preparedata # prepare the data needed for logprobderivedreads!, for fixed n. 
+       #probderivedalleles! 
 
 # Test written
 struct EigenExpansion{S, T}
@@ -112,6 +112,7 @@ Calculate the matrix `e^{Q*τ_A}e^{Qꜜτ_C}` as in Schraiber, calcmatrix(n::Int
 calcmatrix(Q::EigenExpansion, Qꜜ::EigenExpansion, τC::Float64, τA::Float64) =  exp(Q, τA)*exp(Qꜜ, τC)
 
 # Test written
+#=
 """
     probderivedalleles!(p::AbstractVector{Float64}, h::AbstractVector{Float64}, M::AbstractMatrix{Float64}, binomialcoefficients::AbstractVector{Int})
 
@@ -128,6 +129,7 @@ function probderivedalleles!(p::AbstractVector{Float64}, h::AbstractVector{Float
     @assert isprobvec(p)
     return p  
 end
+=#
 # Het omslagpunt ligt bij length(x) ≤ 23 (dus n=11), voor length(x)≤23 is het sneller met StaticArrays,
 # voor length(x)≥24 is een gewone array sneller (dus voor n≥12). 
 #
@@ -291,7 +293,7 @@ function probderivedallelesreminder!(p::AbstractVector{Float64}, h::AbstractVect
 end
 =#
 
-function logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Vector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+function logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
     if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
         return -Inf 
     else

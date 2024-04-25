@@ -147,6 +147,7 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
     end # chain
     command = `gzip -f $csvfile`
     run(command)
+    println("Finished with ", csvfile)
     finishtime = now()
     timedifference = finishtime - starttime
     numhours = round(timedifference, Hour, RoundDown)
@@ -154,7 +155,6 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
     remainingtimeinmilliseconds = Dates.Millisecond(Dates.toms(remainingtime))
     remainingtimeminutes = round(remainingtimeinmilliseconds, Minute)
     println("It took ", numhours, " and ", remainingtimeminutes, '.')
-    println("Finished with ", csvfile)
 end # (anchorpop, ancientpop, truenumind)
 
 finishtime = now()
