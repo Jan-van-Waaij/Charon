@@ -657,9 +657,9 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     ϵmaxliksconditionedonn = Vector{Float64}(undef, nmax)
     for n in 1:nmax 
         filteronn = ns .== n 
-        τCsconditionedonn = τCs[filteron]
-        τAsconditionedonn = τAs[filteron]
-        ϵsconditionedonn = ϵs[filteron]
+        τCsconditionedonn = τCs[filteronn]
+        τAsconditionedonn = τAs[filteronn]
+        ϵsconditionedonn = ϵs[filteronn]
         logliksconditionedonn = logliks[filteronn]
         maxlikindex = argmax(logliksconditionedonn)
         τCmaxliksconditionedonn[n] = τCsconditionedonn[maxlikindex]

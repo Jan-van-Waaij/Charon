@@ -702,7 +702,7 @@ version = "2.39.3+1"
 
 [[Likelihood]]
 deps = ["Distributions", "LinearAlgebra", "StaticArrays"]
-git-tree-sha1 = "efcee1eee4d49421cc528f742ef8bf1f1f328ed2"
+git-tree-sha1 = "514791d1dce9a8d35b89e3d064952f938f79e6a2"
 repo-rev = "master"
 repo-subdir = "packages/Likelihood"
 repo-url = "/net/node07/home/projects/SedaDNA_Demo/simulationsMSPRIME"
@@ -974,7 +974,7 @@ version = "1.4.3"
 
 [[PosteriorSampling]]
 deps = ["Distributions", "Likelihood", "LinearAlgebra", "StaticArrays", "StatsBase"]
-git-tree-sha1 = "643a0b360b2f45e8fb44af7888e46ca6e8383d95"
+git-tree-sha1 = "ef48da486e8a75b3a88454d28d68645540f5a5ec"
 repo-rev = "master"
 repo-subdir = "packages/PosteriorSampling"
 repo-url = "/net/node07/home/projects/SedaDNA_Demo/simulationsMSPRIME"

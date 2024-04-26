@@ -30,7 +30,7 @@ global starttime = now()
 # /home/projects/gabriel/Jan_allelefreq/hg38/bams/IBS_ind16_basecount_IBS_ind16.gz
 # let op de coverage is niet constant. 
 anchorpops = ["ACB", "ASW", "BEB", "CDX", "CEU", "CHB", "CHS", "CLM", "ESN", "FIN", "GBR", "GIH", "GWD", "IBS", "ITU", "JPT", "KHV", "LWK", "MSL", "MXL", "PEL", "PJL", "PUR", "STU", "TSI", "YRI"]
-truenumindvec = [1, 2, 4, 8]
+truenumindvec = [8] # [1, 2, 4, 8]
 allcombinations = [(anchorpop, truenumind) for anchorpop in anchorpops for truenumind in truenumindvec] # 104 elementen. 4*104=416 threads
 
 nsteps = 100_000 # number of steps in mcmc chain 
@@ -42,19 +42,20 @@ nchains = 4 # number of chains.
 trueϵ = 0.001 # true error rate used in the simulations. 
 
 nodes = [
-    ("compute01", 30), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
+    #("compute01", 30), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
     ("node05", 6), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
     ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
     ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
-    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
+   #= ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
     ("node06", 6), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
     ("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
     ("node13", 4), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
     ("node11", 10), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
     ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
     ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
+    =#
 ]
 #nodes = [("compute01", 1)]
 sum(node[2] for node in nodes)
@@ -94,7 +95,7 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
     #@show length(freqs) length(derivedreadsvec) length(coveragevec)
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("EmpericalData_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("storeliksEmpericalData_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
     zippedcsvfile = csvfile * ".gz"
     #=if isfile(zippedcsvfile)
         println(zippedcsvfile, " does already exist. Do not overwrite existing files!")
@@ -109,6 +110,16 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
                 τAsample = Float64[],
                 ϵsample = Float64[],
                 accepted = Bool[],
+                logjointprob1 = Float64[],
+                logjointprob2 = Float64[],
+                logjointprob3 = Float64[],
+                logjointprob4 = Float64[],
+                logjointprob5 = Float64[],
+                logjointprob6 = Float64[],
+                logjointprob7 = Float64[],
+                logjointprob8 = Float64[],
+                logjointprob9 = Float64[],
+                logjointprob10 = Float64[],
                 logjointprob = Float64[],
                 chainid = Int[]
                 )
@@ -140,6 +151,16 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
                             τAsample = τAsampleunpacked,
                             ϵsample = ϵsampleunpacked,
                             accepted = acceptedvecunpacked,
+                            logjointprob1 = logjointprob[:, 2],
+                            logjointprob2 = logjointprob[:, 3],
+                            logjointprob3 = logjointprob[:, 4],
+                            logjointprob4 = logjointprob[:, 5],
+                            logjointprob5 = logjointprob[:, 6],
+                            logjointprob6 = logjointprob[:, 7],
+                            logjointprob7 = logjointprob[:, 8],
+                            logjointprob8 = logjointprob[:, 9],
+                            logjointprob9 = logjointprob[:, 10],
+                            logjointprob10 = logjointprob[:, 11],
                             logjointprob = logjointprob[:, 1],
                             chainid = fill(Int(chain), nsteps)
                             )

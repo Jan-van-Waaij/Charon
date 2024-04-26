@@ -1,0 +1,131 @@
+# runmcmconallfiles.jl
+# Author: Jan van Waaij
+# Created: 25 April 2024
+# Last update: 25 April 2024
+#
+# Purpose:
+# Calculate maximum likelihood estimator for n. 
+#
+# Installation:
+# Please read installinstructions.txt.
+# 
+# Usage:
+# open file as julia -O3 --threads=auto path/to/runtraditionalmcmcMadsmodel.jl
+#
+
+# Als compute01 ongebruikt is, run het daar, het heeft meer dan 128 CPUs. 
+
+
+using Data, # For parsing frequency and read files. 
+      DataFrames, # work with data frames.
+      CSV, # convert dataframes to a CSV file. 
+      Distributions, # To specify the prior.
+      PosteriorSampling, # To sample from the posterior.
+      Dates, # for the now function 
+      Base.Threads, # for threads
+      Distributed
+
+global starttime = now()
+
+# /home/projects/gabriel/Jan_allelefreq/hg38/bams/IBS_ind16_basecount_IBS_ind16.gz
+# let op de coverage is niet constant. 
+anchorpops = ["ACB", "ASW", "BEB", "CDX", "CEU", "CHB", "CHS", "CLM", "ESN", "FIN", "GBR", "GIH", "GWD", "IBS", "ITU", "JPT", "KHV", "LWK", "MSL", "MXL", "PEL", "PJL", "PUR", "STU", "TSI", "YRI"]
+truenumindvec = [1, 2, 4, 8]
+allcombinations = [(anchorpop, truenumind) for anchorpop in anchorpops for truenumind in truenumindvec] # 104 elementen. 4*104=416 threads
+
+nsteps = 100_000 # number of steps in mcmc chain 
+prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
+prioronn = DiscreteUniform(1, 10) # uniform prior on {1, 2, ..., 10}
+prioronϵ = Uniform(0, 0.5) # uniform prior on [0, 0.5]
+nchains = 4 # number of chains. 
+
+trueϵ = 0.001 # true error rate used in the simulations. 
+
+nodes = [
+    ("compute01", 104) #=, # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
+    ("node05", 6), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
+    ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
+    ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
+    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    ("node06", 6), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
+    ("node07", 13), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
+    ("node13", 4), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
+    ("node11", 10), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
+    ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
+    ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
+    =#
+]
+#nodes = [("compute01", 1)]
+sum(node[2] for node in nodes)
+
+dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
+exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
+numthreadsperprocess = 1
+exeflags = ["--project=$dir", "--threads=$numthreadsperprocess", "--optimize=3", "--banner=no"] 
+
+addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
+
+@everywhere using Data, # For parsing frequency and read files. 
+      DataFrames, # work with data frames.
+      CSV, # convert dataframes to a CSV file. 
+      Distributions, # To specify the prior.
+      PosteriorSampling, # To sample from the posterior.
+      Dates, # for the now function 
+      Base.Threads, # for threads
+      Distributed
+
+@everywhere allcombinations
+
+@everywhere function f(combination)
+    anchorpop, truenumind = combination 
+    local starttime = now()
+    ancientpop = "IBS"  
+    frequencyfile = "/home/projects/gabriel/Jan_allelefreq/hg38/bams/IBS_ind$(truenumind)_freq_$(anchorpop).gz"
+    if !isfile(frequencyfile)
+        println(frequencyfile, " does not exist.")
+        return -1 
+    end 
+    freqs = parsefreqfile(frequencyfile)
+
+    readsfile = "/home/projects/gabriel/Jan_allelefreq/hg38/bams/IBS_ind$(truenumind)_basecount_IBS_ind$(truenumind).gz"
+    if !isfile(readsfile)
+        println(readsfile, " does not exist.")
+        return -1 
+    end 
+    derivedreadsvec, coveragevec = parsereadfile(readsfile, ' ')
+    #@show length(freqs) length(derivedreadsvec) length(coveragevec)
+    @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
+
+    nrange = 1:10
+    gridτC = range(0.0, 1.0, length=73)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(0.0, 1.0, length=73)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(0.0, 0.5, length=74)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    
+    ns, _, _, _, logliks = exactposterior(nrange, gridτC, gridτA, gridϵ, coveragevec, derivedreadsvec, freqs, 0)
+    maxlikindex = argmax(logliks)
+    finishtime = now()
+    timedifference = finishtime - starttime
+    numhours = round(timedifference, Hour, RoundDown)
+    remainingtime = timedifference - numhours
+    remainingtimeinmilliseconds = Dates.Millisecond(Dates.toms(remainingtime))
+    remainingtimeminutes = round(remainingtimeinmilliseconds, Minute)
+    println("It took ", numhours, " and ", remainingtimeminutes, '.')
+    return ns[maxlikindex]
+end # (anchorpop, ancientpop, truenumind)
+
+maxliksn = pmap(f, allcombinations)
+
+finishtime = now()
+timedifference = finishtime - starttime
+numhours = round(timedifference, Hour, RoundDown)
+remainingtime = timedifference - numhours
+remainingtimeinmilliseconds = Dates.Millisecond(Dates.toms(remainingtime))
+remainingtimeminutes = round(remainingtimeinmilliseconds, Minute)
+println("It took ", numhours, " and ", remainingtimeminutes, " to finish all files!")
+
+rmprocs(workers())
+
+println(maxliksn)
+
