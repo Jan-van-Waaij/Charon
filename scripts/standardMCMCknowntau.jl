@@ -31,10 +31,11 @@ number_of_individuals_vec = 1:8
 coverage_vec = 2:20 
 allcombinations = [(numind, coverage) for numind in number_of_individuals_vec for coverage in coverage_vec] # 152 elements. 
 
-setdiff!(allcombinations, allcombinationsdone)
+allcombinations = allcombinations[1:1]
 
+#=
 nodes = [
-    ("compute01", 18), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
+    #=("compute01", 18), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
     ("node05", 6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
     ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
     ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
@@ -45,10 +46,12 @@ nodes = [
     ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
     ("node06", 6), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
     ("node13", 4), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
-    ("node14", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
+    =#
+    ("node14", 1), # not used MAX CAP FOR ME: 3 ASO MODE 4
+   # ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
 ]
 sum(node[2] for node in nodes)
+
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
@@ -66,6 +69,8 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
       Base.Threads, # for threads
       Distributed
 
+=#
+
 nsteps = 10 #100_000 # number of steps in the mcmc chain 
 prioronn = DiscreteUniform(1,10)
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
@@ -74,7 +79,8 @@ nchains = 4 # number of chains.
 
 trueϵ = 0.003 # true error rate used in the simulations. 
 
-@sync @distributed for (numind, coverage) in allcombinations   
+#@sync @distributed 
+for (numind, coverage) in allcombinations   
     local starttime = now()
     frequencyfile = "data/frequencies/freqanchor/two_demes_demes_freqanchor.txt.gz"
     if !isfile(frequencyfile)

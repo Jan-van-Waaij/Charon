@@ -38,13 +38,13 @@ function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::In
     return y, d, R, counts
 end 
 
-function makesizedvectors(d::Vector{Int}, R::Vector{Int})
+function makesizedvectors(d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
     d = SizedVector{length(d), Int}(d)
     R = SizedVector{length(R), Int}(R)
     return d, R 
 end 
 
-function makesizedvectors(d::Vector{Int}, R::Int)
+function makesizedvectors(d::AbstractVector{<:Integer}, R::Integer)
     d = SizedVector{length(d), Int}(d)
     return d, R 
 end 
@@ -502,7 +502,6 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     τAmaxlik = τAs[maxlikindex]
     ϵmaxlik = ϵs[maxlikindex]
     
-    d = SizedVector{length(d), Int}(d)
     d, R = makesizedvectors(d, R)
     counts = SizedVector{length(counts), Int}(counts)
 
