@@ -300,7 +300,7 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100)
+function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronϵ) ≥ 0 || throw(ArgumentError("prioronϵ should have support on [0, 0.5], but the minimum is negative."))
@@ -331,10 +331,14 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
     gridτC = range(smallestτC, largestτC, length=23)[begin+1:end] # avoid a 0.0 value
     gridτA = range(smallestτA, largestτA, length=23)[begin+1:end] # avoid a 0.0 value
     gridϵ = range(smallestϵ, largestϵ, length=24)[begin+1:end-1] # avoid a 0.0 and 0.5 value
-    likresults = exactposterior([fixedn], gridτC, gridτA, gridϵ, R, d, counts, y, 0)
-    maxlikindex = argmax(likresults[5, :])
-    τCmaxlik, τAmaxlik, ϵmaxlik = likresults[2:4, maxlikindex]
 
+    _, τCs, τAs, ϵs, logliks = exactposterior([fixedn], gridτC, gridτA, gridϵ, d, R, uniqueR, counts, y, 0)
+
+    maxlikindex = argmax(logliks)
+    τCmaxlik = τCs[maxlikindex]
+    τAmaxlik = τAs[maxlikindex]
+    ϵmaxlik = ϵs[maxlikindex]
+    
     d = SizedVector{length(d), Int}(d)
     counts = SizedVector{length(counts), Int}(counts)
     
@@ -414,10 +418,10 @@ function MHsampler(nchains::Int, nsteps::Int, fixedn::Int, prioronτCτA::Contin
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
                     if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
                         scalefactor = 3*scalefactor/4
-                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                        scalingmessages && println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
                     elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
                         scalefactor = 4*scalefactor/3
-                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
+                        scalingmessages && println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
                     end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end
                 distproposalτCτA = MvNormal(scalefactor*Σ+1.0e-14*I)
@@ -460,7 +464,7 @@ gives the results of the first chain.
 
 Here we assume that all coverages are the same.
 """
-function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100)
+function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronn) ≥ 1 || throw(ArgumentError("prioronn should have support on positive integers. There is always at least one individual."))
@@ -481,7 +485,8 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
     sum(allowedindices) > 0 || throw(ArgumentError("At least one frequency where the coverage is positive should be strictly between 0.0 and 1.0."))
     y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
-    
+    uniqueR = myunique(R)
+
     smallestn, largestn = extrema(prioronn)
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
@@ -489,11 +494,14 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     gridτC = range(smallestτC, largestτC, length=23)[begin+1:end] # avoid a 0.0 value
     gridτA = range(smallestτA, largestτA, length=23)[begin+1:end] # avoid a 0.0 value
     gridϵ = range(smallestϵ, largestϵ, length=24)[begin+1:end-1] # avoid a 0.0 and 0.5 value
-    likresults = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, R, d, counts, y, 0)
-    maxlikindex = argmax(likresults[5, :])
-    nmaxlik, τCmaxlik, τAmaxlik, ϵmaxlik = likresults[1:4, maxlikindex]
-    nmaxlik = Int(nmaxlik)
+    ns, τCs, τAs, ϵs, logliks = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, d, R, uniqueR, counts, y, 0)
 
+    maxlikindex = argmax(logliks)
+    nmaxlik = ns[maxlikindex]
+    τCmaxlik = τCs[maxlikindex]
+    τAmaxlik = τAs[maxlikindex]
+    ϵmaxlik = ϵs[maxlikindex]
+    
     d = SizedVector{length(d), Int}(d)
     d, R = makesizedvectors(d, R)
     counts = SizedVector{length(counts), Int}(counts)
@@ -512,7 +520,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
     # which contain the states of the Markov chain. 
     results = Vector{Tuple{Vector{Int}, Vector{Float64}, Vector{Float64}, Vector{Float64}, BitVector, Vector{Float64}}}(undef,nchains)
     @threads for chainindex in eachindex(results) 
-        p = [MVector{2n+1, Float64}(undef) for n in 1:nmax]
+        #p = [MVector{2n+1, Float64}(undef) for n in 1:nmax]
         q = makeq(nmax, d, R)
         nsample = Vector{Int}(undef, nsteps)
         τCsample = Vector{Float64}(undef, nsteps)
@@ -533,7 +541,9 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
         ϵsample[1] = ϵprevious
         acceptedvec[1] = true 
         # Calculate log likelihood and log prior density with initial values.
-        loglikprevious = logprobderivedreads!(p[nprevious], q[nprevious], d, R, Rmax, counts, τCprevious, τAprevious, ϵprevious, nprevious, Qs[nprevious], Qꜜs[nprevious], binomialcoefficients[nprevious], hvals[nprevious])
+        # p niet meer nodig. 
+        loglikprevious = logprobderivedreads!(q[nprevious], d, R, uniqueR, counts, τCprevious, τAprevious, ϵprevious, nprevious, Qs[nprevious], Qꜜs[nprevious], binomialcoefficients[nprevious], hvals[nprevious])
+
         # check if the initial value is valid. 
         loglikprevious == -Inf && throw(DomainError("The data does not support the initial value."))
         logpdfpriorprevious = logpdf(prioronn, nprevious) + 
@@ -557,7 +567,8 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
             # equal to nprevious. 
             ϵproposal = ϵprevious + rand(distproposalϵ)
             # calculate the loglikelihood
-            loglikproposal = logprobderivedreads!(p[nproposal], q[nproposal], d, R, Rmax, counts, τCproposal, τAproposal, ϵproposal, nproposal, Qs[nproposal], Qꜜs[nproposal], binomialcoefficients[nproposal], hvals[nproposal])
+            loglikproposal = logprobderivedreads!(q[nproposal], d, R, uniqueR, counts, τCproposal, τAproposal, ϵproposal, nproposal, Qs[nproposal], Qꜜs[nproposal], binomialcoefficients[nproposal], hvals[nproposal])
+
             logpdfpriorproposal = logpdf(prioronn, nproposal) + logpdf(prioronτCτA, [τCproposal, τAproposal]) + logpdf(prioronϵ, ϵproposal)
             # calculate the acceptance probability. 
             # Note that our proposal function for n, τC, τA, ϵ is symmetric, i.e. q(x|y)=q(y|x).
@@ -594,10 +605,10 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
                     acceptancerate = mean(acceptedvec[step-999:step]) # acceptance rate in the last 1000 steps.
                     if acceptancerate < 0.1 # acceptancerate too low, take smaller steps.
                         scalefactor = 3*scalefactor/4
-                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
+                        scalingmessages && println("Chain ", chainindex, " talking, I scaled scalefactor with factor 3/4, new scalefactor = ", scalefactor, '.')
                     elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
                         scalefactor = 4*scalefactor/3
-                        println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
+                        scalingmessages && println("Chain ", chainindex, " talking, I scaled scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
                     end # So do nothing when the acceptancerate is between 0.1 and 0.6. 
                 end
                 distproposalτCτA = MvNormal(scalefactor*Σ+1.0e-14*I)

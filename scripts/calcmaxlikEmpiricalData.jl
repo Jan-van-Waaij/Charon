@@ -99,9 +99,9 @@ addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
     nrange = 1:10
-    gridτC = range(0.0, 1.0, length=73)[begin+1:end] # avoid a 0.0 value
-    gridτA = range(0.0, 1.0, length=73)[begin+1:end] # avoid a 0.0 value
-    gridϵ = range(0.0, 0.5, length=74)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    gridτC = range(0.0, 1.0, length=145)[begin+1:end] # avoid a 0.0 value
+    gridτA = range(0.0, 1.0, length=145)[begin+1:end] # avoid a 0.0 value
+    gridϵ = range(0.0, 0.5, length=146)[begin+1:end-1] # avoid a 0.0 and 0.5 value
     
     ns, _, _, _, logliks = exactposterior(nrange, gridτC, gridτA, gridϵ, coveragevec, derivedreadsvec, freqs, 0)
     maxlikindex = argmax(logliks)

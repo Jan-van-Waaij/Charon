@@ -84,7 +84,7 @@ ancientpop = "CEUS"
 csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("simprop_Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
 zippedcsvfile = csvfile * ".gz"
 
-zippedcsvfile = "data/mcmcsamples/Madsmodel_ancient_pop_KARS_anchor_pop_KAR_true_num_ind_4_factor_1.0.csv.gz"
+zippedcsvfile = "data/mcmcsamples/storeliksEmpericalData_anchor_pop_MSL_true_num_ind_8.csv.gz"
 
 csvfile = "/home/projects/SedaDNA_Demo/simulationsMSPRIME/data/mcmcsamples/EmpericalData_anchor_pop_ACB_true_num_ind_8.csv"
 zippedcsvfile = csvfile*".gz"

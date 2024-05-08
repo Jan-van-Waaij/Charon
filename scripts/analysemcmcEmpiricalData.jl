@@ -119,6 +119,9 @@ truenumind = 2
 csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("EmpericalData_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
 zippedcsvfile = csvfile * ".gz"
     
+zippedcsvfile = "data/mcmcsamples/storeliksEmpericalData_anchor_pop_MSL_true_num_ind_8.csv"
+df = CSV.read(zippedcsvfile, DataFrame)
+
 df = CSV.read(zippedcsvfile, DataFrame)#, header = [:anchorpop, :ancientpop, :trueϵ, :truenumind, :coverage, :nsample, :τCsample, :τAsample, :ϵsample, :accepted, :logjointprob, :chainid])
 
 gdf = groupby(df, [:anchorpop, :ancientpop, :trueϵ, :truenumind, :chainid])
