@@ -7,10 +7,12 @@ module Data
 
 # Write test functions. 
 
-# Required pacakges. 
+# Required packages. 
 using Distributions, # for distributions. Here we use the Binomial distribution and the rand function.
       DelimitedFiles, # To work with tab seperated files. Here we use the functions readdlm and writedlm.
       GZip # To open zipped vcf files. 
+
+import Base: showerror # format the error and print it. 
 
 # Exported functions. Available once you add "using Data" to your code. 
 # Other functions can be used with Data.functionname(arguments), which requires at least "import Data" or "using Data". 
@@ -23,6 +25,11 @@ export skiplines, # skip the first n lines of a file
 
 # Define custom DataError Error exception.
 # test written.
+"""
+    DataError
+
+DataError exception. Something is wrong with the data format. 
+"""
 struct DataError <: Exception
     message::String
 end
@@ -30,7 +37,7 @@ end
 """
     DataError(x...)
 
-Data is in the wrong format.
+Data is in the wrong format, details are specified in x. 
 """
 DataError(x...) = DataError(string(x...)) 
 # Formatting of the error message. 

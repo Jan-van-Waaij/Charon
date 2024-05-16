@@ -5,6 +5,7 @@ This package provides functions to sample from the posterior.
 """
 module PosteriorSampling
 
+# external packages that I use. 
 using Distributions, # for probability distributions
       Likelihood, # for the likelihood
       StatsBase, # for countmap
@@ -12,6 +13,7 @@ using Distributions, # for probability distributions
       StaticArrays, # for SizedVector and MVector, they are generally faster.
       Base.Threads # for multithreading.
       
+# functions that you can use when you type 'using PosteriorSampling'. 
 export MHsampler, # The mcmc sampler.
        MCMCSimProp, # More efficient mcmc sampler for low coverage with simulated proposal, at the cost of a longer run time. 
        exactposterior
@@ -62,13 +64,6 @@ function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::Int)
     return [MMatrix{2n+1, R+1, Float64}(undef) for n in 1:nmax]
 end 
 
-#=
-function makeq(nmax::Int, R::AbstractVector{<:Integer})
-    Rmax = maximum(R)
-    return [[Matrix{Float64}(2n+1, R+1, undef) for R in 1:Rmax] for n in 1:nmax]
-end 
-=#
-
 function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
     uniquedandRs = unique(zip(d, R))
     return [Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs) for n in 1:nmax]
@@ -77,30 +72,6 @@ end
 checklength(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}) = length(y) == length(d) == length(R)
 
 checklength(y::Vector{Float64}, d::Vector{Int}, R::Int) = length(y) == length(d)
-    
-##
-##
-## fixed R, error model, fixed n. 
-##
-##
-"""
-    ExactPosterior(fixedn::Int, τCrange::AbstractVector{Float64}, τArange::AbstractVector{Float64}, fixedϵ::Float64, prioronτCτA::ContinuousMultivariateDistribution, R::Int, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100)
-
-Adaptive Metropolis (Haario et al. 2001, mentioned in Rosenthal 2010 "Optimal proposal distributions and adaptive MCMC, section 3.2), with prior on τC, τA and ϵ, the true number of individuals is assumed to be known. Instead of using the recommended scaling factor 1.4161, we use the first nsteps÷4 steps to find a scaling factor that results in an acceptance ratio between 0.1 and 0.6. Setting messages ≤ 0, results in no messages being print, if message>0, then every message steps, a message is print, updating the progress.
-
-If not specified, the initial values are choosen from the prior.
-
-This function returns a vector of length nchains. Each element contains the results of one chain; it is a tuple of five vectors: a vector containing the a vector containing the τC-values, a vector containing the τA-values, a vector containing the ϵ values, a vector telling whether a certain proposal was accepted or not and a vector with unnormalised posterior log-densities. So for example 
-
-```julia
-results = MHsampler(nchains, nsteps, prioronn, prioronτCτA, R, d, y, messages)
-τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[1]
-```
-
-gives the results of the first chain.
-
-Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
-"""
 
 function updateq!(q::AbstractMatrix{<:Real}, binomialcoefficients::AbstractVector{<:Integer}, uniquecoverages::Integer, n::Integer, ϵ::Real)
     for k in 0:2n
@@ -132,7 +103,29 @@ myunique(R::Integer) = R
 
 myunique(R::AbstractVector{<:Integer}) = unique(R)
 
+##
+##
+## fixed R, error model, fixed n. 
+##
+##
+"""
+    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{AbstractVector{<:Integer}, Integer}, uniquecoverages::Union{AbstractVector{<:Integer}, Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
 
+Adaptive Metropolis (Haario et al. 2001, mentioned in Rosenthal 2010 "Optimal proposal distributions and adaptive MCMC, section 3.2), with prior on τC, τA and ϵ, the true number of individuals is assumed to be known. Instead of using the recommended scaling factor 1.4161, we use the first nsteps÷4 steps to find a scaling factor that results in an acceptance ratio between 0.1 and 0.6. Setting messages ≤ 0, results in no messages being print, if message>0, then every message steps, a message is print, updating the progress.
+
+If not specified, the initial values are choosen from the prior.
+
+This function returns a vector of length nchains. Each element contains the results of one chain; it is a tuple of five vectors: a vector containing the a vector containing the τC-values, a vector containing the τA-values, a vector containing the ϵ values, a vector telling whether a certain proposal was accepted or not and a vector with unnormalised posterior log-densities. So for example 
+
+```julia
+results = MHsampler(nchains, nsteps, prioronn, prioronτCτA, R, d, y, messages)
+τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[1]
+```
+
+gives the results of the first chain.
+
+Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
+"""
 function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{AbstractVector{<:Integer}, Integer}, uniquecoverages::Union{AbstractVector{<:Integer}, Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
     # Check conditions.
     all(0 .≤ ϵrange .< 0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
@@ -629,6 +622,11 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
 end # function.
 ## end new, adding error model.
 
+"""
+    MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+
+MCMC with simulated proposals. 
+"""
 function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))

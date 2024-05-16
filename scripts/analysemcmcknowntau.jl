@@ -68,12 +68,12 @@ nchains = 4 # number of chains.
 trueϵ = 0.003 # true error rate used in the simulations. 
 
 @sync @distributed for (numind, coverage) in allcombinations
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("knowntau=0.25_num_ind_", numind, "_cov_", coverage, ".csv"))
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("knowntau=0.25_num_ind_", numind, "_cov_", coverage, "_standard_MCMC.csv"))
     zippedcsvfile = csvfile * ".gz"
     if !isfile(zippedcsvfile)
         continue
     end 
-    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "knowntau", string("knowntau=0.25_num_ind_", numind, "_cov_", coverage, ".png"))
+    plotfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "images", "knowntau", string("knowntau=0.25_num_ind_", numind, "_cov_", coverage, "_standard_MCMC.png"))
     if isfile(plotfile) # plot is already made. 
         continue 
     end 

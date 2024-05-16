@@ -9,17 +9,22 @@ module Likelihood
 
 import Base: ==, exp, isapprox # redefine exp, == and isapprox (≈) for EigenExpansion types. This requires an import statement.
 
+# external packages that are used in this module. 
 using Distributions, # for probability distributions
       LinearAlgebra, # for Linear Algebra functions and data types.  
       StaticArrays # for small matrices this can be faster, as it stores the size of the matrix in the type. Can apply some 
       # optimisations for some matrices. 
 
-export logprobderivedreads!, # the log probability of the read vector. A.k.a. the likelihood.
+export logprobderivedreads!, # the log probability of the read vector. A.k.a. the log-likelihood.
        EigenExpansion, # Data type to store a decomposition A = XDX^{-1}, which allows for fast matrix exponentiation.
        preparedata # prepare the data needed for logprobderivedreads!, for fixed n. 
-       #probderivedalleles! 
 
 # Test written
+"""
+    EigenExpansion{S, T}
+
+Representation of a matrix M=P*D*P^{-1}, where D is a diagonal matrix and P an invertible matrix. P and P^{-1} have type S and the vector of diagonal elements of D has type T. The fields are P, D and Pinv. 
+"""
 struct EigenExpansion{S, T}
     P::S
     D::Diagonal{Float64, T}
@@ -58,6 +63,7 @@ Test whether E1 and E2 have the same decomposition P*D*P^(-1), so whether E1.P =
 """
 ==(E1::EigenExpansion, E2::EigenExpansion) = E1.P == E2.P && E1.D == E2.D && E1.Pinv == E2.Pinv
 
+# test written 
 """
     isapprox(E1::EigenExpansion, E2::EigenExpansion; args...)
     E1 ≈ E2
@@ -71,8 +77,10 @@ isapprox(E1::EigenExpansion, E2::EigenExpansion, args...) = isapprox(E1.P, E2.P,
 """
     exp(F::EigenExpansion, s::Float64)
 
+Calculate e^(s*M) in an efficient way. 
+
 If F=EigenExpansion(M), then exp(s*M)=exp(F,s)=F.P*exp(s*F.D)*F.Pinv, which makes 
-use of the fast implementation of exp for diagonal matrices.     
+use of the fast implementation of exp for diagonal matrices (it is just the exponetiation of the diagonal elements).     
 """
 exp(F::EigenExpansion, s::Float64) =  F.P*exp(s*F.D)*F.Pinv
 # Write a test function that tests whether typeof F.P is equal to the type of the end result.  DONE
@@ -81,7 +89,7 @@ exp(F::EigenExpansion, s::Float64) =  F.P*exp(s*F.D)*F.Pinv
 """
     makeQ(n::Int)
 
-Calculate the (2n+1)x(2n+1) Q matrix as in Schraiber 2018. 
+Calculate the (2n+1)x(2n+1) Q tridiagonal matrix as in Schraiber 2018. 
 """
 function makeQ(n::Int)
     lowerdiagonal = 0.5*(1.0:2n).*(0.0:2n-1.0)
@@ -94,7 +102,7 @@ end
 """
     makeQꜜ(n::Int)
 
-Calculate the (2n+1)x(2n+1) Qꜜ matrix as in Schraiber 2018.  
+Calculate the (2n+1)x(2n+1) Qꜜ tridiagonal matrix as in Schraiber 2018.  
 """
 function makeQꜜ(n::Int)
     lowerdiagonal = 0.5*(1.0:2n).*(0.0:2n-1.0)
@@ -107,7 +115,7 @@ end
 """
     calcmatrix(Q::EigenExpansion, Qꜜ::EigenExpansion, τC::Float64, τA::Float64)
 
-Calculate the matrix `e^{Q*τ_A}e^{Qꜜτ_C}` as in Schraiber, calcmatrix(n::Int, τC::Float64, τA::Float64) first calculates Q and Qꜜ. Note that in general, for matrices, exp(A+B) ̸= exp(A)exp(B) (equality holds if and only if A and B commute, which is not the case for Q and Qꜜ). 
+Calculate the matrix `e^{Q*τ_A}e^{Qꜜτ_C}` as in Schraiber. Note that in general, for matrices, exp(A+B) ≠ exp(A)exp(B) (equality holds if and only if A and B commute, which is not the case for Q and Qꜜ). 
 """
 calcmatrix(Q::EigenExpansion, Qꜜ::EigenExpansion, τC::Float64, τA::Float64) =  exp(Q, τA)*exp(Qꜜ, τC)
 
@@ -141,6 +149,7 @@ end
 
 # HIER VERDER MET TESTEN SCHRIJVEN!
 
+#=
 """
     makebinomialprobs(n::Int, R::Int)
 
@@ -168,6 +177,7 @@ function makebinomialprobs(n::Int, R::Vector{Int})
     binomialprobs = [makebinomialprobs(n, r) for r in 1:Rmax]
     return SVector{Rmax, SArray{S, Float64, 2, L} where {S<:Tuple, L}}(binomialprobs)
 end 
+=#
 
 """
     preparedata(n::Int, y::AbstractVector{<:Real})
@@ -293,6 +303,12 @@ function probderivedallelesreminder!(p::AbstractVector{Float64}, h::AbstractVect
 end
 =#
 
+
+"""
+    logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+
+Calculate the log probability of the derived reads, which is the log-likelihood. This function will mutate q. q[k+1,d+1] contains the probability of seeing d derived reads out of R, given k derived alleles out of 2n, d = 0,...,R and k=0,...,2n.  
+"""
 function logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
     if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
         return -Inf 
@@ -317,6 +333,11 @@ function logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{I
     end 
 end # Constant coverage and with errors. 
 
+"""
+    logprobderivedreads!(q::Dict{Tuple{Int64, Int64}, Vector{Float64}}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, uniquecoverages::AbstractVector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+
+Same as before, only with non-constant coverages. Mutates q, which is dictionary. Key (d, R), if it exists, has an associate vector as value, where the k+1-th element is the probability of having d derived reads out of R, given k derived alleles out of 2n, d=0,...,R and k=0,...,2n. 
+"""
 function logprobderivedreads!(q::Dict{Tuple{Int64, Int64}, Vector{Float64}}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, uniquecoverages::AbstractVector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
     if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
         return -Inf
