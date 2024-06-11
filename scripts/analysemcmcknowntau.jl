@@ -14,7 +14,6 @@
 # open a Julia terminal and use snippets of the code interactively. 
 #
 
-
 using GZip, # to work with zipped files,
       DataFrames, # to work with DataFrames,
       CSV, # for CSV files.
@@ -22,7 +21,8 @@ using GZip, # to work with zipped files,
       Plots, # plotting. 
       StatsPlots, 
       MCMCChains, # plotting of mcmc chains. 
-      Distributed # distributed programming
+      Distributed, # distributed programming
+      Latexify # make latex code from Julia objects. 
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME/data/images/empirical_data/"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
@@ -61,7 +61,7 @@ Distributed # distributed programming
 
 number_of_individuals_vec = 1:8
 coverage_vec = 2:20 
-allcombinations = [(numind, coverage) for numind in number_of_individuals_vec for coverage in coverage_vec] # 152 elements. 
+allcombinations = [(numind, coverage) for numind in number_of_individuals_vec for coverage in coverage_vec]; # 152 elements. 
 
 nsteps = 100_000 # number of steps in mcmc chain 
 nchains = 4 # number of chains. 
@@ -85,6 +85,63 @@ trueϵ = 0.003 # true error rate used in the simulations.
     p=plot(chain, show=false);
     savefig(p, plotfile);
 end 
+
+tableτA = Array{Vector{Float64}}(undef, 19, 8)
+tableτC = Array{Vector{Float64}}(undef, 19, 8)
+# table = zeros(19,8)
+
+for (numind, coverage) in allcombinations
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("knowntau=0.25_num_ind_", numind, "_cov_", coverage, "_standard_MCMC.csv"))
+    zippedcsvfile = csvfile * ".gz"
+    if !isfile(zippedcsvfile)
+        continue
+    end 
+    df = CSV.read(zippedcsvfile, DataFrame)
+    gdf = groupby(df, [:truenumind, :coverage, :trueϵ, :chainid])
+    df = vcat((gdf[k][end÷2+1:10:end, :] for k in eachindex(gdf))...)
+    tableτC[coverage-1, numind] = round.(quantile(df.:τCsample, [0.025, 0.5, 0.975]), digits=2)
+    tableτA[coverage-1, numind] = round.(quantile(df.:τAsample, [0.025, 0.5, 0.975]), digits=2)
+    #table[coverage-1, numind] = mean(df.τAsample)
+end 
+
+table = round.(table, digits=3)
+latexify(table)
+
+tabletuplesτC = similar(tableτC, Tuple{Float64, Float64, Float64})
+
+for index in eachindex(tableτC, tabletuples)
+    tabletuplesτC[index] = tuple(tableτC[index]...)
+end 
+
+tableτCstrings = string.(tableτC)
+latexify(tableτCstrings)
+
+tabletuplesτA = similar(tableτA, Tuple{Float64, Float64, Float64})
+
+for index in eachindex(tableτA, tabletuplesτA)
+    tabletuplesτA[index] = tuple(tableτA[index]...)
+end 
+
+tableτAstrings = string.(tabletuplesτA)
+s = latexify(tableτAstrings[:, 5:8])
+
+sp = split(s, '\n')
+coverage = 2 
+news = ""
+for index in eachindex(sp)[4:end-4]
+    news = news * string(coverage) * " & " * sp[index] * "\n\\hline\n"
+    global coverage += 1 
+end 
+print(news)
+
+
+
+
+tablecontained = similar(table, Bool)
+for index in eachindex(table, tablecontained)
+    tablecontained[index] = table[index][1] ≤ 0.25 ≤ table[index][3]
+end
+
 
 
 function printresults(anchorpop, ancientpop, truenumind, chainid, rate)

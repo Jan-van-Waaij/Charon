@@ -337,4 +337,30 @@ using Test, Data, Distributions, GZip
         @test coverages == vcat(repeat([10],6), repeat([20],5))
         close(openedfile)
     end
+
+    @testset "subsample" begin 
+        @test subsample(3, 5, 5) == 3, 5
+        @test subsample(5, 5, 3) == 3
+        @test subsample(0, 5, 3) == 0
+        for oldcoverage in 2:10
+            for newcoverage in 1:oldcoverage
+                for derivedreads in 0:oldcoverage 
+                    @test subsample(derivedreads, oldcoverage, newcoverage)[1] ≤ derivedreads
+                end 
+            end 
+        end 
+        results = Vector{Int}(undef, 1000_000)
+        for rate in 0.1:0.1:0.9
+            for oldcoverage in 1:100
+                for newcoverage in 1:oldcoverage
+                    for index in eachindex(results)
+                        derivedreads = rand(Binomial(oldcoverage, rate))
+                        results[index] = subsample(derivedreads, oldcoverage, newcoverage)
+                    end
+                    newrate = mean(results)/newcoverage
+                    @test abs(rate-newrate) < 0.01
+                end
+            end
+        end
+    end # subsample testset. 
 end 

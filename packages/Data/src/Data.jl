@@ -21,7 +21,8 @@ export skiplines, # skip the first n lines of a file
        freq, # calculate the frequency of a certain allele of a population from a vcf file.
        parsefreqfile, # parse the frequency file
        parsereadfile, # parse the read file 
-       addhashtagstoeachline # add '#' to each line in the string. 
+       addhashtagstoeachline, # add '#' to each line in the string. 
+       subsample
 
 # Define custom DataError Error exception.
 # test written.
@@ -412,5 +413,41 @@ function parsereadfile(readsfile::String, delim = '\t')
     close(openedreadsfile)
     return derivedreads, coverages
 end
+
+function subsample(numderivedreads::Int, oldcoverage::Int, newcoverage::Int)
+    0 ≤ newcoverage ≤ oldcoverage || throw(ArgumentError("newcoverage should be non-negative and smaller than oldcoverage"))
+    reads = vcat(fill(1, numderivedreads), fill(0, oldcoverage-numderivedreads))
+    subsample = sample(reads, newcoverage, replace=false)
+    return sum(subsample), newcoverage 
+end 
+
+function subsample(derivedreads::Vector{Int}, coverages::Vector{Int}, oldcoverage::Int, newcoverage::Int)
+    @assert length(unique(coverages)) == 1 # for now. 
+    @assert coverages[1] == oldcoverage
+    @assert length(derivedreads) == length(coverages)
+    newderivedreads = similar(derivedreads, Int)
+    newcoverages = similar(coverages, Int)
+    for index in eachindex(newderivedreads, derivedreads, newcoverages)
+        newderivedreads[index], newcoverages[index] = subsample(derivedreads[index], oldcoverage, newcoverage)
+    end 
+    return newderivedreads, newcoverages
+end 
+
+function subsample(originalreadsfile::IO, newreadsfile::IO, oldcoverage::Int, newcoverage::Int, comments::String="")
+    derivedreads, coverages = parsereadfile(originalreadsfile)
+    newderivedreads, newcoverages = subsample(derivedreads, coverages, oldcoverage, newcoverage)
+    addcomments(newreadsfile, comments)
+    writedlm(newreadsfile, [newderivedreads newcoverages])    
+end 
+
+function subsample(originalreadsfile::String, newreadsfile::String, oldcoverage::Int, newcoverage::Int, comments::String=""; fileextension::String=".txt.gz")
+    openedoriginalreadsfile = openfile(originalreadsfile, fileextension)
+    endswith(newreadsfile, fileextension) || throw(FileError("newreadsfile should have extension $fileextension."))
+    openednewreadsfile = GZip.open(newreadsfile, "w")
+    subsample(openedoriginalreadsfile, openednewreadsfile, oldcoverage, newcoverage, comments)
+    close(openedoriginalreadsfile)
+    close(openednewreadsfile)
+end 
+
 
 end # module Data
