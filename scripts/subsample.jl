@@ -19,29 +19,53 @@
 
 using Data, GZip, StatsBase
 
-numberofindividualsinthesedimentvec = 1:8 # [1, 2, 4, 8]
+#=
+numberofindividualsinthesedimentvec = 6:6
+coverages = [50, 40, 39:-1:20..., 15, 10]
+allcombinations = [(numind, cov) for numind in numberofindividualsinthesedimentvec for cov in coverages]
+=#
 
-for index in eachindex(numberofindividualsinthesedimentvec)
-    numberofindividualsinthesediment = numberofindividualsinthesedimentvec[index]
-    individualsinthesediment = randomindividuals[index] 
-    @assert length(randomindividuals[index]) == numberofindividualsinthesedimentvec[index]
+numberofindividualsinthesedimentvec = 5:8
+coverages = 10:-1:5
 
-    # I open the file where I while store the reads. 
-    local openedvcffile = GZip.open(vcffile)
-    # skip the header. 
-    skiplines(openedvcffile, 6)
-    readfile = string("data/reads/subsampling_number_of_individuals=", numberofindividualsinthesediment, "_coverage=100_reads_with_errors.txt.gz")
-    openedreadfile = GZip.open(readfile, "w")
+@assert issorted(coverages, rev=true)
+@assert allunique(coverages)
 
-    comments = """
-    Each line contains the number of derived reads and the total number of reads, seperated by a tab.  
-    original vcf file: $vcffile
-    Individuals in the sediment: $individualsinthesediment
-    Total number of individuals in the sediment: $numberofindividualsinthesediment
-    coverage: 100
-    error rate: $ϵ"""
+for numberofindividualsinthesediment in numberofindividualsinthesedimentvec
+    for index in eachindex(coverages)[1:end-1]
+        oldcoverage = coverages[index]
+        newcoverage = coverages[index+1]
+        @show oldcoverage newcoverage
+        for index in eachindex(numberofindividualsinthesedimentvec)
+            readfileoldcoverage = string("data/reads/subsampling_number_of_individuals=", numberofindividualsinthesediment, "_coverage=", oldcoverage, "_reads_with_errors.txt.gz")
+            readfilenewcoverage = string("data/reads/subsampling_number_of_individuals=", numberofindividualsinthesediment, "_coverage=", newcoverage, "_reads_with_errors.txt.gz")
+            comments = """
+            subsample from $readfileoldcoverage
+            new coverage: $newcoverage
+            """
+            subsample(readfileoldcoverage, readfilenewcoverage, oldcoverage, newcoverage, comments)
+        end
+    end 
+end 
 
-    reads(openedvcffile, openedreadfile, individualsinthesediment, 100, comments, ϵ)
-    close(openedreadfile)
-    close(openedvcffile)
-end  
+
+#= tests 
+for numberofindividualsinthesediment in numberofindividualsinthesedimentvec
+    for index in eachindex(coverages)[1:end-1]
+        oldcoverage = coverages[index]
+        newcoverage = coverages[index+1]
+        for index in eachindex(numberofindividualsinthesedimentvec)
+            readfileoldcoverage = string("data/reads/subsampling_number_of_individuals=", numberofindividualsinthesediment, "_coverage=", oldcoverage, "_reads_with_errors.txt.gz")
+            readfilenewcoverage = string("data/reads/subsampling_number_of_individuals=", numberofindividualsinthesediment, "_coverage=", newcoverage, "_reads_with_errors.txt.gz")
+            oldder, oldcov = parsereadfile(readfileoldcoverage)
+            newder, newcov = parsereadfile(readfilenewcoverage)
+            @test newder ≤ oldder 
+            @test length(unique(oldcov)) == 1 
+            @test length(unique(newcov)) == 1 
+            @test oldcov[1] == oldcoverage
+            @test newcov[1] == newcoverage
+
+        end
+    end 
+end 
+=#

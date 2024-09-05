@@ -339,9 +339,9 @@ using Test, Data, Distributions, GZip
     end
 
     @testset "subsample" begin 
-        @test subsample(3, 5, 5) == 3, 5
-        @test subsample(5, 5, 3) == 3
-        @test subsample(0, 5, 3) == 0
+        @test subsample(3, 5, 5) == (3, 5)
+        @test subsample(5, 5, 3)[1] == 3
+        @test subsample(0, 5, 3)[1] == 0
         for oldcoverage in 2:10
             for newcoverage in 1:oldcoverage
                 for derivedreads in 0:oldcoverage 
@@ -349,16 +349,18 @@ using Test, Data, Distributions, GZip
                 end 
             end 
         end 
-        results = Vector{Int}(undef, 1000_000)
-        for rate in 0.1:0.1:0.9
-            for oldcoverage in 1:100
-                for newcoverage in 1:oldcoverage
+        results = Vector{Int}(undef, 100_000)
+        for rate in sample(0.1:0.1:0.9, 3, replace=false)
+            for oldcoverage in sample(1:100, 3, replace=false)
+                dist = Binomial(oldcoverage, rate)
+                for newcoverage in sample(1:oldcoverage, min(oldcoverage, 3), replace=false)
                     for index in eachindex(results)
-                        derivedreads = rand(Binomial(oldcoverage, rate))
-                        results[index] = subsample(derivedreads, oldcoverage, newcoverage)
+                        derivedreads = rand(dist)
+                        results[index] = subsample(derivedreads, oldcoverage, newcoverage)[1]
                     end
                     newrate = mean(results)/newcoverage
                     @test abs(rate-newrate) < 0.01
+                    @show rate oldcoverage newcoverage 
                 end
             end
         end

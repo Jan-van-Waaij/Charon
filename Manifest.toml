@@ -133,9 +133,9 @@ version = "0.5.1"
 
 [[ChainRulesCore]]
 deps = ["Compat", "LinearAlgebra", "SparseArrays"]
-git-tree-sha1 = "575cd02e080939a33b6df6c5853d14924c08e35b"
+git-tree-sha1 = "71acdbf594aab5bbb2cec89b208c41b4c411e49f"
 uuid = "d360d2e6-b24c-11e9-a2a3-2a2ae2dbcce4"
-version = "1.23.0"
+version = "1.24.0"
 
 [[ChangesOfVariables]]
 deps = ["InverseFunctions", "LinearAlgebra", "Test"]
@@ -218,7 +218,7 @@ version = "4.1.1"
 
 [[Data]]
 deps = ["DelimitedFiles", "Distributions", "GZip"]
-git-tree-sha1 = "dd5cd20f82f6fcdf9b0b8ab9279e673f29a309a6"
+git-tree-sha1 = "0977822a59d103603b30a914b6832e177e9fe0f4"
 repo-rev = "master"
 repo-subdir = "packages/Data"
 repo-url = "/net/node07/home/projects/SedaDNA_Demo/simulationsMSPRIME"
@@ -721,9 +721,9 @@ version = "2.1.1"
 
 [[LogExpFunctions]]
 deps = ["ChainRulesCore", "ChangesOfVariables", "DocStringExtensions", "InverseFunctions", "IrrationalConstants", "LinearAlgebra"]
-git-tree-sha1 = "18144f3e9cbe9b15b070288eef858f71b291ce37"
+git-tree-sha1 = "a2d09619db4e765091ee5c6ffe8872849de0feea"
 uuid = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
-version = "0.3.27"
+version = "0.3.28"
 
 [[Logging]]
 uuid = "56ddb016-857b-54e1-b83d-db4d58db5568"
@@ -754,9 +754,9 @@ version = "2024.1.0+0"
 
 [[MLJModelInterface]]
 deps = ["Random", "ScientificTypesBase", "StatisticalTraits"]
-git-tree-sha1 = "d2a45e1b5998ba3fdfb6cfe0c81096d4c7fb40e7"
+git-tree-sha1 = "88ef480f46e0506143681b3fb14d86742f3cecb1"
 uuid = "e80e1ace-859a-464e-9ed9-23947d8ae3ea"
-version = "1.9.6"
+version = "1.10.0"
 
 [[MacroTools]]
 deps = ["Markdown", "Random"]
@@ -802,10 +802,10 @@ uuid = "a63ad114-7e13-5084-954f-fe012c677804"
 uuid = "14a3606d-f60d-562e-9121-12d972cd8159"
 
 [[MultivariateStats]]
-deps = ["Arpack", "LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI", "StatsBase"]
-git-tree-sha1 = "68bf5103e002c44adfd71fea6bd770b3f0586843"
+deps = ["Arpack", "Distributions", "LinearAlgebra", "SparseArrays", "Statistics", "StatsAPI", "StatsBase"]
+git-tree-sha1 = "816620e3aac93e5b5359e4fdaf23ca4525b00ddf"
 uuid = "6f286f6a-111f-5878-ab1e-185364afe411"
-version = "0.10.2"
+version = "0.10.3"
 
 [[Mustache]]
 deps = ["Printf", "Tables"]
@@ -1168,20 +1168,20 @@ version = "0.1.15"
 
 [[StaticArrays]]
 deps = ["LinearAlgebra", "PrecompileTools", "Random", "StaticArraysCore", "Statistics"]
-git-tree-sha1 = "9ae599cd7529cfce7fea36cf00a62cfc56f0f37c"
+git-tree-sha1 = "6e00379a24597be4ae1ee6b2d882e15392040132"
 uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.9.4"
+version = "1.9.5"
 
 [[StaticArraysCore]]
-git-tree-sha1 = "36b3d696ce6366023a0ea192b4cd442268995a0d"
+git-tree-sha1 = "192954ef1208c7019899fbf8049e717f92959682"
 uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
-version = "1.4.2"
+version = "1.4.3"
 
 [[StatisticalTraits]]
 deps = ["ScientificTypesBase"]
-git-tree-sha1 = "30b9236691858e13f167ce829490a68e1a597782"
+git-tree-sha1 = "983c41a0ddd6c19f5607ca87271d7c7620ab5d50"
 uuid = "64bff920-2084-43da-a3e6-9bb72801c0c9"
-version = "3.2.0"
+version = "3.3.0"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1265,9 +1265,9 @@ uuid = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [[TranscodingStreams]]
 deps = ["Random", "Test"]
-git-tree-sha1 = "5d54d076465da49d6746c647022f3b3674e64156"
+git-tree-sha1 = "a947ea21087caba0a798c5e494d0bb78e3a1a3a0"
 uuid = "3bb67fe8-82b1-5028-8e26-92a6c54297fa"
-version = "0.10.8"
+version = "0.10.9"
 
 [[Transducers]]
 deps = ["Adapt", "ArgCheck", "BangBang", "Baselet", "CompositionsBase", "ConstructionBase", "DefineSingletons", "Distributed", "InitialValues", "Logging", "Markdown", "MicroCollections", "Requires", "Setfield", "SplittablesBase", "Tables"]
