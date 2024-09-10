@@ -27,34 +27,45 @@ using Data, # For parsing frequency and read files.
 
 global starttime = now()
 
-numberofindividualsinthesedimentvec = 5:8
-coverages = 9:-1:5
+numberofindividualsinthesedimentvec = 2:2
+coverages = 100:-1:1
 allcombinations = [(numind, cov) for numind in numberofindividualsinthesedimentvec for cov in coverages]
 
-
+# nodes 01 en 10 doen het niet. 
 nodes = [
-    ("compute01", 21), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
-   #= ("node05", 1), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
-    ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    ("node12", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4 
-    ("node07", 5), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
-    ("node11", 10), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
-    ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
-    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("node06", 6), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
-    ("node13", 4), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
-    ("node14", 5), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("node08", 5), # not used MAX CAP FOR ME: 4 ASO MODE 5
-    =#
+    ("compute01", 24), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32
+    ("compute02", 47), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32
+    ("compute03", 29), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
 ]
 sum(node[2] for node in nodes)
 
+#=
+nodes = [
+    ("compute01", 16), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32
+    ("compute02", 39), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32
+    ("compute03", 26), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
+    #("node02", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    #("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node04", 5), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node05", 5), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node06", 5), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node07", 13), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node08", 4), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node09", 5), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    #("node10", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node11", 8), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node12", 4), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node13", 4), # not used MAX CAP FOR ME: 5 ASO MODE 6
+    ("node14", 4) # not used MAX CAP FOR ME: 5 ASO MODE 6
+]
+sum(node[2] for node in nodes)
+=#
 
-dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
+dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME/"
+project = "/home/projects/SedaDNA_Demo/simulationsMSPRIME/scripts/subsamplingMCMC/"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
 numthreadsperprocess = 4
-exeflags = ["--project=$dir", "--threads=$numthreadsperprocess", "--optimize=3", "--banner=no", "--warn-overwrite=no"] 
+exeflags = ["--project=$project", "--threads=$numthreadsperprocess", "--optimize=3", "--banner=no", "--warn-overwrite=no"] 
 
 addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
 

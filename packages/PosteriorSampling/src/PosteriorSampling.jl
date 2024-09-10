@@ -52,7 +52,7 @@ function makesizedvectors(d::AbstractVector{<:Integer}, R::Integer)
 end 
 
 function makeqfixedn(n::Integer, d::AbstractVector{<:Integer}, R::Integer)
-    MMatrix{2n+1, R+1, Float64}(undef)
+    return MMatrix{2n+1, R+1, Float64}(undef)
 end 
 
 function makeqfixedn(n::Integer, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})

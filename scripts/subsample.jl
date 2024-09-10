@@ -25,8 +25,8 @@ coverages = [50, 40, 39:-1:20..., 15, 10]
 allcombinations = [(numind, cov) for numind in numberofindividualsinthesedimentvec for cov in coverages]
 =#
 
-numberofindividualsinthesedimentvec = 5:8
-coverages = 10:-1:5
+numberofindividualsinthesedimentvec = 1:8
+coverages = 100:-1:1
 
 @assert issorted(coverages, rev=true)
 @assert allunique(coverages)
