@@ -94,6 +94,99 @@ CSV.write(filename, results)
 cmd = `gzip -f $filename`
 run(cmd)
 
+
+gresults = groupby(results, [:ancient, :anchor, :truenumind])
+
+resultsf = filter([:ancient, :anchor] => (x, y) -> ((x == "CHBS") & (y == "YRI")), results)
+gresultsf = groupby(resultsf, [:truenumind])
+
+parameters = [:n, :τC, :τA, :ϵ]
+labels = [L"n", L"\tau_C", L"\tau_A", L"\epsilon"]
+filenameparts = ["n", "tauC", "tauA", "eps"]
+colors = [:red, :turquoise1, :magenta2, :darkgreen]
+#f = [Figure(; size = (1600, 1600)) for _ in 1:4]
+axvec = [(i, j) for i in 1:4 for j in 1:2]
+
+ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
+anchorpops = ["YRI", "CEU", "CHB", "KAR"]
+
+for ancient in ancientpops
+    for anchor in anchorpops
+        resultsf = filter([:ancient, :anchor] => (x, y) -> ((x == ancient) & (y == anchor)), results)
+        gresultsf = groupby(resultsf, :truenumind)
+        for parameterindex in eachindex(parameters, labels, colors)
+            f = Figure(; size = (1600, 1600))
+            parameterlow = Symbol(parameters[parameterindex], :_low)
+            parametermedium = Symbol(parameters[parameterindex], :_median)
+            parameterhigh = Symbol(parameters[parameterindex], :_high) 
+            axes = [Axis(f[axvec[truenumind]...] , xlabel = labels[parameterindex], ylabel = "coverage", 
+                    title = "Number of individuals: $truenumind") for truenumind in 1:8]
+            linkxaxes!(axes...)
+            for truenumind in 1:8
+                ax = axes[truenumind]
+                ys = gresultsf[truenumind].:coverage
+                xs = gresultsf[truenumind][:, parametermedium]
+                lowerrors = xs - gresultsf[truenumind][:, parameterlow]
+                higherrors = gresultsf[truenumind][:, parameterhigh] - xs 
+                errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = colors[parameterindex], direction = :x)
+                scatter!(ax, xs, ys; markersize = 5, color = :black)
+                if parameterindex == 1 
+                    vlines!(ax, truenumind, color = :blue )
+                elseif parameterindex == 4 
+                    vlines!(ax, trueϵ, color = :blue) 
+                end 
+            end 
+            path = joinpath("data", "images", "Madsmodel", "credibleintervals_ancient_pop_$(ancient)_anchor_pop_$(anchor)_parameter_$(filenameparts[parameterindex]).png")
+            save(path, f)
+        end
+    end 
+end 
+
+
+
+
+f = Figure(; size = (1600, 1600))
+ax = Axis(f[1,1])
+ys = gresults[1].:coverage 
+xs = gresults[1].:τC_median
+lowerrors = xs - gresults[1][:, :τC_low]
+higherrors = gresults[1][:, :τC_high] - xs 
+errorbars(xs, ys, lowerrors, higherrors, color = :red)
+
+ancient = :CEUS 
+anchor = :YRI 
+
+ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
+anchorpops = ["YRI", "CEU", "CHB", "KAR"]
+
+for ancient in ancientpops
+    for anchor in anchorpops
+        resultsf = filter([:ancient, :anchor] => (x, y) -> ((x == ancient) & (y == anchor)), results)
+        len = size(resultsf, 1)
+        @show ancient anchor len 
+    end 
+end 
+
+
+
+ax = Axis(f[axvec[truenumind]...] , xlabel = labels[parameterindex], ylabel = "coverage", title = "Number of individuals: $truenumind")
+ys = gresults[truenumind].:coverage
+xs = gresults[truenumind][:, parametermedium]
+lowerrors = xs - gresults[truenumind][:, parameterlow]
+higherrors = gresults[truenumind][:, parameterhigh] - xs 
+errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = colors[parameterindex], direction = :x)
+scatter!(ax, xs, ys; markersize = 5, color = :black)
+if parameterindex == 1 
+    vlines!(ax, truenumind, color = :blue )
+else 
+    vlines!(ax, truevalue[parameterindex], color=:blue)
+end 
+
+
+filename = "results.csv" 
+zippedfilename = string(filename, ".gz")
+results = CSV.read(zippedfilename, DataFrame)
+
 gresults = groupby(results, :truenumind)
 
 axvec = [(i, j) for i in 1:4 for j in 1:2]
@@ -102,8 +195,9 @@ parameters = [:n, :τC, :τA, :ϵ]
 labels = [L"n", L"\tau_C", L"\tau_A", L"\epsilon"]
 filenameparts = ["n", "tauC", "tauA", "eps"]
 truevalue = [0.0, 0.25, 0.25, 0.003]
+colors = [:red, :turquoise1, :magenta2, :darkgreen]
 
-for parameterindex in eachindex(parameters, labels)
+for parameterindex in eachindex(parameters, labels, truevalue, colors)
     f = Figure(; size = (1600, 1600))
     parameterlow = Symbol(parameters[parameterindex], :_low)
     parametermedium = Symbol(parameters[parameterindex], :_median)
@@ -113,38 +207,12 @@ for parameterindex in eachindex(parameters, labels)
     @show parameterhigh
     for truenumind in 1:8
         @assert unique(gresults[truenumind].:truenumind) == [truenumind]
-        ax = Axis(f[axvec[truenumind]...] , xlabel = "coverage", ylabel = labels[parameterindex], title = "Number of individuals: $truenumind")
-        xs = gresults[truenumind].:coverage
-        ys = gresults[truenumind][:, parametermedium]
-        lowerrors = ys - gresults[truenumind][:, parameterlow]
-        higherrors = gresults[truenumind][:, parameterhigh] - ys 
-        errorbars!(ax, xs, ys, lowerrors, higherrors, whiskerwidth = 10, color = :red)
-        scatter!(ax, xs, ys, markersize = 5, color = :black)
-        if parameterindex == 1 
-            hlines!(ax, truenumind, color = :blue )
-        else 
-            hlines!(ax, truevalue[parameterindex], color=:blue)
-        end
-    end 
-    save(string("credibleintervals", filenameparts[parameterindex], ".png"), f)
-end
-
-for parameterindex in eachindex(parameters, labels, truevalue)
-    f = Figure(; size = (1600, 1600))
-    parameterlow = Symbol(parameters[parameterindex], :_low)
-    parametermedium = Symbol(parameters[parameterindex], :_median)
-    parameterhigh = Symbol(parameters[parameterindex], :_high) 
-    @show parameterlow
-    @show parametermedium
-    @show parameterhigh
-    for truenumind in 1:8
-        @assert unique(gresults[truenumind].:truenumind) == [truenumind]
-        ax = Axis(f[axvec[truenumind]...] , xlabel = "coverage", ylabel = labels[parameterindex], title = "Number of individuals: $truenumind")
+        ax = Axis(f[axvec[truenumind]...] , xlabel = labels[parameterindex], ylabel = "coverage", title = "Number of individuals: $truenumind")
         ys = gresults[truenumind].:coverage
         xs = gresults[truenumind][:, parametermedium]
         lowerrors = xs - gresults[truenumind][:, parameterlow]
         higherrors = gresults[truenumind][:, parameterhigh] - xs 
-        errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = :red, direction = :x)
+        errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = colors[parameterindex], direction = :x)
         scatter!(ax, xs, ys; markersize = 5, color = :black)
         if parameterindex == 1 
             vlines!(ax, truenumind, color = :blue )

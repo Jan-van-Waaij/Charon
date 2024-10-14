@@ -22,29 +22,36 @@
 using GZip, Data
 
 inputfilename = "data/vcffiles_demes/multiple_demes_multipledemes_12.vcf.gz"
-outputfilenames = ["data/frequencies/freqanchor/multiple_demes_freq_anchor1.txt.gz",
+outputfilenames = ["data/frequencies/freqanchor/multiple_demes_freq_ancient.txt.gz",
+                   "data/frequencies/freqanchor/multiple_demes_freq_anchor1.txt.gz",
                    "data/frequencies/freqanchor/multiple_demes_freq_anchor2.txt.gz",
                    "data/frequencies/freqanchor/multiple_demes_freq_anchor3.txt.gz",
                    "data/frequencies/freqanchor/multiple_demes_freq_anchor4.txt.gz"]
 
 infoblock = 9
-ancientpop = infoblock .+ (1:5000)
-anchorpops = [infoblock .+ (1+5000:2*5000), infoblock .+ (1+2*5000:3*5000), infoblock .+ (1+3*5000:4*5000), infoblock .+ (1+4*5000:5*5000)]
+pops = [infoblock .+ (1:5000), infoblock .+ (1+5000:2*5000), infoblock .+ (1+2*5000:3*5000), infoblock .+ (1+3*5000:4*5000), infoblock .+ (1+4*5000:5*5000)]
 
-for i in 1:4
-    anchorpopulation = anchorpops[i]
+for i in 1:5
+    population = pops[i]
     outputfilename = outputfilenames[i]
     readfile = GZip.open(inputfilename)
     writefile = GZip.open(outputfilename, "w")
     # skip the header. 
     skiplines(readfile, 6);
     # save the column names. 
-    comments = """
-    Each line contains the frequency of the allele for the anchor population $i.
-    original vcf file: $inputfilename
-    output file: $outputfilename"""
+    if i == 1 
+        comments = """
+        Each line contains the frequency of the allele for the ancient population. 
+        original vcf file: $inputfilename
+        output file: $outputfilename"""
+    else
+        comments = """
+        Each line contains the frequency of the allele for anchor population $(i-1). 
+        original vcf file: $inputfilename
+        output file: $outputfilename"""
+    end 
 
-    freq(readfile, writefile, anchorpopulation, comments)
+    freq(readfile, writefile, population, comments)
 
     close(readfile)
     close(writefile)

@@ -18,6 +18,85 @@
 
 # UNKNOWN N and with errors:
 
+# NEW STUFF:
+
+using GZip, # to work with zipped files,
+      DataFrames, # to work with DataFrames,
+      CSV, # for CSV files.
+      StatsBase # for the mean function
+
+ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
+anchorpops = ["YRI", "CEU", "CHB", "KAR"]
+truenumindvec = 1:8
+coveragevec = 5:5:100 #[100, 50, 20, 10]
+allcombinations = [(anchorpop, ancientpop, truenumind, coverage) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec for coverage in coveragevec ] # 64 elementen. 
+
+nsteps = 100_000 # number of steps in mcmc chain 
+nchains = 4 # number of chains. 
+trueϵ = 0.003 # true error rate used in the simulations. 
+
+results = DataFrame(
+    truenumind = Int[],
+    coverage = Int[],
+    ancient = String[],
+    anchor = String[], 
+    n_low = Float64[],
+    n_median = Float64[],
+    n_high = Float64[],
+    τC_low = Float64[],
+    τC_median = Float64[],
+    τC_high = Float64[],
+    τA_low = Float64[],
+    τA_median = Float64[],
+    τA_high = Float64[],
+    ϵ_low = Float64[],
+    ϵ_median = Float64[],
+    ϵ_high = Float64[],
+)
+      
+
+for (anchorpop, ancientpop, truenumind, coverage) in allcombinations
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "MadsModel", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind,  "_cov_", coverage, ".csv"))
+    zippedcsvfile = csvfile * ".gz"
+    if !isfile(zippedcsvfile)
+        printstyled(string(zippedcsvfile, " is missing.\n"), color = :red)
+        continue 
+    end 
+    
+    df = CSV.read(zippedcsvfile, DataFrame)
+    df = df[end÷2:10:end,:]
+    n_low, n_median, n_high = quantile(df.nsample, [0.025, 0.5, 0.975])
+    τC_low, τC_median, τC_high = quantile(df.τCsample, [0.025, 0.5, 0.975])
+    τA_low, τA_median, τA_high = quantile(df.τAsample, [0.025, 0.5, 0.975])
+    ϵ_low, ϵ_median, ϵ_high = quantile(df.ϵsample, [0.025, 0.5, 0.975])
+    push!(results, (truenumind = truenumind,
+                    coverage = coverage,
+                    ancient = ancientpop,
+                    anchor = anchorpop, 
+                    n_low = n_low,
+                    n_median = n_median,
+                    n_high = n_high,
+                    τC_low = τC_low,
+                    τC_median = τC_median,
+                    τC_high = τC_high,
+                    τA_low = τA_low,
+                    τA_median = τA_median,
+                    τA_high = τA_high,
+                    ϵ_low = ϵ_low,
+                    ϵ_median = ϵ_median,
+                    ϵ_high = ϵ_high,))
+end 
+
+filename = "results.csv" 
+CSV.write(filename, results)
+cmd = `gzip -f $filename`
+run(cmd)
+
+
+
+# OLD STUFF:
+
+
 using GZip, # to work with zipped files,
       DataFrames, # to work with DataFrames,
       CSV, # for CSV files.
@@ -26,6 +105,8 @@ using GZip, # to work with zipped files,
       StatsPlots,
       MCMCChains, 
       Distributed
+
+using CSV, DataFrames, GZip, StatsBase 
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`

@@ -31,12 +31,12 @@ for pop in values(populations)
     @assert length(pop) == 2000
 end 
 
-numberofindividualsinthesedimentvec = [1, 2, 4, 8]
-ϵ = 0.001
-coverage = 64
+numberofindividualsinthesedimentvec = 1:8
+ϵ = 0.003
+coverage = 100
 
 populationnames = [:CHBS, :YRIS, :CEUS, :KARS]
-allcombinations = [(population, numberofindividualsinthesediment) for population in populationnames for numberofindividualsinthesediment in numberofindividualsinthesedimentvec] # 16 elements. 
+allcombinations = [(population, numberofindividualsinthesediment) for population in populationnames for numberofindividualsinthesediment in numberofindividualsinthesedimentvec] # 32 elements. 
 @threads for (population, numberofindividualsinthesediment) in allcombinations
     # I choose numberofindividualsinthesediment individuals from the ancient population. 
     individualsinthesediment = sample(populations[population], numberofindividualsinthesediment, 

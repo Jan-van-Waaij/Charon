@@ -310,7 +310,7 @@ end
 Calculate the log probability of the derived reads, which is the log-likelihood. This function will mutate q. q[k+1,d+1] contains the probability of seeing d derived reads out of R, given k derived alleles out of 2n, d = 0,...,R and k=0,...,2n.  
 """
 function logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
-    if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
+    if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
         return -Inf 
     else
         M = calcmatrix(Q, Qꜜ, τC, τA)
@@ -339,7 +339,7 @@ end # Constant coverage and with errors.
 Same as before, only with non-constant coverages. Mutates q, which is dictionary. Key (d, R), if it exists, has an associate vector as value, where the k+1-th element is the probability of having d derived reads out of R, given k derived alleles out of 2n, d=0,...,R and k=0,...,2n. 
 """
 function logprobderivedreads!(q::Dict{Tuple{Int64, Int64}, Vector{Float64}}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, uniquecoverages::AbstractVector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
-    if τC ≤ 0 || τA ≤ 0 || ϵ < 0 || ϵ > 1
+    if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
         return -Inf
     else
         M = calcmatrix(Q, Qꜜ, τC, τA) 
@@ -361,6 +361,51 @@ function logprobderivedreads!(q::Dict{Tuple{Int64, Int64}, Vector{Float64}}, rea
     end
 end
 
+
+###
+### Unequal contributions
+###
+
+
+"""
+    logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+
+Calculate the log probability of the derived reads, which is the log-likelihood. This function will mutate q. q[k+1,d+1] contains the probability of seeing d derived reads out of R, given k derived alleles out of 2n, d = 0,...,R and k=0,...,2n.  
+"""
+function logprobderivedreadsunevencontributions!(probderreadgivenk::AbstractArray{Float64}, reads::AbstractVector{Int}, coverage::Int, uniqueCoverage::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, numind::Int, proportions::Vector{Float64}, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+    if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
+        return -Inf 
+    else
+        M = calcmatrix(Q, Qꜜ, τC, τA)
+        # update q. q[k+1, d+1] is the probability of d derived alleles given k derived alleles (out of 2n)
+        # and error probability ϵ.
+        proportionslong = repeat(proportions, inner=2)/2
+        for k in 0:2numind
+            dist = Binomial(coverage, k*(1.0-ϵ)/(2numind) + (2numind-k)*ϵ/(2numind))
+            for d in 0:coverage
+                probderreadgivenk[k+1, d+1] = binomialcoefficients[k+1] * pdf(dist, d)
+            end
+        end 
+        loglik = 0.0
+        for index in eachindex(reads, counts)
+            # update p
+            loglik += counts[index] * log(max(0.0, dot(view(probderreadgivenk, :, reads[index]+1), M, view(hvals, :, index))))
+            #probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
+            #loglik +=  counts[index]*log(dot(p, view(q, :, reads[index]+1))) 
+        end
+        return loglik
+    end 
+end # Constant coverage and with errors. 
+
+function generateall2nsequencessummingtok(n::Int, k::Int)
+    allsequences = Vector{Bool}[]
+    for m in 0:2^(2n)-1
+        if count_ones(m) == k
+            push!(allsequences, digits(Bool, m, base=2, pad=2n))
+        end 
+    end 
+    return allsequences
+end 
 
 
 end # module Likelihood

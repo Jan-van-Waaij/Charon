@@ -18,39 +18,31 @@
 using Distributed 
 
 dir = "/home/projects/SedaDNA_Demo/simulationsMSPRIME"
+project = "/home/projects/SedaDNA_Demo/simulationsMSPRIME/scripts/mcmc/"
 exename = `nice -19 /home/ctools/julia-1.6.7/bin/julia`
-exeflags = ["--project=$dir", "--threads=4", "--optimize=3"]
-
-using Pkg 
-Pkg.activate(dir)
-Pkg.update()
-Pkg.precompile()
-Pkg.gc()
+exeflags = ["--project=$project", "--threads=4", "--optimize=3"]
 
 nodes = [
-    ("compute01", 20), # 50 percent used. MAX CAP FOR ME: 31 ASO MODE 32 
-    ("node05", 6), #6), # 2 cores in use. MAX CAP FOR ME:5 ASO MODE 6
-    ("node03", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    ("node04", 6), # not used MAX CAP FOR ME: 5 ASO MODE 6
-    #("node12", 5), # not used MAX CAP FOR ME: 3 ASO MODE 4 
-    ("node01", 6), # not used. MAX CAP FOR ME: 5 ASO MODE 6
-    ("node02", 4), # not used MAX CAP FOR ME: 3 ASO MODE 4
-    ("node06", 6), # 2 core in use. MAX CAP FOR ME: 5 ASO MODE 6
-    ("node07", 6), #14), # 16), # fully used MAX CAP FOR ME: 13 ASO MODE 16
-    ("node08", 1), # not used MAX CAP FOR ME: 4 ASO MODE 5
-    ("node11", 1), #10), # fully used MAX CAP FOR ME: 8 ASO MODE 10
-    ("node13", 1), # 2 used. MAX CAP FOR ME: 3 ASO MODE 4
-    ("node14", 1) # not used MAX CAP FOR ME: 3 ASO MODE 4
+	("compute01", 32),
+	("compute02", 48),
+	#("compute03", 10),
+	("node02", 4),
+	("node03", 6),
+	("node04", 6),
+	("node05", 6),
+	#("node06", 6),
+	#("node07", 4),
+	("node08", 5),
+	("node09", 6),
+	("node10", 4),
+	("node11", 10),
+	("node12", 4),
+	("node13", 4),
+	("node14", 4)
 ]
 
 addprocs(nodes, dir=dir, exename=exename, exeflags=exeflags)
 
-@everywhere begin
-    using Pkg
-    println(Pkg.project().path)
-end
-
-println("until here.")
 # trigger precompilation.
 @everywhere begin 
     using Data # For parsing frequency and read files. 
@@ -60,15 +52,18 @@ println("until here.")
     using PosteriorSampling # To sample from the posterior.
     using Dates # for the now function 
     using Base.Threads # for threads
-    using Distributed
+    using Distributed 
+    using SharedArrays # for sharing an array among different processes. 
 end 
 
 starttime = now()
 
 ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
-anchorpops = ["YRI", "CEU", "CHB", "KAR"]
-truenumindvec = [1, 2, 4, 8]
-allcombinations = [(anchorpop, ancientpop, truenumind) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec] # 64 elementen. 
+anchorpops =  ["YRI", "CEU", "CHB", "KAR"]
+truenumindvec = 1:8
+coveragevec = setdiff(5:5:100, [100, 50, 20, 10])
+allcombinations = [(anchorpop, ancientpop, truenumind, coverage) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec for coverage in coveragevec ] # 64 elementen. 
+filter!(tuple -> !(tuple[1] == "CEU" && tuple[2] == "CEUS"), allcombinations)
 
 nsteps = 100_000 # number of steps in mcmc chain 
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform prior on [0, 1] x [0, 1]
@@ -77,20 +72,26 @@ prioronϵ = Uniform(0, 0.5) # uniform prior on [0, 0.5]
 nchains = 4 # number of chains. 
 
 
-trueϵ = 0.001 # true error rate used in the simulations. 
+trueϵ = 0.003 # true error rate used in the simulations. 
 
-coverage = 64 # the coverage is 64 everywhere. 
+@sync @distributed for index in eachindex(allcombinations)
+    anchorpop, ancientpop, truenumind, coverage = allcombinations[index]
+    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "MadsModel", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind,  "_cov_", coverage, ".csv"))
+    zippedcsvfile = csvfile * ".gz"
+    if isfile(zippedcsvfile)
+        println("skipping $zippedcsvfile")
+        continue
+    end 
 
-@sync @distributed for (anchorpop, ancientpop, truenumind) in allcombinations    
     starttime = now()
-    frequencyfile = "data/frequencies/freqanchor/Madsmodel_freq_anchor_$(anchorpop).txt.gz"
+    frequencyfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "frequencies", "freqanchor", "Madsmodel_freq_anchor_$(anchorpop).txt.gz")
     if !isfile(frequencyfile)
         println(frequencyfile, " does not exist.")
         continue
     end 
     freqs = parsefreqfile(frequencyfile)
-    readsfile = string("data/reads/Mads_model_pop_", ancientpop, "_num_ind_",
-    truenumind, "_cov_", coverage, "_reads_with_errors.txt.gz")
+    readsfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "reads", string("Mads_model_pop_", ancientpop, "_num_ind_",
+    truenumind, "_cov_", coverage, "_reads_with_errors.txt.gz"))
     if !isfile(readsfile)
         println(readsfile, " does not exist.")
         continue
@@ -100,8 +101,6 @@ coverage = 64 # the coverage is 64 everywhere.
     @assert coveragevec[1] == coverage
     @assert length(freqs) == length(derivedreadsvec) == length(coveragevec)
 
-    csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind, ".csv"))
-    zippedcsvfile = csvfile * ".gz"
     #=
     if isfile(zippedcsvfile)
         println(zippedcsvfile, " does already exist. Do not overwrite existing files!")

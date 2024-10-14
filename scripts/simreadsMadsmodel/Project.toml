@@ -1,0 +1,4 @@
+[deps]
+Data = "816b60a8-ec2f-4cbd-b38f-037ed1de810e"
+GZip = "92fee26a-97fe-5a0c-ad85-20a5f3185b63"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"

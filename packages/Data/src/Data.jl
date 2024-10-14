@@ -19,8 +19,8 @@ import Base: showerror # format the error and print it.
 export skiplines, # skip the first n lines of a file
        reads, # generate simulated read data from a vcf file. 
        freq, # calculate the frequency of a certain allele of a population from a vcf file.
-       parsefreqfile, # parse the frequency file
-       parsereadfile, # parse the read file 
+       parsefreqfile, # parse a frequency file
+       parsereadfile, # parse a read file 
        addhashtagstoeachline, # add '#' to each line in the string. 
        subsample
 
@@ -77,7 +77,7 @@ end
 """
     isderived(x::Char)
 
-Assumption: x is a character in "0|0", "0|1", "1|0", or "1|1". Returns true when x == '1', and zero otherwise. Throws a DataError when x is not '0', '1' or '|'.  
+Assumption: x is a character in "0|0", "0|1", "1|0", or "1|1". Returns true when x == '1', and false otherwise. Throws a DataError when x is not '0', '1' or '|'.  
 """
 function isderived(x::Char)
     if x == '1'
@@ -129,7 +129,6 @@ end
 Open file in read modus, checks whether it exists and, optionally, if it ends with fileextension. 
 """
 function openfile(file::String)
-    #endswith(file, fileextension) || throw(FileError("$file is not a $fileextension file."))
     isfile(file) || throw(FileError("$file does not exist."))
     return GZip.open(file) 
 end

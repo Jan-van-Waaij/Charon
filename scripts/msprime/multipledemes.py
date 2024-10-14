@@ -8,7 +8,7 @@ def multiple_demes(demesfile, demesfiledescription, random_seed=None):
     print('1')
     demography = msprime.Demography.from_demes(graph)
     print('2')
-    ts = msprime.sim_ancestry(samples={"common_ancestor":5_000, "anchor1":5_000, "anchor2":5_000, "anchor3":5_000, "anchor4":5_000}, demography=demography, random_seed=random_seed, recombination_rate=1e-8, sequence_length=10e7)
+    ts = msprime.sim_ancestry(samples={"common_ancestor":5_000, "anchor1":5_000, "anchor2":5_000, "anchor3":5_000, "anchor4":5_000}, demography=demography, random_seed=random_seed, recombination_rate=1e-8, sequence_length=10e9)
     print('3')
     mts = msprime.sim_mutations(ts, rate=2e-8, random_seed=random_seed)
     print('4')

@@ -29,37 +29,49 @@ vcffile = "data/vcffiles_demes/multiple_demes_multipledemes_12.vcf.gz"
 
 readfilefirstpart = "data/reads/multiple_demes_"
 
-numberofindividualsinthesedimentvec = 1:8 # [1, 2, 4, 8]
+numberofindividualsinthesedimentvec = 1:8
 ϵ = 0.003
-coveragevec = 2:20
 
-for coverage in coveragevec
-    for numberofindividualsinthesediment in numberofindividualsinthesedimentvec
-        # I choose numberofindividualsinthesediment individuals from the ancient population. 
-        individualsinthesediment = sample(ancientpopulation, numberofindividualsinthesediment, 
-                                            replace=false, ordered=true)
-
-        # I open the file where I while store the reads. 
-        local openedvcffile = GZip.open(vcffile)
-        # skip the header. 
-        skiplines(openedvcffile, 6)
-        readfile = string(readfilefirstpart, 
-            numberofindividualsinthesediment, '_', coverage, "_reads_with_errors.txt.gz")
-        openedreadfile = GZip.open(readfile, "w")
-
-        comments = """
-        Each line contains the number of derived reads and the total number of reads, seperated by a tab.  
-        original vcf file: $vcffile
-        Individuals in the sediment: $individualsinthesediment
-        Total number of individuals in the sediment: $numberofindividualsinthesediment
-        coverage: $coverage"""
-
-        reads(openedvcffile, openedreadfile, individualsinthesediment, coverage, comments, ϵ)
-        close(openedreadfile)
-        close(openedvcffile)
-    end  
+individualsinthesedimentvec = Vector{Vector{Int}}(undef, 8)
+individualsinthesedimentvec[8] = sample(ancientpopulation, 8, replace=false, ordered=true)
+for numind in 8:-1:2
+    individualsinthesedimentvec[numind-1] = sample(individualsinthesedimentvec[numind], numind - 1, replace = false, ordered = true)
 end 
 
+for numind in 1:8
+    @assert length(individualsinthesedimentvec[numind]) == numind 
+    @assert all(allunique.(individualsinthesedimentvec))
+end 
+
+for numind in 1:7
+    @assert individualsinthesedimentvec[numind] ⊆ individualsinthesedimentvec[numind+1]
+end 
+
+coverage = 100
+
+for numberofindividualsinthesediment in numberofindividualsinthesedimentvec
+    # I choose numberofindividualsinthesediment individuals from the ancient population. 
+    individualsinthesediment = individualsinthesedimentvec[numberofindividualsinthesediment]
+
+    # I open the file where I while store the reads. 
+    local openedvcffile = GZip.open(vcffile)
+    # skip the header. 
+    skiplines(openedvcffile, 6)
+    readfile = string(readfilefirstpart, 
+        numberofindividualsinthesediment, '_', coverage, "_reads_with_errors.txt.gz")
+    openedreadfile = GZip.open(readfile, "w")
+
+    comments = """
+    Each line contains the number of derived reads and the total number of reads, seperated by a tab.  
+    original vcf file: $vcffile
+    Individuals in the sediment: $individualsinthesediment
+    Total number of individuals in the sediment: $numberofindividualsinthesediment
+    coverage: $coverage"""
+
+    reads(openedvcffile, openedreadfile, individualsinthesediment, coverage, comments, ϵ)
+    close(openedreadfile)
+    close(openedvcffile)
+end  
 
 
 
