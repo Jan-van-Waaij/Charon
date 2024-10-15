@@ -40,26 +40,6 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
         # for eigen decomposition. 
         @test FT == FU 
     end
-    
-    @testset "≈" begin
-        A = rand(2,2)
-        B = A*A'
-        C = copy(B)
-        C[1,1] += eps(C[1,1])
-        @test B != C
-        FB = EigenExpansion(B)
-        FC = EigenExpansion(C)  
-        @test FB ≈ FC 
-        x = zeros(3)
-        y = [1.0, 2.0, 3.0, 4.0]
-        z = copy(y)
-        z[1] += eps(z[1])
-        T = Tridiagonal(x, y, x)
-        U = Tridiagonal(x, z, x)
-        FT = EigenExpansion(T)
-        FU = EigenExpansion(U)
-        @test FT ≈ FU
-    end
 
     @testset "makeQ" begin
         @test makeQ(1) == [0 1 0

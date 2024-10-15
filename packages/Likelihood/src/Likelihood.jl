@@ -7,7 +7,7 @@ module Likelihood
 # test, write tests.
 # adapt to unequal biomasses.
 
-import Base: ==, exp, isapprox # redefine exp, == and isapprox (≈) for EigenExpansion types. This requires an import statement.
+import Base: ==, exp # redefine exp and == for EigenExpansion types. This requires an import statement.
 
 # external packages that are used in this module. 
 using Distributions, # for probability distributions
@@ -62,16 +62,6 @@ EigenExpansion(M::Tridiagonal{Float64, Vector{Float64}}) = EigenExpansion(SizedM
 Test whether E1 and E2 have the same decomposition P*D*P^(-1), so whether E1.P == E2.P, E1.D == E2.D and E1.Pinv == E2.Pinv.
 """
 ==(E1::EigenExpansion, E2::EigenExpansion) = E1.P == E2.P && E1.D == E2.D && E1.Pinv == E2.Pinv
-
-# test written 
-"""
-    isapprox(E1::EigenExpansion, E2::EigenExpansion; args...)
-    E1 ≈ E2
-    ≈(E1, E2; args...)
-
-Test whether E1 and E2 have approximately the same decomposition P*D*P^(-1), so whether E1.P ≈ E2.P, E1.D ≈ E2.D and E1.Pinv ≈ E2.Pinv.
-"""
-isapprox(E1::EigenExpansion, E2::EigenExpansion, args...) = isapprox(E1.P, E2.P, args...) && isapprox(E1.D, E2.D, args...) && isapprox(E1.Pinv, E2.Pinv, args...)
 
 # test written
 """
