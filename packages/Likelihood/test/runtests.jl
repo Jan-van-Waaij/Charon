@@ -93,8 +93,8 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
             @test length(t) == 4 
             @test t isa NamedTuple 
             Q, Qꜜ, hvals, binomialcoefficients = t
-            @test Q == makeQ(n)
-            @test Qꜜ == makeQꜜ(n)
+            @test Q == EigenExpansion(makeQ(n))
+            @test Qꜜ == EigenExpansion(makeQꜜ(n))
             @test size(hvals) == (2n+1, length(y))
             for k in 0:2n 
                 for yindex in eachindex(y) 
