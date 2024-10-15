@@ -148,7 +148,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                 y = rand(1000)
                 Rvec = fill(R, 1000)
                 uniqueRvec = [R]
-                d = rand(0:R, 1000)
+                reads = rand(0:R, 1000)
                 uniquedandRs = unique(zip(d, Rvec))
                 qmatrix = Matrix{Float64}(undef, 2n+1, R+1)
                 qdic = Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs)
