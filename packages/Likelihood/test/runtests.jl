@@ -32,11 +32,14 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
         y = rand(4)
         T = Tridiagonal(x, y, x)
         U = deepcopy(T)
-        M = Matrix(T)
+        MT = Matrix(T)
+        MU = Matrix(U)
         FT = EigenExpansion(T)
         FU = EigenExpansion(U)
-        FM = EigenExpansion(M)
-        @test FT == FU == FM
+        FMT = EigenExpansion(MT)
+        FMU = EigenExpansion(MU)
+        @test FT == FU
+        @test FMT == MFU
     end
 
     @testset "makeQ" begin
