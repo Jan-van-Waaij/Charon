@@ -65,6 +65,20 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
         @test M == exp(FQ, τA)*exp(FQꜜ, τC)
         @test calcmatrix(FQ, FQꜜ, 0.0, 0.0) ≈ I
         @test typeof(FQ.P) == typeof(M)
+        for n in 1:10
+            Q = makeQ(n)
+            Qꜜ = makeQꜜ(n)
+            FQ = EigenExpansion(Q)
+            FQꜜ = EigenExpansion(Qꜜ)
+            τC = rand()
+            τA = rand()
+            M = calcmatrix(FQ, FQꜜ, τC, τA)
+            @test M == exp(FQ, τA)*exp(FQꜜ, τC)
+            M = calcmatrix(FQ, FQꜜ, 0.0, τA)
+            @test M ≈ exp(FQ, τA)
+            M = calcmatrix(FQ, FQꜜ, τC, 0.0)
+            @test M ≈ exp(FQꜜ, τC)
+        end 
     end
 
     @testset "preparedata" begin
