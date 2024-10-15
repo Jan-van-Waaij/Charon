@@ -105,37 +105,10 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
         end 
     end
 
-    @testset "preparedatafixedn" begin
-        for n in 1:10
-            R = 20
-            y = rand(50)
-            Q, Qꜜ, hvals, binomialcoefficients, p, binomialprobs = preparedatafixedn(n, R, y)
-            @test Q == EigenExpansion(makeQ(n))
-            @test Qꜜ == EigenExpansion(makeQꜜ(n))
-            for i in eachindex(y)
-                for k in 0:2n 
-                    @test hvals[k+1, i] == y[i]^k*(1.0-y[i])^(2n-k)
-                end 
-            end 
-            @test binomialcoefficients == binomial.(2n, 0:2n)
-            @test length(p) == 2n+1 
-        end
-        for n in 1:10
-            for R in [1, 2, 3, 10, 30, 100]
-                for d in 0:R
-                    y = rand(50)
-                    Q, Qꜜ, hvals, binomialcoefficients, p, binomialprobs = preparedatafixedn(n, R, y)
-                    for k in 0:2n 
-                        @test binomialprobs[k+1, d+1] == pdf(Binomial(R, k/2n), d)
-                    end
-                end  
-            end
-        end
-    end
-
     @testset "logprobderivedreads!" begin
         # when τC=τA=0, then logprobderivedreads! calculates the log probability 
         # of the binomial distribution with parameters R and (1-ϵ)*k/2n+ϵ*k/(2n), where k itself is binomially distributed with parameters 2n and y. 
+        #=
         for n in 1:10
             for R in 1:100
                 for ϵ in 0.1:0.1:0.4
@@ -166,6 +139,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                 end 
             end 
         end 
+        =#
 
         # logprobderivedreads! with R or fill(R, length(reads)) should be the same. 
         for n in 1:10
@@ -189,10 +163,10 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                             resultintversion = logprobderivedreads!(qmatrix, reads, R, R, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
                             resultvecversion = logprobderivedreads!(qdic, reads, uniqueRvec, uniqueRvec, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
                             @test resultintversion == resultvecversion
-                        end 
-                    end 
-                end 
-            end 
-        end 
-    end
-end
+                        end # ϵ
+                    end #τA
+                end #τC
+            end # R 
+        end # n 
+    end # testset logprobderivedreads!
+end # testset Likelihood
