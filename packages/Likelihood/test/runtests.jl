@@ -1,6 +1,6 @@
 using Test, Likelihood, Distributions, GZip, LinearAlgebra, StatsBase 
 
-using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix, probderivedalleles!
+using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
 
 @testset "Likelihood" begin
     @testset "EigenExpansion and exp" begin
