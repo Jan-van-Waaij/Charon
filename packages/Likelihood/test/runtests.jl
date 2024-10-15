@@ -152,16 +152,21 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                 uniquedandRs = unique(zip(reads, Rvec))
                 qmatrix = Matrix{Float64}(undef, 2n+1, R+1)
                 qdic = Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs)
-                cm = countmap(zip(y, reads))
-                y = [key[1] for key in keys(cm)]
-                reads = [key[2] for key in keys(cm)]
-                counts = [count for count in values(cm)]
+                cmintversion = countmap(zip(y, reads))
+                yintversion = [key[1] for key in keys(cm)]
+                readsintversion = [key[2] for key in keys(cm)]
+                countsintversion = [count for count in values(cm)]
+                cmvecversion = countmap(zip(y, reads, Rvec))
+                yvecversion = [key[1] for key in keys(cm)]
+                readsvecversion = [key[2] for key in keys(cm)]
+                Rvecversion = [key[3] for key in keys(cm)]
+                countsvecversion = [count for count in values(cm)]
                 Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
                 for τC in 0.0:0.1:1.0
                     for τA in 0.0:0.1:1.0
                         for ϵ in 0.1:0.1:0.4
-                            resultintversion = logprobderivedreads!(qmatrix, reads, R, R, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
-                            resultvecversion = logprobderivedreads!(qdic, reads, uniqueRvec, uniqueRvec, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                            resultintversion = logprobderivedreads!(qmatrix, readsintversion, R, R, countsintversion, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                            resultvecversion = logprobderivedreads!(qdic, readsvecversion, Rvecversion, uniqueRvec, countsvecversion, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
                             @test resultintversion == resultvecversion
                         end # ϵ
                     end #τA
