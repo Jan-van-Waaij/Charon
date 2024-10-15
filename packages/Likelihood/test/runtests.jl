@@ -36,9 +36,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
         FT = EigenExpansion(T)
         FU = EigenExpansion(U)
         FM = EigenExpansion(M)
-        @test FT ≈ FM # SMatrix can make use of different methods
-        # for eigen decomposition. 
-        @test FT == FU 
+        @test FT == FU == FM
     end
 
     @testset "makeQ" begin
