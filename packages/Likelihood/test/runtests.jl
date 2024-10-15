@@ -149,25 +149,20 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                 Rvec = fill(R, 1000)
                 uniqueRvec = [R]
                 reads = rand(0:R, 1000)
-                uniquedandRs = unique(zip(reads, Rvec))
-                qmatrix = Matrix{Float64}(undef, 2n+1, R+1)
-                qdic = Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs)
-                cmintversion = countmap(zip(y, reads))
-                yintversion = [key[1] for key in keys(cmintversion)]
-                readsintversion = [key[2] for key in keys(cmintversion)]
-                countsintversion = [count for count in values(cmintversion)]
-                cmvecversion = countmap(zip(y, reads, Rvec))
-                yvecversion = [key[1] for key in keys(cmvecversion)]
-                readsvecversion = [key[2] for key in keys(cmvecversion)]
-                Rvecversion = [key[3] for key in keys(cmvecversion)]
-                countsvecversion = [count for count in values(cmvecversion)]
+                cm = countmap(zip(reads, y))
+                reads = [key[1] for key in keys(cm)]
+                y = [key[2] for key in keys(cm)]
+                counts = collect(values(cm))
+                Rvec = fill(R, length(counts))
                 Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
+                qmatrix = Matrix{Float64}(undef, 2n+1, R+1)
+                qdic = Dict((d, R) => Vector{Float64}(undef, 2n+1) for d in unique(reads))
                 for τC in 0.0:0.1:1.0
                     for τA in 0.0:0.1:1.0
                         for ϵ in 0.1:0.1:0.4
-                            resultintversion = logprobderivedreads!(qmatrix, readsintversion, R, R, countsintversion, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
-                            resultvecversion = logprobderivedreads!(qdic, readsvecversion, Rvecversion, uniqueRvec, countsvecversion, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
-                            @test resultintversion ≈ resultvecversion
+                            resultintversion = logprobderivedreads!(qmatrix, reads, R, R, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                            resultvecversion = logprobderivedreads!(qdic, reads, Rvec, uniqueRvec, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                            @test resultintversion == resultvecversion
                         end # ϵ
                     end #τA
                 end #τC
