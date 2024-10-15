@@ -1,4 +1,4 @@
-using Test, Likelihood, Distributions, GZip, LinearAlgebra
+using Test, Likelihood, Distributions, GZip, LinearAlgebra, StatsBase 
 
 using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix, probderivedalleles!
 
@@ -66,11 +66,13 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix, probderivedallele
                            0 -1 0
                            0 1 0]
     end
+    
     @testset "makeQꜜ" begin
         @test makeQꜜ(1) == [0 3 0
                             0 -2 1
                             0 1 -2]
     end
+    
     @testset "calcmatrix" begin
         Q = makeQ(2)
         Qꜜ = makeQꜜ(2)
@@ -83,30 +85,26 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix, probderivedallele
         @test calcmatrix(FQ, FQꜜ, 0.0, 0.0) ≈ I
         @test typeof(FQ.P) == typeof(M)
     end
-    @testset "probderivedalleles!" begin
+
+    @testset "preparedata" begin
+        y = 0.1:0.1:0.9
         for n in 1:10
-            @show n
-            p = Vector{Float64}(undef, 2n+1)
-            for y in 0.1:0.1:0.9
-                h = [y^k*(1.0-y)^(2n-k) for k in 0:2n]
-                for τC in 0.1:0.1:10.0
-                    for τA in 0.1:0.1:10.0
-                        Q = makeQ(n)
-                        Qꜜ = makeQꜜ(n)
-                        FQ = EigenExpansion(Q)
-                        FQꜜ = EigenExpansion(Qꜜ)
-                        M = calcmatrix(FQ, FQꜜ, τC, τA)
-                        binomialcoefficients = binomial.(2n, 0:2n)
-                        q = probderivedalleles!(p, h, M, binomialcoefficients)
-                        @test p == q
-                        @test isprobvec(p)
-                        @test p == (M*h).*binomialcoefficients 
-                    end 
-                end
+            t = preparedata(n, y)
+            @test length(t) == 4 
+            @test t isa NamedTuple 
+            Q, Qꜜ, hvals, binomialcoefficients = t
+            @test Q == makeQ(n)
+            @test Qꜜ == makeQꜜ(n)
+            @test size(hvals) == (2n+1, length(y))
+            for k in 0:2n 
+                for yindex in eachindex(y) 
+                    @test hvals[k+1, yindex] == y[yindex]^k*(1-y[yindex])^(2n-k)
+                end 
             end 
-        end
+            @test binomialcoefficients == binomial.(2n, 0:2n)
+        end 
     end
-    
+
     @testset "preparedatafixedn" begin
         for n in 1:10
             R = 20
@@ -136,36 +134,65 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix, probderivedallele
     end
 
     @testset "logprobderivedreads!" begin
-        n = 4
-        R = 20
-        y = rand(50)
-        Q, Qꜜ, hvals, binomialcoefficients, p, binomialprobs = preparedatafixedn(n, R, y)
-        d = rand(0:R, length(y))
-        τC = 0.0
-        τA = 0.1 
-        @test logprobderivedreads!(d, τC, τA, Q, Qꜜ, p, binomialcoefficients, binomialprobs, hvals) == -Inf
-        τC = 0.1
-        τA = 0.0 
-        @test logprobderivedreads!(d, τC, τA, Q, Qꜜ, p, binomialcoefficients, binomialprobs, hvals) == -Inf
-        τC = 0.0
-        τA = 0.0 
-        @test logprobderivedreads!(d, τC, τA, Q, Qꜜ, p, binomialcoefficients, binomialprobs, hvals) == -Inf
-        τC = -0.1
-        τA = 0.1 
-        @test logprobderivedreads!(d, τC, τA, Q, Qꜜ, p, binomialcoefficients, binomialprobs, hvals) == -Inf
-        τC = 0.1
-        τA = -0.1 
-        @test logprobderivedreads!(d, τC, τA, Q, Qꜜ, p, binomialcoefficients, binomialprobs, hvals) == -Inf
-        n = 4
-        R = 2
-        y = rand(3)
-        ds =  [[a, b, c] for a in 0:2 for b in 0:2 for c in 0:2]
-        logprobs = similar(ds, Float64)
-        Q, Qꜜ, hvals, binomialcoefficients, p, binomialprobs = preparedatafixedn(n, R, y)
-        for i in eachindex(ds, logprobs)
-            logprobs[i] = logprobderivedreads!(ds[i], 0.2, 0.1, Q, Qꜜ, p, binomialcoefficients, binomialprobs, hvals)
+        # when τC=τA=0, then logprobderivedreads! calculates the log probability 
+        # of the binomial distribution with parameters R and (1-ϵ)*k/2n+ϵ*k/(2n), where k itself is binomially distributed with parameters 2n and y. 
+        for n in 1:10
+            for R in 1:100
+                for ϵ in 0.1:0.1:0.4
+                    y = rand(0.1:0.1:0.9, 1000)
+                    Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
+                    q = Matrix{Float64}(undef, 2n+1, R+1)
+                    reads = rand(0:R, 1000)
+                    cm = countmap(zip(y, reads))
+                    y = [key[1] for key in keys(cm)]
+                    reads = [key[2] for key in keys(cm)]
+                    counts = [count for count in values(cm)]
+                    τC = 0.0 
+                    τA = 0.0 
+                    ϵ = 0.0 
+                    logpdffunction = logprobderivedreads!(q, reads, R, R, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                    logpdftheoretical = 0.0
+                    for index in eachindex(reads, counts, y)
+                        d = reads[index]
+                        distk = Binomial(2n, y[index])
+                        prob = 0.0 
+                        for k in 0:2n 
+                            distgivenk = Binomial(R, (1-ϵ)*k/(2n)+ϵ*(2n-k)/(2n))
+                            prob += pdf(distgivenk, d)*pdf(distk, k)
+                        end 
+                        logpdftheoretical += counts[index] * log(prob)
+                    end 
+                    @test logpdffunction ≈ logpdftheoretical 
+                end 
+            end 
         end 
-        probs = exp.(logprobs)
-        @test isprobvec(probs) 
+
+        # logprobderivedreads! with R or fill(R, length(reads)) should be the same. 
+        for n in 1:10
+            for R in 1:100 
+                ϵ = rand(Uniform(0.0, 0.5))
+                y = rand(1000)
+                Rvec = fill(R, 1000)
+                uniqueRvec = [R]
+                d = rand(0:R, 1000)
+                uniquedandRs = unique(zip(d, Rvec))
+                qmatrix = Matrix{Float64}(undef, 2n+1, R+1)
+                qdic = Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs)
+                cm = countmap(zip(y, reads))
+                y = [key[1] for key in keys(cm)]
+                reads = [key[2] for key in keys(cm)]
+                counts = [count for count in values(cm)]
+                Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
+                for τC in 0.0:0.1:1.0
+                    for τA in 0.0:0.1:1.0
+                        for ϵ in 0.1:0.1:0.4
+                            resultintversion = logprobderivedreads!(qmatrix, reads, R, R, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                            resultvecversion = logprobderivedreads!(qdic, reads, uniqueRvec, uniqueRvec, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                            @test resultintversion == resultvecversion
+                        end 
+                    end 
+                end 
+            end 
+        end 
     end
 end

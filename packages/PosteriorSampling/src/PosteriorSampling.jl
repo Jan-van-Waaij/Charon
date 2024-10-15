@@ -7,8 +7,8 @@ module PosteriorSampling
 
 # external packages that I use. 
 using Distributions, # for probability distributions
-      Likelihood, # for the likelihood
-      StatsBase, # for countmap
+      Likelihood, # our own package for the likelihood
+      StatsBase, # for the countmap function
       LinearAlgebra, # Needed for the identity matrix I. 
       StaticArrays, # for SizedVector and MVector, they are generally faster.
       Base.Threads # for multithreading.
