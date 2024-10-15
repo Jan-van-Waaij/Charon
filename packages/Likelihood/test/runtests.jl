@@ -50,10 +50,10 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
         FB = EigenExpansion(B)
         FC = EigenExpansion(C)  
         @test FB ≈ FC 
-        x = rand(3)
-        y = rand(4)
+        x = [1.0, 1.0, 1.0]
+        y = [2.0, 2.0, 2.0, 2.0]
         z = copy(y)
-        #z[1] += eps(z[1])
+        z[1] += eps(z[1])
         T = Tridiagonal(x, y, x)
         U = Tridiagonal(x, z, x)
         FT = EigenExpansion(T)
