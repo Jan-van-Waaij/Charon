@@ -153,14 +153,14 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                 qmatrix = Matrix{Float64}(undef, 2n+1, R+1)
                 qdic = Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs)
                 cmintversion = countmap(zip(y, reads))
-                yintversion = [key[1] for key in keys(cm)]
-                readsintversion = [key[2] for key in keys(cm)]
-                countsintversion = [count for count in values(cm)]
+                yintversion = [key[1] for key in keys(cmintversion)]
+                readsintversion = [key[2] for key in keys(cmintversion)]
+                countsintversion = [count for count in values(cmintversion)]
                 cmvecversion = countmap(zip(y, reads, Rvec))
-                yvecversion = [key[1] for key in keys(cm)]
-                readsvecversion = [key[2] for key in keys(cm)]
-                Rvecversion = [key[3] for key in keys(cm)]
-                countsvecversion = [count for count in values(cm)]
+                yvecversion = [key[1] for key in keys(cmvecversion)]
+                readsvecversion = [key[2] for key in keys(cmvecversion)]
+                Rvecversion = [key[3] for key in keys(cmvecversion)]
+                countsvecversion = [count for count in values(cmvecversion)]
                 Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
                 for τC in 0.0:0.1:1.0
                     for τA in 0.0:0.1:1.0
