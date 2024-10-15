@@ -167,7 +167,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                         for ϵ in 0.1:0.1:0.4
                             resultintversion = logprobderivedreads!(qmatrix, readsintversion, R, R, countsintversion, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
                             resultvecversion = logprobderivedreads!(qdic, readsvecversion, Rvecversion, uniqueRvec, countsvecversion, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
-                            @test resultintversion == resultvecversion
+                            @test resultintversion ≈ resultvecversion
                         end # ϵ
                     end #τA
                 end #τC

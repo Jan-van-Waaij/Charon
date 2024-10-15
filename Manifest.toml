@@ -702,7 +702,7 @@ version = "2.40.1+0"
 
 [[Likelihood]]
 deps = ["Distributions", "LinearAlgebra", "StaticArrays"]
-git-tree-sha1 = "e64222722f42d13fef6df9a803e80493510a5941"
+git-tree-sha1 = "394089a03928e0fe9a5f43e48f46929111760617"
 repo-rev = "master"
 repo-subdir = "packages/Likelihood"
 repo-url = "/net/node07/home/projects/SedaDNA_Demo/simulationsMSPRIME"
