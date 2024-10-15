@@ -53,7 +53,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
         x = rand(3)
         y = rand(4)
         z = copy(y)
-        z[1] += eps(z[1])
+        #z[1] += eps(z[1])
         T = Tridiagonal(x, y, x)
         U = Tridiagonal(x, z, x)
         FT = EigenExpansion(T)
