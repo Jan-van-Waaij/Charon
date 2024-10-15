@@ -39,7 +39,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
         FMT = EigenExpansion(MT)
         FMU = EigenExpansion(MU)
         @test FT == FU
-        @test FMT == MFU
+        @test FMT == FMU
     end
 
     @testset "makeQ" begin
