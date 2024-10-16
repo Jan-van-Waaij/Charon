@@ -116,6 +116,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                     τC = 0.0 
                     τA = 0.0 
                     logpdffunction = logprobderivedreads!(q, reads, R, R, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                    @assert logpdffunction > -Inf 
                     logpdftheoretical = 0.0
                     for index in eachindex(reads, counts, y)
                         d = reads[index]
@@ -125,6 +126,8 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                             distgivenk = Binomial(R, (1-ϵ)*k/(2n)+ϵ*(2n-k)/(2n))
                             prob += pdf(distgivenk, d)*pdf(distk, k)
                         end 
+                        @assert prob > 0.0
+                        @assert prob ≤ 1.0 
                         logpdftheoretical += counts[index] * log(prob)
                     end 
                     println("Difference: ", abs(logpdffunction - logpdftheoretical))
