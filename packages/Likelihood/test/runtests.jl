@@ -63,7 +63,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
         τA = rand()
         M = calcmatrix(FQ, FQꜜ, τC, τA)
         @test M == exp(FQ, τA)*exp(FQꜜ, τC)
-        @test calcmatrix(FQ, FQꜜ, 0.0, 0.0) ≈ I
+        @test calcmatrix(FQ, FQꜜ, 0.0, 0.0) == I
         @test typeof(FQ.P) == typeof(M)
         for n in 1:10
             Q = makeQ(n)
