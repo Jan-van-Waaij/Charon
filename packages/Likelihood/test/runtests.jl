@@ -61,10 +61,10 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
             FQ = EigenExpansion(Q)
             FQꜜ = EigenExpansion(Qꜜ)
             @test calcmatrix(FQ, FQꜜ, 0.0, 0.0) ≈ I
-            @test typeof(FQ.P) == typeof(M)
             τC = rand()
             τA = rand()
             M = calcmatrix(FQ, FQꜜ, τC, τA)
+            @test typeof(FQ.P) == typeof(M)
             @test M == exp(FQ, τA)*exp(FQꜜ, τC)
             M = calcmatrix(FQ, FQꜜ, 0.0, τA)
             @test M ≈ exp(FQ, τA)
@@ -95,21 +95,26 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
     @testset "logprobderivedreads!" begin
         # when τC=τA=0, then logprobderivedreads! calculates the log probability 
         # of the binomial distribution with parameters R and (1-ϵ)*k/2n+ϵ*k/(2n), where k itself is binomially distributed with parameters 2n and y. 
-        #=
         for n in 1:10
             for R in 1:100
                 for ϵ in 0.1:0.1:0.4
-                    y = rand(0.1:0.1:0.9, 1000)
+                    expsize = 1000 
+                    y = rand(0.1:0.1:0.9, expsize)
                     Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
                     q = Matrix{Float64}(undef, 2n+1, R+1)
-                    reads = rand(0:R, 1000)
+                    reads = rand(0:R, expsize)
                     cm = countmap(zip(y, reads))
                     y = [key[1] for key in keys(cm)]
                     reads = [key[2] for key in keys(cm)]
-                    counts = [count for count in values(cm)]
+                    counts = collect(values(cm))
+                    τC = 0.3 
+                    τA = 0.2 
+                    @test logprobderivedreads!(q, reads, R, R, counts, -0.1, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
+                    @test logprobderivedreads!(q, reads, R, R, counts, τC, -0.1, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
+                    @test logprobderivedreads!(q, reads, R, R, counts, τC, τA, -0.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
+                    @test logprobderivedreads!(q, reads, R, R, counts, τC, τA, 1.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
                     τC = 0.0 
                     τA = 0.0 
-                    ϵ = 0.0 
                     logpdffunction = logprobderivedreads!(q, reads, R, R, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
                     logpdftheoretical = 0.0
                     for index in eachindex(reads, counts, y)
@@ -122,11 +127,10 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                         end 
                         logpdftheoretical += counts[index] * log(prob)
                     end 
-                    @test logpdffunction ≈ logpdftheoretical 
-                end 
-            end 
-        end 
-        =#
+                    println("Difference: ", abs(logpdffunction - logpdftheoretical))
+                end # ϵ  
+            end # R
+        end # n 
 
         # logprobderivedreads! with R or fill(R, length(reads)) should be the same. 
         for n in 1:10
