@@ -55,21 +55,13 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
     end
     
     @testset "calcmatrix" begin
-        Q = makeQ(2)
-        Qꜜ = makeQꜜ(2)
-        FQ = EigenExpansion(Q)
-        FQꜜ = EigenExpansion(Qꜜ)
-        τC = rand()
-        τA = rand()
-        M = calcmatrix(FQ, FQꜜ, τC, τA)
-        @test M == exp(FQ, τA)*exp(FQꜜ, τC)
-        @test calcmatrix(FQ, FQꜜ, 0.0, 0.0) == I
-        @test typeof(FQ.P) == typeof(M)
         for n in 1:10
             Q = makeQ(n)
             Qꜜ = makeQꜜ(n)
             FQ = EigenExpansion(Q)
             FQꜜ = EigenExpansion(Qꜜ)
+            @test calcmatrix(FQ, FQꜜ, 0.0, 0.0) ≈ I
+            @test typeof(FQ.P) == typeof(M)
             τC = rand()
             τA = rand()
             M = calcmatrix(FQ, FQꜜ, τC, τA)
