@@ -130,6 +130,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                         @assert prob ≤ 1.0 
                         logpdftheoretical += counts[index] * log(prob)
                     end 
+                    @test logpdffunction ≈ logpdftheoretical 
                     println("Difference: ", abs(logpdffunction - logpdftheoretical))
                 end # ϵ  
             end # R
