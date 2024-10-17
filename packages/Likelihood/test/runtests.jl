@@ -101,7 +101,6 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                     expsize = 1000 
                     Random.seed!(1987)
                     y = rand(0.1:0.1:0.9, expsize)
-                    Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
                     q = Matrix{Float64}(undef, 2n+1, R+1)
                     Random.seed!(1987)
                     reads = rand(0:R, expsize)
@@ -109,6 +108,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                     y = [key[1] for key in keys(cm)]
                     reads = [key[2] for key in keys(cm)]
                     counts = collect(values(cm))
+                    Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
                     τC = 0.3 
                     τA = 0.2 
                     @test logprobderivedreads!(q, reads, R, R, counts, -0.1, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
