@@ -1,4 +1,4 @@
-using Test, Likelihood, Distributions, GZip, LinearAlgebra, StatsBase 
+using Test, Likelihood, Distributions, GZip, LinearAlgebra, StatsBase, Random
 
 using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
 
