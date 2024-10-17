@@ -1,131 +1,203 @@
 using LinearAlgebra
-using Expokit 
-using Dates 
-using Likelihood: makeQ, makeQꜜ 
+using Likelihood: makeQ, makeQꜜ, calcmatrix
+using Likelihood
+using LogExpFunctions
+using Random 
+using StatsBase 
+using Distributions 
+using SpecialFunctions
 
-nrange = 1:10
-numexp = 100_000 
-svec = rand(numexp)
-
-
-for n in nrange
-    @show n  
-    starttime = now()
-    M = makeQ(n)
-    Mꜜ = makeQꜜ(n)
-    F = EigenExpansion(M)
-    Fꜜ = EigenExpansion(Mꜜ)
-    for M in [F, Fꜜ]
-        for index in Base.OneTo(numexp)
-            v = rand(2n+1)
-            exp(M, svec[index])*v 
+function logprobderivedreadstestlogspace!(logq::AbstractMatrix{Float64}, intermediateresult::AbstractVector{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, logbinomialcoefficients::AbstractVector{Float64}, hvals::AbstractMatrix{Float64})
+    if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
+        return -Inf 
+    else
+        M = calcmatrix(Q, Qꜜ, τC, τA)
+        # update q. q[k+1, d+1] is the probability of d derived alleles given k derived alleles (out of 2n)
+        # and error probability ϵ.
+        for k in 0:2n
+            dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+            for d in 0:R
+                logq[k+1, d+1] = logbinomialcoefficients[k+1] + logpdf(dist, d)
+            end
         end 
+        loglik = 0.0
+        for index in eachindex(reads, counts)
+            mul!(intermediateresult, M, view(hvals, :, index)) # caculate M*hvals[:, index] and put it in intermediateresults.
+            intermediateresult .= log.(max.(0.0, intermediateresult)) # correct for possible negative values due to numerical errors, and calculate the log. This is an in-place calculation, no new vector is created. 
+            intermediateresult .+= view(logq, :, reads[index]+1) 
+            loglik += counts[index] * logsumexp(intermediateresult) 
+        end
+        return loglik
     end 
-    finishtime = now()
-    println("Time my method: ", finishtime-starttime)
+end # Constant coverage and with errors. 
+
+function logprobderivedreadstestexpspace!(q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+    if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
+        return -Inf 
+    else
+        M = calcmatrix(Q, Qꜜ, τC, τA)
+        # update q. q[k+1, d+1] is the probability of d derived alleles given k derived alleles (out of 2n)
+        # and error probability ϵ.
+        for k in 0:2n
+            dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+            for d in 0:R
+                q[k+1, d+1] = binomialcoefficients[k+1] * pdf(dist, d)
+            end
+        end 
+        loglik = 0.0
+        for index in eachindex(reads, counts)
+            # update p
+            loglik += counts[index] * log(max(0.0, dot(view(q, :, reads[index]+1), M, view(hvals, :, index)))) 
+        end
+        return loglik
+    end 
+end # Constant coverage and with errors. 
+
+
+function testlogspace(n, ϵ, R, expsize)
+    Random.seed!(1987)
+    y = rand(0.1:0.1:0.9, expsize)
+    logq = Matrix{Float64}(undef, 2n+1, R+1)
+    intermediateresult = Vector{Float64}(undef, 2n+1)
+    Random.seed!(1987)
+    reads = rand(0:R, expsize)
+    cm = countmap(zip(y, reads))
+    y = [key[1] for key in keys(cm)]
+    reads = [key[2] for key in keys(cm)]
+    counts = collect(values(cm))
+    Q, Qꜜ, hvals, _ = preparedata(n, y)
+    logbinomialcoefficients = [logabsbinomial(2n, k)[1] for k in 0:2n]
+
+    logpdffunction = logprobderivedreadstestlogspace!(logq, intermediateresult, reads, R, R, counts, 0.0, 0.0, ϵ, n, Q, Qꜜ, logbinomialcoefficients, hvals)
     
-    starttime = now()
-    for MT in [M, Mꜜ]
-        for index in Base.OneTo(numexp)
-            v = rand(2n+1)
-            expmv!(svec[index], MT, v)
+    logpdftheoretical = 0.0
+    logprobs = Vector{Float64}(undef, 2n+1)
+    for index in eachindex(reads, counts, y)
+        d = reads[index]
+        distk = Binomial(2n, y[index])
+        for k in 0:2n 
+            distgivenk = Binomial(R, (1-ϵ)*k/(2n)+ϵ*(2n-k)/(2n))
+            logprobs[k+1] = logpdf(distgivenk, d) + logpdf(distk, k)
         end 
+        logpdftheoretical += counts[index] * logsumexp(logprobs)
     end 
-    finishtime = now()
-    println("Time my method: ", finishtime-starttime)
+    
+    return logpdffunction, logpdftheoretical
 end 
 
-for n in nrange
-    @show n  
-    M = makeQ(n)
-    Mꜜ = makeQꜜ(n)
-    F = EigenExpansion(M)
-    Fꜜ = EigenExpansion(Mꜜ)
-    aboutthesame = BitVector(undef, numexp)
-    for index in eachindex(Base.OneTo(numexp), aboutthesame)
-        v = rand(2n+1)
-        ansmymethod = exp(F, svec[index])*v 
-        ansexpokitmethod = expmv(svec[index], M, v)
-        aboutthesame[index] = ansmymethod ≈ ansexpokitmethod
+function testexpspace(n, ϵ, R, expsize)
+    Random.seed!(1987)
+    y = rand(0.1:0.1:0.9, expsize)
+    q = Matrix{Float64}(undef, 2n+1, R+1)
+    Random.seed!(1987)
+    reads = rand(0:R, expsize)
+    cm = countmap(zip(y, reads))
+    y = [key[1] for key in keys(cm)]
+    reads = [key[2] for key in keys(cm)]
+    counts = collect(values(cm))
+    Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
+    
+    logpdffunction = logprobderivedreadstestexpspace!(q, reads, R, R, counts, 0.0, 0.0, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+    
+    logpdftheoretical = 0.0
+    for index in eachindex(reads, counts, y)
+        d = reads[index]
+        distk = Binomial(2n, y[index])
+        prob = 0.0 
+        for k in 0:2n 
+            distgivenk = Binomial(R, (1-ϵ)*k/(2n)+ϵ*(2n-k)/(2n))
+            prob += pdf(distgivenk, d)*pdf(distk, k)
+        end 
+        logpdftheoretical += counts[index] * log(prob)
     end 
-    println(length(aboutthesame)-sum(aboutthesame))
-    println(mean(aboutthesame))
-    for index in eachindex(Base.OneTo(numexp), aboutthesame)
-        v = rand(2n+1)
-        ansmymethod = exp(Fꜜ, svec[index])*v 
-        ansexpokitmethod = expmv(svec[index], Mꜜ, v)
-        aboutthesame[index] = ansmymethod ≈ ansexpokitmethod
-    end 
-    println(length(aboutthesame)-sum(aboutthesame))
-    println(mean(aboutthesame))
+    
+    return logpdffunction, logpdftheoretical
 end 
 
-for n in nrange
-    @show n  
-    M = makeQ(n)
-    M_Matrixtype = Matrix(M)
-    Mꜜ = makeQꜜ(n)
-    Mꜜ_Matrixtype = Matrix(Mꜜ)
-    F = EigenExpansion(M)
-    Fꜜ = EigenExpansion(Mꜜ)
-    aboutthesame = BitVector(undef, numexp)
-    for index in eachindex(Base.OneTo(numexp), aboutthesame)
-        v = rand(2n+1)
-        #ansmymethod = exp(F, svec[index])*v
-        ansstandardmethod = exp(svec[index]*M_Matrixtype)*v  
-        ansexpokitmethod = expmv(svec[index], M, v)
-        aboutthesame[index] = ansexpokitmethod ≈ ansstandardmethod
+function testcomparelikexpspacewiththeoritcallogspace(n, ϵ, R, expsize)
+    Random.seed!(1987)
+    y = rand(0.1:0.1:0.9, expsize)
+    q = Matrix{Float64}(undef, 2n+1, R+1)
+    Random.seed!(1987)
+    reads = rand(0:R, expsize)
+    cm = countmap(zip(y, reads))
+    y = [key[1] for key in keys(cm)]
+    reads = [key[2] for key in keys(cm)]
+    counts = collect(values(cm))
+    Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
+    
+    logpdffunction = logprobderivedreadstestexpspace!(q, reads, R, R, counts, 0.0, 0.0, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+    
+    logpdftheoretical = 0.0
+    logprobs = Vector{Float64}(undef, 2n+1)
+    for index in eachindex(reads, counts, y)
+        d = reads[index]
+        distk = Binomial(2n, y[index])
+        for k in 0:2n 
+            distgivenk = Binomial(R, (1-ϵ)*k/(2n)+ϵ*(2n-k)/(2n))
+            logprobs[k+1] = logpdf(distgivenk, d) + logpdf(distk, k)
+        end 
+        logpdftheoretical += counts[index] * logsumexp(logprobs)
     end 
-    println(length(aboutthesame)-sum(aboutthesame))
-    println(mean(aboutthesame))
-    for index in eachindex(Base.OneTo(numexp), aboutthesame)
-        v = rand(2n+1)
-        #ansmymethod = exp(Fꜜ, svec[index])*v
-        ansstandardmethod = exp(svec[index]*Mꜜ_Matrixtype)*v  
-        ansexpokitmethod = expmv(svec[index], M, v)
-        aboutthesame[index] = ansexpokitmethod ≈ ansstandardmethod
-    end 
-    println(length(aboutthesame)-sum(aboutthesame))
-    println(mean(aboutthesame))
+
+    return logpdffunction, logpdftheoretical
 end 
 
-istriuvec = BitVector(undef, numexp)
-for n in nrange 
-    for index in eachindex(isdiagvec)
-        M = diagm(0 => rand(2n+1), 1 => rand(2n))
-        E = exp(M)
-        istriuvec[index] = istriu(E)
-    end
-    println(length(istriuvec) - sum(istriuvec))
-    println(mean(istriuvec))
-end  
 
-function makeorthogonalmatrix(n::Int, M::Matrix{Float64})
-    n ≥ 1 || error("n should be one or larger.")
-    size(M) == (2,2) || error("M should be 2x2 matrix")
-    BM = zeros(2n,2n)
-    for i in 0:n-1 
-        BM[2i+1:2i+2, 2i+1:2i+2] .= M  
+themax = 0.0
+expsize = 100_000_000
+for n in 1:10
+    for R in 1:100
+        for ϵ in 0.0:0.01:0.49
+            ans1, ans2 = testlogspace(n, ϵ, R, expsize)
+            m = abs(ans1-ans2)
+            if m > themax 
+                themax = m 
+                #@show themax 
+            end 
+        end 
+        #@show n R 
     end 
-    return BM 
-end 
+end # max voor werken in logspace: 6.571212907147128e-9 
+themaxlogspace = themax  
 
-M = [0.6   0.8
-0.8  -0.6]
+themax = 0.0
+for n in 1:10
+    for R in 1:100
+        for ϵ in 0.0:0.01:0.49
+            ans1, ans2 = testexpspace(n, ϵ, R, expsize)
+            m = abs(ans1-ans2)
+            if m > themax 
+                themax = m 
+                #@show themax 
+            end 
+        end 
+        #@show n R 
+    end 
+end # max voor werken in expspace: 5.664105628966354e-9. 
+themaxexpspace = themax 
 
-n = 10
+themax = 0.0
+for n in 1:10
+    for R in 1:100
+        for ϵ in 0.0:0.01:0.49
+            ans1, ans2 = testcomparelikexpspacewiththeoritcallogspace(n, ϵ, R, expsize)
+            m = abs(ans1-ans2)
+            if m > themax 
+                themax = m 
+                #@show themax 
+            end 
+        end 
+        #@show n R 
+    end 
+end # max voor werken in expspace: 5.663878255290911e-9. 
+themaxcompare = themax 
 
-BM = makeorthogonalmatrix(n, M)
-X = BM' * diagm(1:2n) * BM 
+@show themaxlogspace themaxexpspace themaxcompare;
 
-TRUEEXPX = BM' * diagm(exp.(1:2n)) * BM 
-
-v = rand(2n)
-exp(X)*v ≈ TRUEEXPX*v
-
-F = EigenExpansion(X)
-myexpsol = exp(F, 1.0)
-
-myexpsol*v ≈ TRUEEXPX*v
-
-expmv(1.0, X, v) ≈ TRUEEXPX*v 
+#=
+Results with 1000_000
+themaxlogspace = 6.782473064959049e-6
+themaxexpspace = 5.754642188549042e-6
+themaxcompare = 5.754642188549042e-6
+=# 

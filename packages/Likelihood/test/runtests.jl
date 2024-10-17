@@ -99,9 +99,11 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
             for R in 1:100
                 for ϵ in 0.1:0.1:0.4
                     expsize = 1000 
+                    Random.seed!(1987)
                     y = rand(0.1:0.1:0.9, expsize)
                     Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
                     q = Matrix{Float64}(undef, 2n+1, R+1)
+                    Random.seed!(1987)
                     reads = rand(0:R, expsize)
                     cm = countmap(zip(y, reads))
                     y = [key[1] for key in keys(cm)]
@@ -113,9 +115,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                     @test logprobderivedreads!(q, reads, R, R, counts, τC, -0.1, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
                     @test logprobderivedreads!(q, reads, R, R, counts, τC, τA, -0.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
                     @test logprobderivedreads!(q, reads, R, R, counts, τC, τA, 1.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
-                    τC = 0.0 
-                    τA = 0.0 
-                    logpdffunction = logprobderivedreads!(q, reads, R, R, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                    logpdffunction = logprobderivedreads!(q, reads, R, R, counts, 0.0, 0.0, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
                     #@assert logpdffunction > -Inf 
                     logpdftheoretical = 0.0
                     for index in eachindex(reads, counts, y)
@@ -130,7 +130,7 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                         @assert prob ≤ 1.0 
                         logpdftheoretical += counts[index] * log(prob)
                     end 
-                    #println("Difference: ", abs(logpdffunction - logpdftheoretical))
+                    println("Difference: ", abs(logpdffunction - logpdftheoretical))
                 end # ϵ  
             end # R
         end # n 

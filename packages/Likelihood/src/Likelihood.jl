@@ -12,8 +12,9 @@ import Base: ==, exp # redefine exp and == for EigenExpansion types. This requir
 # external packages that are used in this module. 
 using Distributions, # for probability distributions
       LinearAlgebra, # for Linear Algebra functions and data types.  
-      StaticArrays # for small matrices this can be faster, as it stores the size of the matrix in the type. Can apply some 
+      StaticArrays, # for small matrices this can be faster, as it stores the size of the matrix in the type. Can apply some 
       # optimisations for some matrices. 
+      LogSumExp # for the logsumexp function. logsumexp([log(1),log(2),log(3)]) = log(sum(exp.([log(1), log(2), log(3)]))) = log(6), but in an numerical efficient way. 
 
 export logprobderivedreads!, # the log probability of the read vector. A.k.a. the log-likelihood.
        EigenExpansion, # Data type to store a decomposition A = XDX^{-1}, which allows for fast matrix exponentiation.
@@ -137,7 +138,7 @@ end
 
 Calculate the log probability of the derived reads, which is the log-likelihood. This function will mutate q. q[k+1,d+1] contains the probability of seeing d derived reads out of R, given k derived alleles out of 2n, d = 0,...,R and k=0,...,2n.  
 """
-function logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+function logprobderivedreads!(q::AbstractMatrix{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
     if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
         return -Inf 
     else
@@ -158,6 +159,8 @@ function logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{I
         return loglik
     end 
 end # Constant coverage and with errors. 
+
+
 
 """
     logprobderivedreads!(q::Dict{Tuple{Int64, Int64}, Vector{Float64}}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, uniquecoverages::AbstractVector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
@@ -186,6 +189,33 @@ function logprobderivedreads!(q::Dict{Tuple{Int64, Int64}, Vector{Float64}}, rea
         return loglik
     end
 end
+
+###
+### Numeric stable method
+###
+function logprobderivedreads!(logq::AbstractMatrix{Float64}, intermediateresult::AbstractVector{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, logbinomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+    if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
+        return -Inf 
+    else
+        M = calcmatrix(Q, Qꜜ, τC, τA)
+        # update q. q[k+1, d+1] is the probability of d derived alleles given k derived alleles (out of 2n)
+        # and error probability ϵ.
+        for k in 0:2n
+            dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
+            for d in 0:R
+                logq[k+1, d+1] = logbinomialcoefficients[k+1] + logpdf(dist, d)
+            end
+        end 
+        loglik = 0.0
+        for index in eachindex(reads, counts)
+            mul!(intermediateresult, M, view(hvals, :, index)) # caculate M*hvals[:, index] and put it in intermediateresults.
+            intermediateresult .= log.(max.(0.0, intermediateresult)) # correct for possible negative values due to numerical errors, and calculate the log. This is an in-place calculation, no new vector is created. 
+            intermediateresult .+= view(logq, :, reads[index]+1) 
+            loglik += counts[index] * logsumexp(intermediateresult) 
+        end
+        return loglik
+    end 
+end # Constant coverage and with errors. 
 
 
 ###
