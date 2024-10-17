@@ -12,9 +12,9 @@ import Base: ==, exp # redefine exp and == for EigenExpansion types. This requir
 # external packages that are used in this module. 
 using Distributions, # for probability distributions
       LinearAlgebra, # for Linear Algebra functions and data types.  
-      StaticArrays, # for small matrices this can be faster, as it stores the size of the matrix in the type. Can apply some 
+      StaticArrays # for small matrices this can be faster, as it stores the size of the matrix in the type. Can apply some 
       # optimisations for some matrices. 
-      LogSumExp # for the logsumexp function. logsumexp([log(1),log(2),log(3)]) = log(sum(exp.([log(1), log(2), log(3)]))) = log(6), but in an numerical efficient way. 
+      #LogSumExp # for the logsumexp function. logsumexp([log(1),log(2),log(3)]) = log(sum(exp.([log(1), log(2), log(3)]))) = log(6), but in an numerical efficient way. 
 
 export logprobderivedreads!, # the log probability of the read vector. A.k.a. the log-likelihood.
        EigenExpansion, # Data type to store a decomposition A = XDX^{-1}, which allows for fast matrix exponentiation.
@@ -193,6 +193,7 @@ end
 ###
 ### Numeric stable method
 ###
+#=
 function logprobderivedreads!(logq::AbstractMatrix{Float64}, intermediateresult::AbstractVector{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, logbinomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
     if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
         return -Inf 
@@ -216,7 +217,7 @@ function logprobderivedreads!(logq::AbstractMatrix{Float64}, intermediateresult:
         return loglik
     end 
 end # Constant coverage and with errors. 
-
+=#
 
 ###
 ### Unequal contributions
