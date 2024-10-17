@@ -131,9 +131,55 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                         logpdftheoretical += counts[index] * log(prob)
                     end 
                     @test logpdffunction ≈ logpdftheoretical 
-                    println("Difference: ", abs(logpdffunction - logpdftheoretical))
                 end # ϵ  
             end # R
+        end # n 
+
+        # test for equality with τC = τA = 0.0, with non-constant R version. 
+        for n in 1:10
+            for ϵ in 0.1:0.1:0.4
+                expsize = 100_000 
+                Random.seed!(1987)
+                y = rand(0.1:0.1:0.9, expsize)
+                Random.seed!(1987)
+                coverages = rand(1:10, expsize)
+                uniquecoverages = unique(coverages)
+                Random.seed!(1987)
+                reads = [rand(0:coverage) for coverage in coverages]
+                @assert all(0 .≤ reads .≤ coverages)
+                uniquereadsandcoverages = unique(zip(reads, coverages))
+                q = Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquereadsandcoverages)
+                cm = countmap(zip(y, reads, coverages))
+                y = [key[1] for key in keys(cm)]
+                reads = [key[2] for key in keys(cm)]
+                coverages = [key[3] for key in keys(cm)]
+                counts = collect(values(cm))
+                Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
+                τC = 0.3 
+                τA = 0.2 
+                @test logprobderivedreads!(q, reads, coverages, uniquecoverages, counts, -0.1, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
+                @test logprobderivedreads!(q, reads, coverages, uniquecoverages, counts, τC, -0.1, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
+                @test logprobderivedreads!(q, reads, coverages, uniquecoverages, counts, τC, τA, -0.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
+                @test logprobderivedreads!(q, reads, coverages, uniquecoverages, counts, τC, τA, 1.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
+                logpdffunction = logprobderivedreads!(q, reads, coverages, uniquecoverages, counts, 0.0, 0.0, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                #@assert logpdffunction > -Inf 
+                logpdftheoretical = 0.0
+                for index in eachindex(reads, coverages, counts, y)
+                    d = reads[index]
+                    R = coverages[index]
+                    distk = Binomial(2n, y[index])
+                    prob = 0.0 
+                    for k in 0:2n 
+                        distgivenk = Binomial(R, (1-ϵ)*k/(2n)+ϵ*(2n-k)/(2n))
+                        prob += pdf(distgivenk, d)*pdf(distk, k)
+                    end 
+                    @assert prob > 0.0
+                    @assert prob ≤ 1.0 
+                    logpdftheoretical += counts[index] * log(prob)
+                end 
+                @test logpdffunction ≈ logpdftheoretical 
+                print('#')
+            end # ϵ  
         end # n 
 
         # logprobderivedreads! with R or fill(R, length(reads)) should be the same. 

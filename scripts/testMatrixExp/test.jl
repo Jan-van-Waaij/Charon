@@ -6,6 +6,7 @@ using Random
 using StatsBase 
 using Distributions 
 using SpecialFunctions
+using Dates 
 
 function logprobderivedreadstestlogspace!(logq::AbstractMatrix{Float64}, intermediateresult::AbstractVector{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, logbinomialcoefficients::AbstractVector{Float64}, hvals::AbstractMatrix{Float64})
     if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
@@ -201,3 +202,51 @@ themaxlogspace = 6.782473064959049e-6
 themaxexpspace = 5.754642188549042e-6
 themaxcompare = 5.754642188549042e-6
 =# 
+
+##
+## Test speed difference. 
+##
+
+for R in 1:100
+    timedurationscalar = Millisecond(0.0)
+    timedurationvector = Millisecond(0.0)
+    for n in 1:10
+        for ϵ in 0.1:0.1:0.4
+            expsize = 1000_000 
+            Random.seed!(1987)
+            y = rand(0.0001:0.0001:0.9999, expsize)
+            q = Matrix{Float64}(undef, 2n+1, R+1)
+            Random.seed!(1987)
+            reads = rand(0:R, expsize)
+            cm = countmap(zip(y, reads))
+            y = [key[1] for key in keys(cm)]
+            reads = [key[2] for key in keys(cm)]
+            counts = collect(values(cm))
+            Rvec = fill(R, length(reads)) 
+            Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
+            before = now()
+            for τC in 0.0:0.01:1.0 
+                for τA in 0.0:0.01:1.0
+                    logprobderivedreads!(q, reads, R, R, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                end 
+            end 
+            after = now()
+            timedurationscalar += after - before
+
+            uniquereads = unique(reads)
+            q = Dict((d, R) => Vector{Float64}(undef, 2n+1) for d in uniquereads)
+            before = now()
+            for τC in 0.0:0.01:1.0 
+                for τA in 0.0:0.01:1.0
+                    logprobderivedreads!(q, reads, Rvec, [R], counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                end 
+            end 
+            after = now()
+            timedurationvector += after - before
+        end # ϵ  
+    end # n
+    println(R, " takes ", timedurationscalar, " with scalar version, and ")
+    println(R, " takes ", timedurationvector, " with vector version.")
+    println()
+    println()
+end # R

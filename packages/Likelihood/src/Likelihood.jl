@@ -4,7 +4,6 @@ A module to calculate the likelihood from read data.
 module Likelihood
 
 # To do:
-# test, write tests.
 # adapt to unequal biomasses.
 
 import Base: ==, exp # redefine exp and == for EigenExpansion types. This requires an import statement.
@@ -12,12 +11,11 @@ import Base: ==, exp # redefine exp and == for EigenExpansion types. This requir
 # external packages that are used in this module. 
 using Distributions, # for probability distributions
       LinearAlgebra, # for Linear Algebra functions and data types.  
-      StaticArrays # for small matrices this can be faster, as it stores the size of the matrix in the type. Can apply some 
-      # optimisations for some matrices. 
-      #LogSumExp # for the logsumexp function. logsumexp([log(1),log(2),log(3)]) = log(sum(exp.([log(1), log(2), log(3)]))) = log(6), but in an numerical efficient way. 
+      StaticArrays # for small matrices this can be faster, as it stores the size of the matrix in the type. This package can apply some 
+      # optimisations for linear algebra functions for small matrices. 
 
 export logprobderivedreads!, # the log probability of the read vector. A.k.a. the log-likelihood.
-       EigenExpansion, # Data type to store a decomposition A = XDX^{-1}, which allows for fast matrix exponentiation.
+       EigenExpansion, # Data type to store a decomposition A = XDX^{-1}, where D is a diagonal matrix, which allows for fast matrix exponentiation.
        preparedata # prepare the data needed for logprobderivedreads!, for fixed n. 
 
 # Test written
@@ -53,7 +51,6 @@ F.P::Matrix{Float64}
 F.D::Diagonal{Float64, Vector{Float64}}
 F.Pinv::Matrix{Float64} 
 """
-# This function can be problematic, because I don't always want an SMatrix. 
 EigenExpansion(M::Tridiagonal{Float64, Vector{Float64}}) = EigenExpansion(SizedMatrix{size(M)...,Float64}(M))
 
 # Test written. 
