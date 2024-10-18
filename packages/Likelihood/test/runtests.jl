@@ -1,4 +1,9 @@
-using Test, Likelihood, Distributions, GZip, LinearAlgebra, StatsBase, Random
+using Test # the testing package   
+using Likelihood # the package to be tested
+using Distributions # for probability distributions
+using LinearAlgebra # for Tridiagonal objects 
+using StatsBase # for countmap 
+using Random # for setting the seed
 
 using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
 
@@ -59,11 +64,11 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                         @test Q[k+1, L+1] == 0.5*(2n-k)*(2n-k-1)
                     else 
                         @test Q[k+1, L+1] == 0
-                    end 
-                end
-            end 
-        end  
-    end
+                    end # if-elseif-else block 
+                end # L 
+            end # k 
+        end  # n 
+    end # testset makeQ 
     
     @testset "makeQꜜ" begin
         @test makeQꜜ(1) == [0 3 0
@@ -123,6 +128,20 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                 end 
             end 
             @test binomialcoefficients == binomial.(2n, 0:2n)
+
+            Q = t.Q 
+            Qꜜ = t.Qꜜ
+            hvals = t.hvals 
+            binomialcoefficients = t.binomialcoefficients
+            @test Q == EigenExpansion(makeQ(n))
+            @test Qꜜ == EigenExpansion(makeQꜜ(n))
+            @test size(hvals) == (2n+1, length(y))
+            for k in 0:2n 
+                for yindex in eachindex(y) 
+                    @test hvals[k+1, yindex] == y[yindex]^k*(1-y[yindex])^(2n-k)
+                end 
+            end 
+            @test binomialcoefficients == binomial.(2n, 0:2n)
         end 
     end
 
@@ -150,7 +169,6 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                     @test logprobderivedreads!(q, reads, R, R, counts, τC, τA, -0.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
                     @test logprobderivedreads!(q, reads, R, R, counts, τC, τA, 1.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
                     logpdffunction = logprobderivedreads!(q, reads, R, R, counts, 0.0, 0.0, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
-                    #@assert logpdffunction > -Inf 
                     logpdftheoretical = 0.0
                     for index in eachindex(reads, counts, y)
                         d = reads[index]
@@ -160,8 +178,6 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                             distgivenk = Binomial(R, (1-ϵ)*k/(2n)+ϵ*(2n-k)/(2n))
                             prob += pdf(distgivenk, d)*pdf(distk, k)
                         end 
-                        @assert prob > 0.0
-                        @assert prob ≤ 1.0 
                         logpdftheoretical += counts[index] * log(prob)
                     end 
                     @test logpdffunction ≈ logpdftheoretical 
@@ -207,8 +223,6 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                         distgivenk = Binomial(R, (1-ϵ)*k/(2n)+ϵ*(2n-k)/(2n))
                         prob += pdf(distgivenk, d)*pdf(distk, k)
                     end 
-                    @assert prob > 0.0
-                    @assert prob ≤ 1.0 
                     logpdftheoretical += counts[index] * log(prob)
                 end 
                 @test logpdffunction ≈ logpdftheoretical 
