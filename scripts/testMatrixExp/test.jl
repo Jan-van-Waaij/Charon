@@ -146,7 +146,7 @@ end
 
 
 themax = 0.0
-expsize = 100_000_000
+expsize = 10_000_000
 for n in 1:10
     for R in 1:100
         for ϵ in 0.0:0.01:0.49
@@ -250,3 +250,5 @@ for R in 1:100
     println()
     println()
 end # R
+
+# De vector versie is zo'n 20-25 procent langzamer. Het verschil is minder groot voor kleine coverages. 

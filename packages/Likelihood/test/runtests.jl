@@ -46,13 +46,47 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
         @test makeQ(1) == [0 1 0
                            0 -1 0
                            0 1 0]
+
+        for n in 1:10
+            Q = makeQ(n)
+            for k in 0:2n 
+                for L in 0:2n 
+                    if L == k-1 
+                        @test Q[k+1, L+1] == 0.5*k*(k-1)
+                    elseif L == k 
+                        @test Q[k+1, L+1] == -k*(2n-k)
+                    elseif L == k+1 
+                        @test Q[k+1, L+1] == 0.5*(2n-k)*(2n-k-1)
+                    else 
+                        @test Q[k+1, L+1] == 0
+                    end 
+                end
+            end 
+        end  
     end
     
     @testset "makeQꜜ" begin
         @test makeQꜜ(1) == [0 3 0
                             0 -2 1
                             0 1 -2]
-    end
+        
+        for n in 1:10
+            Qꜜ = makeQꜜ(n)
+            for k in 0:2n 
+                for L in 0:2n 
+                    if L == k-1 
+                        @test Qꜜ[k+1, L+1] == 0.5*k*(k-1)
+                    elseif L == k 
+                        @test Qꜜ[k+1, L+1] == -k*(2n-k+1)
+                    elseif L == k+1 
+                        @test Qꜜ[k+1, L+1] == 0.5*(2n-k+1)*(2n-k)
+                    else 
+                        @test Qꜜ[k+1, L+1] == 0
+                    end # if-elseif-else block. 
+                end # L 
+            end # k 
+        end # n 
+    end # testset makeQꜜ
     
     @testset "calcmatrix" begin
         for n in 1:10
@@ -178,7 +212,6 @@ using Likelihood: EigenExpansion, makeQ, makeQꜜ, calcmatrix
                     logpdftheoretical += counts[index] * log(prob)
                 end 
                 @test logpdffunction ≈ logpdftheoretical 
-                print('#')
             end # ϵ  
         end # n 
 
