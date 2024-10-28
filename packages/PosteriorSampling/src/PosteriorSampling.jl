@@ -32,7 +32,7 @@ export MHsampler # The mcmc sampler.
 export MCMCSimProp # More efficient mcmc sampler for low coverage with simulated proposal, at the cost of a longer run time. 
 export exactposterior # caculate the posterior in a given set of parameter points, up to a constant not depending on the parameters. 
 
-function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}, allowedindices::BitVector)
+function filtervectorsandapplycountmap(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
     y, d, R = y[allowedindices], d[allowedindices], R[allowedindices]
     tuples = zip(d, R, y)
     cm = countmap(tuples)
@@ -43,12 +43,12 @@ function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Ve
     return y, d, R, counts
 end 
 
-function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Integer, counts::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
+function filtervectorsandapplycountmap(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::Integer, counts::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
     y, d, counts = y[allowedindices], d[allowedindices], counts[allowedindices]
     return y, d, R, counts
 end 
 
-function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
+function filtervectorsandapplycountmap(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
     y, d, R, counts = y[allowedindices], d[allowedindices], R[allowedindices], counts[allowedindices]
     return y, d, R, counts
 end 
@@ -73,11 +73,11 @@ function makeqfixedn(n::Integer, d::AbstractVector{<:Integer}, R::AbstractVector
     return Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs)
 end 
 
-function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::Int)
+function makeq(nmax::Integer, d::AbstractVector{<:Integer}, R::Integer)
     return [MMatrix{2n+1, R+1, Float64}(undef) for n in 1:nmax]
 end 
 
-function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
+function makeq(nmax::Integer, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
     uniquedandRs = unique(zip(d, R))
     return [Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs) for n in 1:nmax]
 end 
@@ -99,7 +99,7 @@ function updateq!(q::AbstractMatrix{<:Real}, binomialcoefficients::AbstractVecto
     end              
 end 
 
-function updateq!(q::AbstractDict, binomialcoefficients::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, n::Integer, ϵ::Real)
+function updateq!(q::AbstractDict{<:Tuple{Integer, Integer}, <:AbstractVector{<:Real}}, binomialcoefficients::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, n::Integer, ϵ::Real)
     for R in uniquecoverages
         for k in 0:2n
             dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
@@ -112,9 +112,9 @@ function updateq!(q::AbstractDict, binomialcoefficients::AbstractVector{<:Intege
     end          
 end 
 
-calcloglik(counts, q::AbstractMatrix, reads, coverages, M, hvals, index) = counts[index] * log(max(0.0, dot(view(q, :, reads[index]+1), M, view(hvals, :, index))))
+calcloglik(counts::AbstractVector{<:Integer}, q::AbstractMatrix{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{Integer, AbstractVector{<:Integer}}, M::AbstractMatrix{<:Real}, hvals::AbstractMatrix{<:Real}, index::Integer) = counts[index] * log(max(0.0, dot(view(q, :, reads[index]+1), M, view(hvals, :, index))))
 
-calcloglik(counts, q::AbstractDict, reads, coverages, M, hvals, index) = counts[index]*log(max(0.0, dot(q[reads[index], coverages[index]], M, view(hvals, :, index))))
+calcloglik(counts::AbstractVector{<:Integer}, q::AbstractDict{<:Tuple{Integer, Integer}, <:AbstractVector{<:Real}}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, M::Matrix{<:Real}, hvals::Matrix{<:Real}, index::Integer) = counts[index]*log(max(0.0, dot(q[reads[index], coverages[index]], M, view(hvals, :, index))))
 
 myunique(R::Integer) = R 
 
@@ -126,7 +126,7 @@ myunique(R::AbstractVector{<:Integer}) = unique(R)
 ##
 ##
 """
-    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{AbstractVector{<:Integer}, Integer}, uniquecoverages::Union{AbstractVector{<:Integer}, Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
+    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{AbstractVector{<:Integer}, Integer}, uniquecoverages::Union{AbstractVector{<:Integer}, Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer)
 
 Adaptive Metropolis (Haario et al. 2001, mentioned in Rosenthal 2010 "Optimal proposal distributions and adaptive MCMC, section 3.2), with prior on τC, τA and ϵ, the true number of individuals is assumed to be known. Instead of using the recommended scaling factor 1.4161, we use the first nsteps÷4 steps to find a scaling factor that results in an acceptance ratio between 0.1 and 0.6. Setting messages ≤ 0, results in no messages being print, if message>0, then every message steps, a message is print, updating the progress.
 
@@ -143,7 +143,7 @@ gives the results of the first chain.
 
 Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
 """
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{AbstractVector{<:Integer}, Integer}, uniquecoverages::Union{AbstractVector{<:Integer}, Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{AbstractVector{<:Integer}, Integer}, uniquecoverages::Union{AbstractVector{<:Integer}, Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer)
     # Check conditions.
     all(0 .≤ ϵrange .< 0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
@@ -198,7 +198,7 @@ end # function.
 ## End fixed R with counts
 ##
 
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Union{Integer, AbstractVector{<:Integer}}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Union{Integer, AbstractVector{<:Integer}}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
     # Check conditions.
     all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
@@ -581,7 +581,7 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
 end # function.
 ## end new, adding error model.
 
-function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, df::DataFrame, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+function MCMCSimProp(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, df::AbstractDataFrame, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
     R = df[!, 1] + df[!, 2]
     d = df[!, 2]
     y = df[!, 3]
@@ -589,7 +589,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     return MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, R, d, y, counts, messages, scalingmessages)
 end 
 
-function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::Union{AbstractString, IO}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+function MCMCSimProp(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::Union{AbstractString, IO}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
     # Can handle both CSV file with and without headers. 
     df = CSV.read(dicefile, DataFrame, header = false)  
     if typeof(df[1,1]) <: AbstractString
@@ -598,7 +598,7 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     return MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, df, messages, scalingmessages)
 end  
 
-function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+function MCMCSimProp(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Integer, AbstractVector{<:Integer}}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
     checklength(y, d, R) || throw(DimensionMismatch("d, y  and/or R (in case R is a vector) should be of the same length."))
     
     # Remove frequencies 0.0 and 1.0
@@ -611,11 +611,11 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
 end 
 
 """
-    MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+    MCMCSimProp(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Integer, AbstractVector{<:Integer}}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
 
 MCMC with simulated proposals. 
 """
-function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, counts::AbstractVector{<:Integer}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+function MCMCSimProp(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Integer, AbstractVector{<:Integer}}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronn) ≥ 1 || throw(ArgumentError("prioronn should have support on positive integers. There is always at least one individual."))

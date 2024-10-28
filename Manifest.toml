@@ -980,7 +980,7 @@ version = "1.4.3"
 
 [[PosteriorSampling]]
 deps = ["Distributions", "Likelihood", "LinearAlgebra", "StaticArrays", "StatsBase"]
-git-tree-sha1 = "9be06fba4a7ff33ee77e22c9330a1c6df9541e38"
+git-tree-sha1 = "3de8c5533f220341c2eeeaf3c9ff127c60094bba"
 repo-rev = "master"
 repo-subdir = "packages/PosteriorSampling"
 repo-url = "/net/node07/home/projects/SedaDNA_Demo/simulationsMSPRIME"
