@@ -53,8 +53,6 @@ function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Ab
     return y, d, R, counts
 end 
 
-function filtervectors(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}, allowedindices::BitVector)
-
 function makesizedvectors(d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
     d = SizedVector{length(d), Int}(d)
     R = SizedVector{length(R), Int}(R)
@@ -833,3 +831,4 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
 end # function.
 
 end # package PosteriorSampling
+
