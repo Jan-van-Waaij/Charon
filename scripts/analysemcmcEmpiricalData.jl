@@ -367,3 +367,93 @@ f
 f = Figure(; size = (800, 800))
 ax = Axis(f[1,1])
 vlines!(ax, 4.0)
+
+f = Figure(; size=(2400, 2400))
+
+colours = [
+    :red :turquoise1 :maroon1 :chocolate 
+    :magenta2 :darkgreen :grey63 :navajowhite1  
+    :cyan :yellow3 :darkorange1 :red4 
+    :lightsalmon :yellow1 :green3 :teal 
+]
+
+axes = [Axis(f[numindindex, methodindex], title = "Number of individuals $(numindvec[numindindex])", xlabel = labels[methodindex], xlabelsize=30) for numindindex in 1:4, methodindex in 1:4]
+
+linkxaxes!(axes[:, 1]...)
+linkxaxes!(axes[:, 2]...)
+linkxaxes!(axes[:, 3]...)
+linkxaxes!(axes[:, 4]...)
+
+
+for methodindex in eachindex(methods, labels)
+    method = methods[methodindex] 
+    label = labels[methodindex]
+    for numindindex in eachindex(numindvec)
+        numind = numindvec[numindindex]
+        resultsf = filter(:numind => x -> x == numind, results)
+        if method == "τC"
+            est = resultsf.:τC_median
+            lows = resultsf.:τC_low
+            highs = resultsf.:τC_high
+        elseif method == "τA"
+            est = resultsf.:τA_median
+            lows = resultsf.:τA_low
+            highs = resultsf.:τA_high
+        elseif method == "τCplusτA"
+            est = resultsf.:τCplusτA_median
+            lows = resultsf.:τCplusτA_low
+            highs = resultsf.:τCplusτA_high
+        elseif method == "maxτCτA"
+            est = resultsf.:maxτCτA_median
+            lows = resultsf.:maxτCτA_low
+            highs = resultsf.:maxτCτA_high
+        else
+            error("something went wrong.")
+        end 
+        
+        lowerrors = est - lows 
+        higherrors = highs - est 
+        
+        perm = sortperm(est)
+        
+        xs = est[perm]
+        lowerrors = lowerrors[perm]
+        higherrors = higherrors[perm]
+
+        pops = resultsf.:anchor[perm]
+        ys = 1:length(pops)
+
+        ax = axes[numindindex, methodindex] #Axis(f[numindindex, methodindex], yticks = (ys, pops), title = "Number of individuals $numind", xlabel = label, xlabelsize=30)
+        ax.yticks = (ys, pops)
+        errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = colours[numindindex, methodindex], direction = :x)
+        scatter!(ax, xs, ys; markersize = 5, color = :black)
+    end 
+end 
+
+save("data/images/empirical_data/credibleintervalsempircaldatasortedeverything.png", f)
+
+df = CSV.read("resultsEmpirical.csv.gz", DataFrame)
+gdf = groupby(df, :numind)
+df1 = gdf[1]
+
+f = Figure(; size=(1000, 1000))
+pops = df1.:anchor
+ys = 1:length(pops)
+yticks = (ys, pops)
+axes = [Axis(f[1,1]; yticks = yticks, title = "Number of individuals: 1"),
+      Axis(f[1,2]; yticks = yticks, title = "Number of individuals: 2"),
+      Axis(f[2,1]; yticks = yticks, title = "Number of individuals: 4"),
+      Axis(f[2,2]; yticks = yticks, title = "Number of individuals: 8")]
+
+linkxaxes!(axes...)      
+
+xs = df1.:n_median
+lowerrors = xs - df1.:n_low
+higherrors = df1.:n_high - xs 
+
+errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = :red, direction = :x)
+
+f 
+
+
+

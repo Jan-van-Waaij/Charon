@@ -5,18 +5,32 @@ This package provides functions to sample from the posterior.
 """
 module PosteriorSampling
 
+#=
+DICE 2-pop format:
+ancestral_reads derived_reads frequency counts 
+
+Can easily be loaded with 
+CSV.read("filename.txt", DataFrame)
+coveragevec = df[!, 1] + df[!, 2]
+derivedreadsvec = df[!, 2]
+freqs = df[!, 3]
+counts = df[!, 4]
+=#
+
 # external packages that I use. 
-using Distributions, # for probability distributions
-      Likelihood, # our own package for the likelihood
-      StatsBase, # for the countmap function
-      LinearAlgebra, # Needed for the identity matrix I. 
-      StaticArrays, # for SizedVector and MVector, they are generally faster.
-      Base.Threads # for multithreading.
+using Distributions # for probability distributions
+using Likelihood # our own package for the likelihood
+using StatsBase # for the countmap function
+using LinearAlgebra # Needed for the identity matrix I. 
+using StaticArrays # for SizedVector and MVector, they are generally faster.
+using Base.Threads # for multithreading.
+using DataFrames # for processing Dice files. 
+using CSV # for processing CSV files. 
       
 # functions that you can use when you type 'using PosteriorSampling'. 
-export MHsampler, # The mcmc sampler.
-       MCMCSimProp, # More efficient mcmc sampler for low coverage with simulated proposal, at the cost of a longer run time. 
-       exactposterior
+export MHsampler # The mcmc sampler.
+export MCMCSimProp # More efficient mcmc sampler for low coverage with simulated proposal, at the cost of a longer run time. 
+export exactposterior # caculate the posterior in a given set of parameter points, up to a constant not depending on the parameters. 
 
 function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}, allowedindices::BitVector)
     y, d, R = y[allowedindices], d[allowedindices], R[allowedindices]
@@ -29,16 +43,17 @@ function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Ve
     return y, d, R, counts
 end 
 
-function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Int, allowedindices::BitVector)
-    y, d = y[allowedindices], d[allowedindices]
-    tuples = zip(d, y)
-    cm = countmap(tuples)
-    thekeys = keys(cm)
-    d = [key[1] for key in thekeys]
-    y = [key[2] for key in thekeys]
-    counts = collect(values(cm))
+function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::Integer, counts::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
+    y, d, counts = y[allowedindices], d[allowedindices], counts[allowedindices]
     return y, d, R, counts
 end 
+
+function filtervectorsandapplycountmap(y::Vector{Float64}, d::Vector{Int}, R::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
+    y, d, R, counts = y[allowedindices], d[allowedindices], R[allowedindices], counts[allowedindices]
+    return y, d, R, counts
+end 
+
+function filtervectors(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}, allowedindices::BitVector)
 
 function makesizedvectors(d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
     d = SizedVector{length(d), Int}(d)
@@ -69,9 +84,13 @@ function makeq(nmax::Int, d::AbstractVector{<:Integer}, R::AbstractVector{<:Inte
     return [Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs) for n in 1:nmax]
 end 
 
-checklength(y::Vector{Float64}, d::Vector{Int}, R::Vector{Int}) = length(y) == length(d) == length(R)
+checklength(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}) = length(y) == length(d) == length(R)
 
-checklength(y::Vector{Float64}, d::Vector{Int}, R::Int) = length(y) == length(d)
+checklength(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::Integer) = length(y) == length(d)
+
+checklength(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::Integer, counts::AbstractVector{<:Integer}) = length(y) == length(d) == length(counts)
+
+checklength(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}) = length(y) == length(d) == length(counts) == length(R)
 
 function updateq!(q::AbstractMatrix{<:Real}, binomialcoefficients::AbstractVector{<:Integer}, uniquecoverages::Integer, n::Integer, ϵ::Real)
     for k in 0:2n
@@ -209,64 +228,6 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     return exactposterior(nrange, τCrange, τArange, ϵrange, reads, R, uniqueR, counts, y, messages)
 end # function.
 
-#
-#
-# begin variable R. 
-#
-#
-#=
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Int)
-    # Check conditions.
-    all(0 .≤ ϵrange .< 0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
-    length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
-    length(τCrange) > 0 || throw(ArgumentError("τCrange should have at least one element."))
-    length(τArange) > 0 || throw(ArgumentError("τArange should have at least one element."))
-    length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
-    
-    nrows = length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)
-    results = Matrix{Float64}(undef, 5, nrows)
-    columnindex = 1
-
-    for n in nrange
-        Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
-        #p = MVector{2n+1, Float64}(undef)
-        q = makeqfixedn(n, reads, coverages)
-        M = Matrix{Float64}(undef, 2n+1, 2n+1)
-        for τC in τCrange 
-            expτCQꜜ = exp(Qꜜ, τC)
-            for τA in τArange
-                expτAQ = exp(Q, τA)    
-                mul!(M, expτAQ, expτCQꜜ)
-                for ϵ in ϵrange
-                    # update q. 
-                    updateq!(q, uniquecoverages, n, ϵ)
-                    loglik = 0.0
-                    for index in eachindex(reads, coverages, counts)
-                        # update p
-                        #probderivedalleles!(p, view(hvals, :, index), M, binomialcoefficients)
-                        #loglik +=  counts[index]*log(dot(p, q[reads[index], coverages[index]])) 
-                        loglik += calcloglik(counts, q, reads, coverages, M, hvals, index)
-                    end
-                    results[:, columnindex] .= n, τC, τA, ϵ, loglik 
-                    if messages > 0 # No messages at all when messages ≤ 0.
-                        if columnindex % messages == 0
-                            println("I did ", columnindex, " posterior calculations, ", round(Int, 100*columnindex / nrows, RoundDown), "% finished!")
-                        end
-                    end
-                    columnindex += 1 
-                end # ϵ
-            end # τA
-        end # τC 
-    end # n
-    @assert columnindex == nrows + 1 
-    return results
-end # function.
-=#
-#
-#
-# End variable R, with counts. 
-#
-#
 
 
 
@@ -622,25 +583,24 @@ function MHsampler(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistri
 end # function.
 ## end new, adding error model.
 
-"""
-    MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, df::DataFrame, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+    R = df[!, 1] + df[!, 2]
+    d = df[!, 2]
+    y = df[!, 3]
+    counts = df[!, 4]
+    return MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, R, d, y, counts, messages, scalingmessages)
+end 
 
-MCMC with simulated proposals. 
-"""
+function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::Union{AbstractString, IO}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+    # Can handle both CSV file with and without headers. 
+    df = CSV.read(dicefile, DataFrame, header = false)  
+    if typeof(df[1,1]) <: AbstractString
+        df = CSV.read(dicefile, DataFrame, header = true)
+    end 
+    return MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, df, messages, scalingmessages)
+end  
+
 function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
-    # Check conditions.
-    length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
-    minimum(prioronn) ≥ 1 || throw(ArgumentError("prioronn should have support on positive integers. There is always at least one individual."))
-    nmax = maximum(prioronn)
-    nmax ≤ 10 || throw(ArgumentError("For the current implementation we require that the prior on n is bounded by 10. I.e. P(prioronn ≤ 10)=1"))
-    minimum(prioronϵ) ≥ 0 || throw(ArgumentError("prioronϵ should have support on [0,0.5], but the minimum is negative."))
-    maximum(prioronϵ) ≤ 0.5 || throw(ArgumentError("prioronϵ should have support on [0,0.5], but the maximum exceeds 0.5."))
-    nchains > 0 || throw(ArgumentError("There should be at least one chain."))
-    nsteps > 0 || throw(ArgumentError("nsteps should be positive."))
-    any(r -> r>0, R) || throw(DomainError("At least some coverages should be positive.")) # Are zero coverages allowed?
-    minimum(d) ≥ 0 || throw(DomainError("All reads should be non-negative."))
-    all(d .≤ R) || throw(DomainError("All reads should be at most the coverage."))
-    all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
     checklength(y, d, R) || throw(DimensionMismatch("d, y  and/or R (in case R is a vector) should be of the same length."))
     
     # Remove frequencies 0.0 and 1.0
@@ -648,6 +608,36 @@ function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDist
     any(allowedindices) || throw(ArgumentError("At least one element of y with corresponding positive coverage should be strictly between 0 and 1."))
 
     y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
+    
+    return MCMCSimProp(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, R, d, y, counts, messages, scalingmessages)
+end 
+
+"""
+    MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+
+MCMC with simulated proposals. 
+"""
+function MCMCSimProp(nchains::Int, nsteps::Int, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Int, Vector{Int}}, d::Vector{Int}, y::Vector{Float64}, counts::AbstractVector{<:Integer}, messages::Int=nsteps÷100, scalingmessages::Bool=true)
+    # Check conditions.
+    length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
+    minimum(prioronn) ≥ 1 || throw(ArgumentError("prioronn should have support on positive integers. There is always at least one individual."))
+    nmax = maximum(prioronn)
+    nmax ≤ 10 || throw(ArgumentError("For the current implementation we require that the prior on n is bounded by 10. I.e. P(prioronn ≤ 10)=1"))
+    minimum(prioronϵ) ≥ 0 || throw(ArgumentError("prioronϵ should have support on [0,0.5], but $prioronϵ can take negative values."))
+    maximum(prioronϵ) ≤ 0.5 || throw(ArgumentError("prioronϵ should have support on [0,0.5], but $prioronϵ can take values larger than 0.5."))
+    nchains > 0 || throw(ArgumentError("There should be at least one chain."))
+    nsteps > 0 || throw(ArgumentError("nsteps should be positive."))
+    any(r -> r>0, R) || throw(DomainError("At least some coverages should be positive.")) # Are zero coverages allowed?
+    minimum(d) ≥ 0 || throw(DomainError("All reads should be non-negative."))
+    all(d .≤ R) || throw(DomainError("All reads should be at most the coverage."))
+    all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
+    checklength(y, d, R, counts) || throw(DimensionMismatch("d, y, counts  and/or R (in case R is a vector) should be of the same length."))
+    
+    # Remove frequencies 0.0 and 1.0
+    allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
+    any(allowedindices) || throw(ArgumentError("At least one element of y with corresponding positive coverage should be strictly between 0 and 1."))
+
+    y, d, R, counts = filtervectorsandapplycountmap(y, d, R, counts, allowedindices)
     uniqueR = myunique(R)
     smallestn, largestn = extrema(prioronn)
     smallestτC, smallestτA = minimum(prioronτCτA)

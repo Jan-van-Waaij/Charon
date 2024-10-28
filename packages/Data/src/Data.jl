@@ -13,6 +13,7 @@ using Distributions, # for distributions. Here we use the Binomial distribution 
       GZip # To open zipped vcf files. 
 
 import Base: showerror # format the error and print it. 
+# it is imported in order to extend it to our DataError and FileError types. 
 
 # Exported functions. Available once you add "using Data" to your code. 
 # Other functions can be used with Data.functionname(arguments), which requires at least "import Data" or "using Data". 
@@ -46,6 +47,11 @@ Base.showerror(io::IO, e::DataError) = print(io, "DataError: ", e.message)
 
 # Define custom FileError Error exception.
 # test written.
+"""
+    FileError
+
+FileError exception. Something is wrong with the file. 
+"""
 struct FileError <: Exception
     message::String
 end
@@ -53,7 +59,7 @@ end
 """
     FileError(x...)
 
-Somethings is wrong with the file.
+Somethings is wrong with the file. Details are specified in x. 
 """
 FileError(x...) = FileError(string(x...)) 
 # Formatting of the error message. 
@@ -62,11 +68,11 @@ Base.showerror(io::IO, e::FileError) = print(io, "FileError: ", e.message)
 # Try to find a library function that does this.
 # test written.
 """
-    skiplines(openedfile::IO, numberoflinestobeskipped::Int)
+    skiplines(openedfile::IO, numberoflinestobeskipped::Integer)
 
-Skip the first numberoflinestobeskipped lines of openedfile. 
+Skip the first numberoflinestobeskipped lines of openedfile. numberoflinestobeskipped should be non-negative. 
 """
-function skiplines(openedfile::IO, numberoflinestobeskipped::Int)
+function skiplines(openedfile::IO, numberoflinestobeskipped::Integer)
     numberoflinestobeskipped >= 0 || throw(DomainError("numberoflinestobeskipped must be nonnegative"))
     for _ in Base.OneTo(numberoflinestobeskipped)
         readline(openedfile)
@@ -98,7 +104,7 @@ end
 Our data comes in the form of a vector of substrings, where each substring is either "0|0", "0|1", "1|0" or "1|1", 
 which adds 0, 1, 1 or 2 derived alleles to the total number of derived alleles, respectively. This function counts the total number of derived alleles of the population at the specific locus to which the line corresponds.
 """
-countderivedalleles(line::Vector{SubString{String}}, population::AbstractVector{Int}) = sum(count.(isderived, line[population]))
+countderivedalleles(line::AbstractVector{<:AbstractString}, population::AbstractVector{<:Integer}) = sum(count.(isderived, line[population]))
 # line[population] selects all genotypes belonging to individuals in the population. 
 # count is broadcasted (indicated by the . after the function name) over all SubStrings in line[population]. 
 # Each substring is either "0|0", "0|1", "1|0", or "1|1". The function 'count' counts how many times each substring
@@ -109,16 +115,12 @@ countderivedalleles(line::Vector{SubString{String}}, population::AbstractVector{
 """
     addhashtagstoeachline(str::String)
 
-Precedes each line in str with #, except for an empty string, which is left untouched. 
+Precedes each line in str with "# ", except for an empty string, which is left untouched. 
 """
-function addhashtagstoeachline(str::String)
-    if str == ""
-        return "" # leave an empty string untouched. 
-    else
-        sp = split(str, '\n') # split the string by newline.
-        vec = '#'.*sp.*'\n' # add # before and \n after each line. 
-        return string(vec...) # concatenate the vector of strings to one string and return. 
-    end     
+function addhashtagstoeachline(str::AbstractString)
+    sp = split(str, '\n'; keepempty = false) # split the string by newline.
+    vec = "# ".*sp.*'\n' # add # before and \n after each line. 
+    return string(vec...) # concatenate the vector of strings to one string and return.      
 end 
 
 # tested.
@@ -138,39 +140,37 @@ function openfile(file::String, fileextension::String)
 end
 
 """
+    openwritefileandwritecomments(filename::AbstractString, overwrite::Bool, comments::AbstractString)
+
+Open filename, write comments and return the opened file. If overwrite == false, make sure that the file does not yet exist. Assume that the comments are preceded by '#'. 
+"""
+function openwritefileandwritecomments(filename::AbstractString, overwrite::Bool, comments::AbstractString)
+    if !overwrite
+        if isfile(filename)
+            throw(FileError(filename, " does already exist and should not be overwritten."))
+        end 
+    end 
+    file = GZip.open(filename, "w")
+    print(file, comments)
+    return file 
+end 
+
+
+"""
     addcomments(file::IO, comments::String)
 
 Add comments to the file, and precede them by #'s. Do nothing when comments is the empty string.
 """
-function addcomments(file::IO, comments::String)
-    if comments != ""
-        commentswithhashtags = addhashtagstoeachline(comments)
-        print(file, commentswithhashtags)
-    end 
-end
-
-# tests written. 
-"""
-    openoutputfileandwritecomments(outputfile::String, overwrite::Bool, comments::String)
-
-Open outputfile and write the comments, next return the IO stream. Throws a FileError when overwrite is false, which prevents accidentally overwriting files. It checks whether writefile is a gzipped (.gz) file.
-"""
-function openoutputfileandwritecomments(outputfile::String, overwrite::Bool, comments::String)
-    isfile(outputfile) && !overwrite && throw(FileError("$outputfile does already exist."))
-    endswith(outputfile, ".gz") || throw(FileError("$outputfile should be a zip file (so with file extension .gz)."))
-    openedoutputfile = GZip.open(outputfile, "w")
-    addcomments(openedoutputfile, comments)
-    return openedoutputfile
-end
+addcomments(file::IO, comments::AbstractString) = print(file, addhashtagstoeachline(comments))
 
 # tests written 
 """
-    reads(numberofderivedalles::Int, numberofindividuals::Int, coverage::Int, error::Float64=0.0)
+    reads(numberofderivedalles::Integer, numberofindividuals::Integer, coverage::Integer, error::Real=0.0)
 
 Simulates the number of derived reads, with coverage and numberofderivedalles and numberofindividuals. It is binomially distributed with parameters 
-coverage and numberofderivedalles / (2*numberofindividuals). Note that we assume diploid individuals. With probability error, a derived read is changed into an ancestral read or vice versa an ancestral read is changed into a derived read.
+coverage and numberofderivedalles / (2*numberofindividuals). Note that we assume diploid individuals. With probability error, a derived read is changed into an ancestral read or vice versa an ancestral read is changed into a derived read each with probability ϵ.
 """
-function reads(numberofderivedalles::Int, numberofindividuals::Int, coverage::Int, error::Float64=0.0)
+function reads(numberofderivedalles::Integer, numberofindividuals::Integer, coverage::Integer, error::Real=0.0)
     coverage ≥ 0 || throw(ArgumentError("Coverage should be a non-nonegative integer, you provided $coverage."))
     0.0 ≤ error ≤ 1.0 || throw(ArgumentError(string("The error probability should be between 0.0 and 1.0, but you provided ", error, ".")))
     distderivedreads = Binomial(coverage, numberofderivedalles / (2*numberofindividuals))
@@ -185,28 +185,28 @@ end
 
 # tests written.
 """
-    reads(numberofderivedalles::Int, numberofindividuals::Int, distcoverage::Distribution{Univariate, Discrete}, error::Float64=0.0)
+    reads(numberofderivedalles::Integer, numberofindividuals::Integer, distcoverage::Distribution{Univariate, Discrete}, error::Real=0.0)
 
 Simulate the number of derived reads and total number of reads. Returns a tuple with number of derived reads and total number of reads. 
 distnumreads is the distribution of the number of reads, for instance Poisson(10). Returns a tuple of Ints where 
 the first argument is the number of derived reads and the second number is the total number of reads. With probability error, a derived read is changed into an ancestral read or vice versa an ancestral read is changed into a derived read.
 """
-function reads(numberofderivedalles::Int, numberofindividuals::Int, distcoverage::Distribution{Univariate, Discrete}, error::Float64=0.0)
+function reads(numberofderivedalles::Integer, numberofindividuals::Integer, distcoverage::Distribution{Univariate, Discrete}, error::Real=0.0)
     coverage = rand(distcoverage)
     return reads(numberofderivedalles, numberofindividuals, coverage, error)
 end
 
 # test written. 
 """
-    reads(vcffile::IO, individualsinthesediment::Vector{Int}, coverage, error::Float64=0.0)
+    reads(vcffile::IO, individualsinthesediment::AbstractVector{<:Integer}, coverage::Union{Integer, Distribution{Univariate, Discrete}}, error::Real=0.0)
 
-vcffile is an opened (zipped) VCF file (.vcf or .vcf.gz). Select the individuals at positions individualsinthesediment and count the number of derived alleles of all individuals together, at each locus. Then simulate reads. The parameter coverage is either an Int or a Distribution{Univariate, Discrete} distribution.
+vcffile is an opened (zipped) VCF file (.vcf or .vcf.gz). Select the individuals at positions individualsinthesediment and count the number of derived alleles of all individuals together, at each locus. Then simulate reads. The parameter coverage is either an Integer or a Distribution{Univariate, Discrete} distribution.
 
 Output: two vectors (Vector{Int}) where the first one are the number of derived reads for each locus, and the second is the coverage for each locus. In case coverage is an Int, then the second vector is constant. 
 
-With probability error, a derived read is changed into an ancestral read or vice versa an ancestral read is changed into a derived read.
+With probability error, a derived read is changed into an ancestral read or vice versa an ancestral read is changed into a derived read each with probability ϵ.
 """
-function reads(vcffile::IO, individualsinthesediment::Vector{Int}, coverage, error::Float64=0.0)
+function reads(vcffile::IO, individualsinthesediment::AbstractVector{<:Integer}, coverage::Union{Integer, Distribution{Univariate, Discrete}}, error::Real=0.0)
     allderivedreads = Int[] # vector with number of derived reads.
     allcoverages = Int[] # vector with coverages. 
     numberofindividualsinthesediment = length(individualsinthesediment)
@@ -227,14 +227,14 @@ end
 
 # test written 
 """
-    reads(vcffile::String, individualsinthesediment::Vector{Int}, coverage, error::Float64=0.0)
+    reads(vcffile::AbstractString, individualsinthesediment::AbstractVector{<:Integer}, coverage::Union{Integer, Distribution{Univariate, Discrete}}, error::Real=0.0; fileextension::AbstractString=".vcf.gz")
 
 Open VCF file vcffile and generate reads. Returns two vectors, the first containing the total number of derived reads and the second containing all coverages. This function closes the VCF file afterwards. 
 
 With probability error, a derived read is changed into an ancestral read or vice versa an ancestral read is changed into a derived read.
 """
-function reads(vcffile::String, individualsinthesediment::Vector{Int}, coverage, error::Float64=0.0)
-    openedvcffile = openfile(vcffile, ".vcf.gz")
+function reads(vcffile::AbstractString, individualsinthesediment::AbstractVector{<:Integer}, coverage::Union{Integer, Distribution{Univariate, Discrete}}, error::Real=0.0; fileextension::AbstractString=".vcf.gz")
+    openedvcffile = openfile(vcffile, fileextension)
     allderivedreads, allcoverages = reads(openedvcffile, individualsinthesediment, coverage, error)
     close(openedvcffile)
     return allderivedreads, allcoverages
@@ -242,13 +242,13 @@ end
 
 # test written 
 """
-    reads(vcffile::IO, readsfile::IO, individualsinthesediment::Vector{Int}, coverage, comments::String="", error::Float64=0.0)
+    reads(vcffile::IO, readsfile::IO, individualsinthesediment::AbstractVector{<:Integer}, coverage::Union{Integer, Distribution{Univariate, Discrete}}, comments::AbstractString="", error::Real=0.0)
 
 Simulate reads with reads(readfile, individualsinthesediment, coverage) and write them to writefile. writefile contains two columns, the first containing the total number of derived reads and the second containing all coverages.  The comments (if any) are preceded with '#' and written to readsfile.
 
 With probability error, a derived read is changed into an ancestral read or vice versa an ancestral read is changed into a derived read.
 """
-function reads(vcffile::IO, readsfile::IO, individualsinthesediment::Vector{Int}, coverage, comments::String="", error::Float64=0.0)
+function reads(vcffile::IO, readsfile::IO, individualsinthesediment::AbstractVector{<:Integer}, coverage::Union{Integer, Distribution{Univariate, Discrete}}, comments::AbstractString="", error::Real=0.0)
     addcomments(readsfile, comments)
     allderivedreads, allcoverages = reads(vcffile, individualsinthesediment, coverage, error) # simulate reads.
     writedlm(readsfile, [allderivedreads allcoverages]) # write the results to writefiles.
@@ -262,38 +262,14 @@ Simulate reads with reads(readfile, individualsinthesediment, coverage) and writ
 
 With probability error, a derived read is changed into an ancestral read or vice versa an ancestral read is changed into a derived read.
 """
-function reads(vcffile::String, readsfile::String, individualsinthesediment::Vector{Int}, coverage, overwrite::Bool=false, comments::String="", error::Float64=0.0)
-    openedvcffile = openfile(vcffile, ".vcf.gz")
-    openedreadsfile = openwritefileandwritecomments(readsfile, overwrite, comments)
+function reads(vcffile::AbstractString, readsfile::AbstractString, individualsinthesediment::AbstractVector{<:Integer}, coverage::Union{Integer, Distribution{Univariate, Discrete}}, overwrite::Bool=false, comments::String="", error::Real=0.0l; fileextensionvcffile::AbstractString=".vcf.gz", fileextensionreadsfile::AbstractString=".txt.gz")
+    openedvcffile = openfile(vcffile, fileextensionvcffile)
+    openedreadsfile = openwritefileandwritecomments(readsfile, overwrite, comments) 
     allderivedreads, allcoverages = reads(openedvcffile, individualsinthesediment, coverage, error)
     writedlm(openedreadsfile, [allderivedreads allcoverages])
     close(openedvcffile)
     close(openedreadsfile)
 end
-
-# test written 
-# This function is needed so that the compiler can distinghuish between all the options. 
-#reads(vcffile::String, readsfile::String, individualsinthesediment::Vector{Int}, coverage, comments::String="", error::Float64=0.0) =
-#    reads(vcffile, readsfile, individualsinthesediment, coverage, false, comments, error)
-
-#= HOLA PROBLEEMPJE!!!!!
-IK KREEG DE VOLGENDE FOUTMELDING
-WARNING: Method definition reads(String, String, Array{Int64, 1}, Any) in module Data at /home/people/jvawa/.julia/packages/Data/ibwf7/src/Data.jl:253 overwritten at /home/people/jvawa/.julia/packages/Data/ibwf7/src/Data.jl:264.
-
-OPLOSSING 1: REMOVER 264 EN KIJK WAT ER GEBEURT!
-=#
-
-#=
-Algemene stramien: 
-voeg # toe aan comments. 
-schrijf de comments. 
-
-initialise some variables.
-
-readline 
-
-loop over all lines and write all the results to some other file, or store them into a vector. 
-=#
 
 # tests written
 """

@@ -1,4 +1,7 @@
-using Test, Data, Distributions, GZip
+using Test # for testing
+using Data # the package to be tested
+using Distributions # for probability distributions 
+using GZip # to work with zipped files. 
 
 @testset "Data" begin
     @testset "DataError" begin
@@ -59,19 +62,30 @@ using Test, Data, Distributions, GZip
         bla 
         bla bla 
         bla """
-        textwithhashtags = addhashtagstoeachline(text)
-        sp = split(textwithhashtags, '\n')
-        sp = sp[begin:end-1] # last item is "", because
-        # the last character of textwithhashtags is \n. 
-        @test length(sp) == 3
-        for line in sp 
-            @test line[1] == '#'
-        end 
+        textwithhashtags = """
+        # bla 
+        # bla bla 
+        # bla 
+        """
+        @test addhashtagstoeachline(text) == textwithhashtags
     end 
 
     @testset "openfile" begin
+        # wrong extension. 
         @test_throws Data.FileError Data.openfile("/home/projects/SedaDNA_Demo/simulationsMSPRIME/packages/Data/test/1to10.txt.gz", ".vcf.gz")
+        
+        # file does not exist 
+        @test_throws Data.FileError Data.openfile("/home/projects/SedaDNA_Demo/simulationsMSPRIME/packages/Data/test/filethatdoesnotexist.vcf.gz", ".vcf.gz")
+        
+        # file does not exist 
+        @test_throws Data.FileError Data.openfile("/home/projects/SedaDNA_Demo/simulationsMSPRIME/packages/Data/test/filethatdoesnotexist.vcf.gz")
+        
+        # see if file gets opened. 
         openedfile = Data.openfile("/home/projects/SedaDNA_Demo/simulationsMSPRIME/packages/Data/test/1to10.txt.gz", ".txt.gz")
+        @test close(openedfile) == 0 # hack to see if file was open.
+        
+        # see if file gets opened.
+        openedfile = Data.openfile("/home/projects/SedaDNA_Demo/simulationsMSPRIME/packages/Data/test/1to10.txt.gz")
         @test close(openedfile) == 0 # hack to see if file was open. 
     end
 
