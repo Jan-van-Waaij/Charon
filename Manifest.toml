@@ -25,9 +25,9 @@ version = "0.1.38"
 
 [[Adapt]]
 deps = ["LinearAlgebra", "Requires"]
-git-tree-sha1 = "d80af0733c99ea80575f612813fa6aa71022d33a"
+git-tree-sha1 = "cde29ddf7e5726c9fb511f340244ea3481267608"
 uuid = "79e6a3ab-5dfb-504d-930d-738a2a938a0e"
-version = "4.1.0"
+version = "3.7.2"
 
 [[AliasTables]]
 deps = ["PtrArrays", "Random"]
@@ -157,9 +157,9 @@ version = "0.7.6"
 
 [[ColorSchemes]]
 deps = ["ColorTypes", "ColorVectorSpace", "Colors", "FixedPointNumbers", "PrecompileTools", "Random"]
-git-tree-sha1 = "13951eb68769ad1cd460cdb2e64e5e95f1bf123d"
+git-tree-sha1 = "b5278586822443594ff615963b0c09755771b3e0"
 uuid = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
-version = "3.27.0"
+version = "3.26.0"
 
 [[ColorTypes]]
 deps = ["FixedPointNumbers", "Random"]
@@ -168,10 +168,10 @@ uuid = "3da002f7-5984-5a60-b8a6-cbb66c0b333f"
 version = "0.11.5"
 
 [[ColorVectorSpace]]
-deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "Requires", "Statistics", "TensorCore"]
-git-tree-sha1 = "a1f44953f2382ebb937d60dafbe2deea4bd23249"
+deps = ["ColorTypes", "FixedPointNumbers", "LinearAlgebra", "SpecialFunctions", "Statistics", "TensorCore"]
+git-tree-sha1 = "600cc5508d66b78aae350f7accdb58763ac18589"
 uuid = "c3611d14-8923-5661-9e6a-0046d554d3a4"
-version = "0.10.0"
+version = "0.9.10"
 
 [[Colors]]
 deps = ["ColorTypes", "FixedPointNumbers", "Reexport"]
@@ -707,10 +707,7 @@ version = "2.40.1+0"
 
 [[Likelihood]]
 deps = ["Distributions", "LinearAlgebra", "StaticArrays"]
-git-tree-sha1 = "72ee1b30750540d2321d63212dbbf6db2052f268"
-repo-rev = "master"
-repo-subdir = "packages/Likelihood"
-repo-url = "/net/node07/home/projects/SedaDNA_Demo/simulationsMSPRIME"
+path = "/home/projects/SedaDNA_Demo/simulationsMSPRIME/packages/Likelihood"
 uuid = "6b21585a-d53a-4759-b69f-7d4585bb53a6"
 version = "0.1.0"
 
@@ -908,6 +905,12 @@ git-tree-sha1 = "949347156c25054de2db3b166c52ac4728cbad65"
 uuid = "90014a1f-27ba-587c-ab20-58faa44d9150"
 version = "0.11.31"
 
+[[PackageToBeShipped]]
+deps = ["CSV", "DataFrames", "Distributions", "LinearAlgebra", "StaticArrays", "StatsBase"]
+path = "packages/PackageToBeShipped"
+uuid = "7cff5b3a-8f09-4ceb-8bc2-fd31e9948585"
+version = "0.1.0"
+
 [[Pango_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "FriBidi_jll", "Glib_jll", "HarfBuzz_jll", "JLLWrappers", "Libdl"]
 git-tree-sha1 = "e127b609fb9ecba6f201ba7ab753d5a605d53801"
@@ -996,11 +999,8 @@ uuid = "2dfb63ee-cc39-5dd5-95bd-886bf059d720"
 version = "1.4.3"
 
 [[PosteriorSampling]]
-deps = ["Distributions", "Likelihood", "LinearAlgebra", "StaticArrays", "StatsBase"]
-git-tree-sha1 = "809fb2c5ce0cd225922b692a0b16ff1e2109d317"
-repo-rev = "master"
-repo-subdir = "packages/PosteriorSampling"
-repo-url = "/net/node07/home/projects/SedaDNA_Demo/simulationsMSPRIME"
+deps = ["CSV", "DataFrames", "Distributions", "Likelihood", "LinearAlgebra", "StaticArrays", "StatsBase"]
+path = "packages/PosteriorSampling"
 uuid = "eef181ce-16ce-45cf-8940-73268af89f45"
 version = "1.0.0-DEV"
 

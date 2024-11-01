@@ -1,10 +1,27 @@
 
+module A 
+
+"""
+    first explanation
+"""
+f(x::Number) = x 
+
+""" 
+    second explanation 
+"""
+f(x::AbstractString) = x 
+
+end 
+
+
+#=
+
 println(length(ARGS)) 
 println(typeof(ARGS[1]))
 
 n = parse()
 
-
+=# 
 
 
 #= 

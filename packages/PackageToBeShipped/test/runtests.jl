@@ -4,8 +4,10 @@ using Distributions # for probability distributions
 using LinearAlgebra # for Tridiagonal objects 
 using StatsBase # for countmap 
 using Random # for setting the seed
+using CSV # to test readcsvfile 
+using GZip # to test readcsvfile 
 
-using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobderivedreads!, preparedata 
+using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobderivedreads!, preparedata, filtervectorsandapplycountmap, makeqfixedn, makeq, updateq!, readcsvfile
 
 @testset "PackageToBeShipped" begin
     @testset "EigenExpansion and exp" begin
@@ -148,43 +150,7 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
     @testset "logprobderivedreads!" begin
         # when τC=τA=0, then logprobderivedreads! calculates the log probability 
         # of the binomial distribution with parameters R and (1-ϵ)*k/2n+ϵ*k/(2n), where k itself is binomially distributed with parameters 2n and y. 
-        for n in 1:10
-            for R in 1:100
-                for ϵ in 0.1:0.1:0.4
-                    expsize = 1000 
-                    Random.seed!(1987)
-                    y = rand(0.1:0.1:0.9, expsize)
-                    q = Matrix{Float64}(undef, 2n+1, R+1)
-                    Random.seed!(1987)
-                    reads = rand(0:R, expsize)
-                    cm = countmap(zip(y, reads))
-                    y = [key[1] for key in keys(cm)]
-                    reads = [key[2] for key in keys(cm)]
-                    counts = collect(values(cm))
-                    Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
-                    τC = 0.3 
-                    τA = 0.2 
-                    @test logprobderivedreads!(q, reads, R, R, counts, -0.1, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
-                    @test logprobderivedreads!(q, reads, R, R, counts, τC, -0.1, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
-                    @test logprobderivedreads!(q, reads, R, R, counts, τC, τA, -0.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
-                    @test logprobderivedreads!(q, reads, R, R, counts, τC, τA, 1.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
-                    logpdffunction = logprobderivedreads!(q, reads, R, R, counts, 0.0, 0.0, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
-                    logpdftheoretical = 0.0
-                    for index in eachindex(reads, counts, y)
-                        d = reads[index]
-                        distk = Binomial(2n, y[index])
-                        prob = 0.0 
-                        for k in 0:2n 
-                            distgivenk = Binomial(R, (1-ϵ)*k/(2n)+ϵ*(2n-k)/(2n))
-                            prob += pdf(distgivenk, d)*pdf(distk, k)
-                        end 
-                        logpdftheoretical += counts[index] * log(prob)
-                    end 
-                    @test logpdffunction ≈ logpdftheoretical 
-                end # ϵ  
-            end # R
-        end # n 
-
+       
         # test for equality with τC = τA = 0.0, with non-constant R version. 
         for n in 1:10
             for ϵ in 0.1:0.1:0.4
@@ -228,33 +194,91 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
                 @test logpdffunction ≈ logpdftheoretical 
             end # ϵ  
         end # n 
-
-        # logprobderivedreads! with R or fill(R, length(reads)) should be the same. 
-        for n in 1:10
-            for R in 1:100 
-                ϵ = rand(Uniform(0.0, 0.5))
-                y = rand(1000)
-                Rvec = fill(R, 1000)
-                uniqueRvec = [R]
-                reads = rand(0:R, 1000)
-                cm = countmap(zip(reads, y))
-                reads = [key[1] for key in keys(cm)]
-                y = [key[2] for key in keys(cm)]
-                counts = collect(values(cm))
-                Rvec = fill(R, length(counts))
-                Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
-                qmatrix = Matrix{Float64}(undef, 2n+1, R+1)
-                qdic = Dict((d, R) => Vector{Float64}(undef, 2n+1) for d in unique(reads))
-                for τC in 0.0:0.1:1.0
-                    for τA in 0.0:0.1:1.0
-                        for ϵ in 0.1:0.1:0.4
-                            resultintversion = logprobderivedreads!(qmatrix, reads, R, R, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
-                            resultvecversion = logprobderivedreads!(qdic, reads, Rvec, uniqueRvec, counts, τC, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
-                            @test resultintversion == resultvecversion
-                        end # ϵ
-                    end #τA
-                end #τC
-            end # R 
-        end # n 
     end # testset logprobderivedreads!
+
+    @testset "filtervectorsandapplycountmap" begin
+        y = vcat([1, 1, 2, 3, 4], rand(10))
+        d = vcat([1, 1, 2, 3, 4], rand([1,2,3], 10))
+        R = vcat([3, 3, 2, 3, 4], rand(4:6, 10 ))
+        allowedindices = vcat(trues(5), falses(10))
+        y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
+        @test Set(y) == Set([1, 2, 3, 4])
+        @test Set(d) == Set([1, 2, 3, 4])
+        @test Set(R) == Set([2, 3, 4])
+        @test Set(counts) == Set([2, 1, 1, 1])
+    end
+
+    @testset "makeqfixedn" begin 
+        for n in 1:10 
+            d = rand(1:10, 1000)
+            R = [rand(d[i]:10) for i in 1:1000]
+            uniquedandR = unique(zip(d, R))
+            q = makeqfixedn(n, d, R)
+            @test length(q) == length(uniquedandR)
+            for value in values(q) 
+                @test length(value) == 2n+1
+            end
+            q = makeqfixedn(n, uniquedandR)
+            @test length(q) == length(uniquedandR)
+            for value in values(q) 
+                @test length(value) == 2n+1
+            end 
+        end 
+    end 
+
+    @testset "makeq" begin
+        for nmax in 1:10 
+            d = rand(1:10, 1000)
+            R = [rand(d[i]:10) for i in 1:1000]
+            q = makeq(nmax, d, R)
+            @test length(q) == nmax
+            lendic = length(unique(zip(d, R)))
+            for key in keys(q) 
+                @test length(q[key]) == lendic 
+            end  
+            for n in 1:nmax 
+                for value in values(q[n]) 
+                    @test length(value) == 2n+1
+                end 
+            end 
+        end
+    end
+
+    @testset "updateq!" begin 
+        for n in 1:10 
+            dic = Dict((d, R) => Vector{Float64}(undef,2n+1) for R in 1:10 for d in 0:R)
+            binomialcoefficients = binomial.(2n, 0:2n)
+            updateq!(dic, binomialcoefficients, 1:10, n, 0.1)
+            for R in 1:10
+                for d in 0:R 
+                    for k in 0:2n 
+                        dist = Binomial(R, k*0.9/(2n)+(2n-k)*0.1/(2n))
+                        @test dic[(d,R)][k+1] == binomialcoefficients[k+1] * pdf(dist, d)
+                    end 
+                end 
+            end 
+        end  
+    end 
+
+    @testset "calcloglik" begin 
+    end 
+
+    @testset "readcsvfile" begin 
+        filewithheader = "testwithheader.csv"
+        filewithoutheader = "testwithoutheader.csv"
+        filewithheaderzipped = "testwithheader.csv.gz"
+        filewithoutheaderzipped = "testwithoutheader.csv.gz"
+
+        dfh = readcsvfile(filewithheader)
+        dfw = readcsvfile(filewithoutheader)
+        dfhz = readcsvfile(filewithheaderzipped)
+        dfwz = readcsvfile(filewithoutheaderzipped)
+
+        #@test Matrix(dfhz) == Matrix(dfwz)
+        @test Matrix(dfh) == Matrix(dfw) == Matrix(dfhz) == Matrix(dfwz)
+    end 
+
+
+
+
 end # testset PackageToBeShipped

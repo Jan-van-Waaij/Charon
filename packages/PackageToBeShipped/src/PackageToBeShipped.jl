@@ -5,55 +5,81 @@ This package provides functions to sample from the posterior.
 """
 module PackageToBeShipped
 
-import Base: ==, exp # redefine exp and == for EigenExpansion types. This requires an import statement.
+import Base: ==, exp, show # redefine exp and == for EigenExpansion types. 
+# This requires an import statement. Redefine show for customized printing of EigenExpansion types. 
 
 # external packages that I use. 
 using Distributions # for probability distributions
 using StatsBase # for the countmap function
-using LinearAlgebra # Needed for the identity matrix I. 
-using StaticArrays # for SizedVector and MVector, they are generally faster.
+using LinearAlgebra # Needed for the identity matrix I and the different matrix types and functions. 
+using StaticArrays # for SizedVector, they are generally faster 
+#than the build-in Matrix types, because they store their size in their type.
 using Base.Threads # for multithreading.
 using DataFrames # for processing Dice files. 
 using CSV # for processing CSV files. 
       
-# functions that you can use when you type 'using PosteriorSampling'. 
-export MCMCsampler # More efficient mcmc sampler for low coverage with simulated proposal, at the cost of a longer run time. 
+# functions that you can use when you type 'using PackageToBeShipped'. 
+export MCMCsampler # MCMC sampler.
+export exactposterior # Calculate the posterior up to a fixed constant depending on the data, 
+# but not depending on the parameters. Can be used for maximum likelihood estimation.
 
-## Likelihood functions, from the former Likelihood package 
+# Likelihood functions
 # Tests written
 """
-    EigenExpansion{S, T}
+    EigenExpansion{Q<:AbstractMatrix{<:Real}, R<:Real, S<:AbstractVector{R}, T<:AbstractMatrix{<:Real}}
 
-Representation of a matrix M=P*D*P^{-1}, where D is a diagonal matrix and P an invertible matrix. P and P^{-1} have type S and the vector of diagonal elements of D has type T. The fields are P, D and Pinv. 
+Representation of a matrix decomposition M=P*D*P^{-1}, where D is a diagonal matrix and P an invertible matrix with inverse Pinv. The fields are P, D and Pinv of types Q, Diagonal{R, S}, and T, respectively. 
+
+This decomposition can be used for fast matrix exponentiation, using that exp(M) = P*exp(D)*Pinv, and the fact that the exponent of a diagonal matrix is formed by exponentiating its diagonal elements.
 """
-struct EigenExpansion{S, T}
-    P::S
-    D::Diagonal{Float64, T}
-    Pinv::S
+struct EigenExpansion{Q<:AbstractMatrix{<:Real}, R<:Real, S<:AbstractVector{R}, T<:AbstractMatrix{<:Real}}
+    P::Q
+    D::Diagonal{R, S}
+    Pinv::T
     # inner constructor.
-    function EigenExpansion(M::AbstractMatrix{Float64})
+    function EigenExpansion(M::AbstractMatrix{<:Real})
         F = eigen(M)
         P = F.vectors
         D = Diagonal(F.values)
         Pinv = inv(P)
-        return new{typeof(P), typeof(F.values)}(P, D, Pinv)
+        return new{typeof(P), eltype(F.values), typeof(F.values), typeof(Pinv)}(P, D, Pinv)
     end
 end 
 
 # outer constructor
 # Tests written
 """
-    EigenExpansion(M::Tridiagonal{Float64, Vector{Float64}})
-    EigenExpansion(M::Matrix{Float64})
+    EigenExpansion(M::Tridiagonal{S, T}}) where {S<:Real, T<:AbstractVector{S}}
+    EigenExpansion(M::Diagonal{S, T}}) where {S<:Real, T<:AbstractVector{S}}
+    EigenExpansion(M::SymTridiagonal{S, T}}) where {S<:Real, T<:AbstractVector{S}}
+    EigenExpansion(M::Symmetric{S, T}}) where {S<:Real, T<:AbstractVector{S}}
+    EigenExpansion(M::AbstractMatrix{<:Real})
+    EigenExpansion(M::Bidiagonal{S, T}}) where {S<:Real, T<:AbstractVector{S}}
 
-Try to find a decomposition M = P*D*P^(-1), where D is a diagonal matrix
-and P is an invertible matrix. Note that exp(M) = P*exp(D)*P^(-1).
-Fields:
-F.P::Matrix{Float64}
-F.D::Diagonal{Float64, Vector{Float64}}
-F.Pinv::Matrix{Float64} 
+Try to find a decomposition M = P*D*P^(-1).
 """
-EigenExpansion(M::Tridiagonal{Float64, Vector{Float64}}) = EigenExpansion(SizedMatrix{size(M)...,Float64}(M))
+EigenExpansion(M::Tridiagonal{S, T}) where {S<:Real, T<:AbstractVector{S}} = EigenExpansion(SizedMatrix{size(M)...,S}(M))
+EigenExpansion(M::Diagonal{S, T}) where {S<:Real, T<:AbstractVector{S}} = EigenExpansion(SizedMatrix{size(M)...,S}(M))
+EigenExpansion(M::Bidiagonal{S, T}) where {S<:Real, T<:AbstractVector{S}} = EigenExpansion(SizedMatrix{size(M)...,S}(M))
+EigenExpansion(M::SymTridiagonal{S, T}) where {S<:Real, T<:AbstractVector{S}} = EigenExpansion(SizedMatrix{size(M)...,S}(M))
+EigenExpansion(M::Symmetric{S, T}) where {S<:Real, T<:AbstractVector{S}} = EigenExpansion(SizedMatrix{size(M)...,S}(M))
+
+
+"""
+    Base.show(io::IO, mime::MIME{Symbol("text/plain")}, F::EigenExpansion{Q, R, S, T}) where {Q<:AbstractMatrix{<:Real}, R<:Real, S<:AbstractVector{R}, T<:AbstractMatrix{<:Real}}
+
+Pretty display of EigenExpansion types. 
+"""
+function Base.show(io::IO, mime::MIME{Symbol("text/plain")}, F::EigenExpansion{Q, R, S, T}) where {Q<:AbstractMatrix{<:Real}, R<:Real, S<:AbstractVector{R}, T<:AbstractMatrix{<:Real}}
+    print(io, "EigenExpansion{$Q, $R, $S, $T}\n\nP:\n\n")
+    show(io, mime, F.P) 
+    print(io, "\n\nD:\n\n")
+    show(io, mime, F.D)
+    print(io, "\n\nPinv:\n\n")
+    show(io, mime, F.Pinv)
+end
+
+
 
 # Tests written. 
 """
@@ -65,22 +91,22 @@ Test whether E1 and E2 have the same decomposition P*D*P^(-1), so whether E1.P =
 
 # tests written
 """
-    exp(F::EigenExpansion, s::Float64)
+    exp(F::EigenExpansion, s::Real)
 
-Calculate e^(s*M) in an efficient way. 
+Calculate e^(s*M) in a numerical efficient way. 
 
 If F=EigenExpansion(M), then exp(s*M)=exp(F,s)=F.P*exp(s*F.D)*F.Pinv, which makes 
 use of the fast implementation of exp for diagonal matrices (it is just the exponetiation of the diagonal elements).     
 """
-exp(F::EigenExpansion, s::Float64) =  F.P*exp(s*F.D)*F.Pinv
+exp(F::EigenExpansion, s::Real) =  F.P*exp(s*F.D)*F.Pinv
 
 # Tests written.
 """
-    makeQ(n::Int)
+    makeQ(n::Integer)
 
 Calculate the (2n+1)x(2n+1) Q tridiagonal matrix as in Schraiber 2018. 
 """
-function makeQ(n::Int)
+function makeQ(n::Integer)
     lowerdiagonal = 0.5*(1.0:2n).*(0.0:2n-1.0)
     diagonal = -(0.0:2n).*(2n:-1.0:0.0)
     upperdiagonal = 0.5*(2n:-1.0:1.0).*(2n-1:-1.0:0.0)
@@ -89,11 +115,11 @@ end
 
 # Tests written.
 """
-    makeQꜜ(n::Int)
+    makeQꜜ(n::Integer)
 
 Calculate the (2n+1)x(2n+1) Qꜜ tridiagonal matrix as in Schraiber 2018.  
 """
-function makeQꜜ(n::Int)
+function makeQꜜ(n::Integer)
     lowerdiagonal = 0.5*(1.0:2n).*(0.0:2n-1.0)
     diagonal = -(0.0:2n).*(2n+1.0:-1.0:1.0)
     upperdiagonal = 0.5*(2n+1:-1.0:2.0).*(2n:-1.0:1.0)
@@ -102,24 +128,23 @@ end
 
 # Tests written. 
 """
-    calcmatrix(Q::EigenExpansion, Qꜜ::EigenExpansion, τC::Float64, τA::Float64)
+    calcmatrix(Q::EigenExpansion, Qꜜ::EigenExpansion, τC::Real, τA::Real)
 
 Calculate the matrix `e^{Q*τ_A}e^{Qꜜτ_C}` as in Schraiber. Note that in general, for matrices, exp(A+B) ≠ exp(A)exp(B) (equality holds if and only if A and B commute, which is not the case for Q and Qꜜ). 
 """
-calcmatrix(Q::EigenExpansion, Qꜜ::EigenExpansion, τC::Float64, τA::Float64) =  exp(Q, τA)*exp(Qꜜ, τC)
+calcmatrix(Q::EigenExpansion, Qꜜ::EigenExpansion, τC::Real, τA::Real) =  exp(Q, τA)*exp(Qꜜ, τC)
 
 # Tests written 
 """
-    preparedata(n::Int, y::AbstractVector{<:Real})
+    preparedata(n::Integer, y::AbstractVector{<:Real})
 
 Returns a named tuple (Q=Q, Qꜜ=Qꜜ, hvals=hvals, binomialcoefficients=binomialcoefficients), where 
 Q and Qꜜ are EigenExpansions of Q and Qꜜ (as in Schraiber 2018), respectively. 
 hvals is a (2n+1) x length(y) matrix of type SizedMatrix. SizedMatrix is used rather than SMatrix, because this matrix is so large, and 
-SMatrix is slow for large matrices, here hvals[k+1,i] = y[i]^k*(1-y[i])^(2n-k).
+SMatrix is slow for large matrices. The matrix hvals is defined as hvals[k+1,i] = y[i]^k*(1-y[i])^(2n-k) (note that Julia has 1-based indexing).
 binomialcoefficients is a vector (of type SVector) containing the binomial coefficients 2n over k, k=0,...,2n.  
 """
-function preparedata(n::Int, y::AbstractVector{<:Real})
-    # I can define an if statement and give Matrix(makeQ(n)) for large n.
+function preparedata(n::Integer, y::AbstractVector{<:Real})
     Q = EigenExpansion(makeQ(n))
     Qꜜ = EigenExpansion(makeQꜜ(n))
     binomialcoefficients = SVector{2n+1, Int}(binomial.(2n, 0:2n))
@@ -134,67 +159,40 @@ end
 
 # tests written 
 """
-    logprobderivedreads!(q::AbstractArray{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+    logprobderivedreads!(q::AbstractDict{<:Tuple{Integer, Integer}, <:AbstractVector{<:Real}}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, τC::Real, τA::Real, ϵ::Real, n::Integer, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{<:Integer}, hvals::AbstractMatrix{<:Real})
 
-Calculate the log probability of the derived reads, which is the log-likelihood. This function will mutate q. q[k+1,d+1] contains the probability of seeing d derived reads out of R, given k derived alleles out of 2n, d = 0,...,R and k=0,...,2n.  
+Calculate the log probabilty of the data, a.k.a. the likelihood. It mutates q, which is dictionary, and is used for intermediate calculations. 
 """
-function logprobderivedreads!(q::AbstractMatrix{Float64}, reads::AbstractVector{Int}, R::Int, uniqueR::Int, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
-    if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
-        return -Inf 
-    else
-        M = calcmatrix(Q, Qꜜ, τC, τA)
-        # update q. q[k+1, d+1] is the probability of d derived alleles given k derived alleles (out of 2n)
-        # and error probability ϵ.
-        for k in 0:2n
-            dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
-            for d in 0:R
-                q[k+1, d+1] = binomialcoefficients[k+1] * pdf(dist, d)
-            end
-        end 
-        loglik = 0.0
-        for index in eachindex(reads, counts)
-            # update p
-            loglik += counts[index] * log(max(0.0, dot(view(q, :, reads[index]+1), M, view(hvals, :, index)))) 
-        end
-        return loglik
-    end 
-end # Constant coverage and with errors. 
-
-
-# tests written 
-"""
-    logprobderivedreads!(q::Dict{Tuple{Int64, Int64}, Vector{Float64}}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, uniquecoverages::AbstractVector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
-
-Same as before, only with non-constant coverages. Mutates q, which is dictionary. Key (d, R), if it exists, has an associate vector as value, where the k+1-th element is the probability of having d derived reads out of R, given k derived alleles out of 2n, d=0,...,R and k=0,...,2n. 
-"""
-function logprobderivedreads!(q::Dict{Tuple{Int64, Int64}, Vector{Float64}}, reads::AbstractVector{Int}, coverages::AbstractVector{Int}, uniquecoverages::AbstractVector{Int}, counts::AbstractVector{Int}, τC::Float64, τA::Float64, ϵ::Float64, n::Int, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{Int}, hvals::AbstractMatrix{Float64})
+function logprobderivedreads!(q::AbstractDict{<:Tuple{Integer, Integer}, <:AbstractVector{<:Real}}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, τC::Real, τA::Real, ϵ::Real, n::Integer, Q::EigenExpansion, Qꜜ::EigenExpansion, binomialcoefficients::AbstractVector{<:Integer}, hvals::AbstractMatrix{<:Real})
     if τC < 0 || τA < 0 || ϵ < 0 || ϵ > 1
         return -Inf
     else
         M = calcmatrix(Q, Qꜜ, τC, τA) 
-        for R in uniquecoverages
-            for k in 0:2n
-                dist = Binomial(R, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
-                for d in 0:R
-                    if haskey(q, (d, R))
-                        q[d, R][k+1] = binomialcoefficients[k+1]*pdf(dist, d)
-                    end 
-                end 
-            end 
-        end 
+        updateq!(q, binomialcoefficients, uniquecoverages, n, ϵ)
         loglik = 0.0
         for index in eachindex(reads, coverages, counts)
-            loglik += counts[index]*log(max(0.0, dot(q[reads[index], coverages[index]], M, view(hvals, :, index))))
+            loglik += calcloglik(counts, q, reads, coverages, M, hvals, index)
         end
         return loglik
     end
 end
+# End likelihood functions. 
 
+# tests written 
+"""
+    filtervectorsandapplycountmap(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
 
-## End likelihood functions. 
+This function does the following:
+y_filtered = y[allowedindices]
+d_filtered = d[allowedindices]
+R_filtered = R[allowedindices]
 
+Next it counts how many times (y_filtered[i], d_filtered[i], R_filtered[i]) occurs, for all triples, and next returns four vectors (y_filtered_unique, d_filtered_unique, R_filtered_unique, counts), where each triple (y_filtered_unique[i], d_filtered_unique[i], R_filtered_unique[i]) is unique and occurs counts[i] times in zip(y_filtered, d_filtered, R_filtered).
+"""
 function filtervectorsandapplycountmap(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
-    y, d, R = y[allowedindices], d[allowedindices], R[allowedindices]
+    y = y[allowedindices]
+    d = d[allowedindices]
+    R = R[allowedindices]
     tuples = zip(d, R, y)
     cm = countmap(tuples)
     d = [key[1] for key in keys(cm)]
@@ -204,62 +202,40 @@ function filtervectorsandapplycountmap(y::AbstractVector{<:Real}, d::AbstractVec
     return y, d, R, counts
 end 
 
-function filtervectorsandapplycountmap(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::Integer, counts::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
-    y, d, counts = y[allowedindices], d[allowedindices], counts[allowedindices]
-    return y, d, R, counts
-end 
+# tests written 
+"""
+    makeqfixedn(n::Integer, uniquedandRs::AbstractVector{<:Tuple{Integer, Integer}})
 
-function filtervectorsandapplycountmap(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, allowedindices::AbstractVector{Bool})
-    y, d, R, counts = y[allowedindices], d[allowedindices], R[allowedindices], counts[allowedindices]
-    return y, d, R, counts
-end 
+Construct a dictionary with keys (d[i], R[i]) and values real vectors of length 2n+1.
+"""
+makeqfixedn(n::Integer, uniquedandRs::AbstractVector{<:Tuple{Integer, Integer}}) = Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs)
 
-function makesizedvectors(d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
-    d = SizedVector{length(d), Int}(d)
-    R = SizedVector{length(R), Int}(R)
-    return d, R 
-end 
-
-function makesizedvectors(d::AbstractVector{<:Integer}, R::Integer)
-    d = SizedVector{length(d), Int}(d)
-    return d, R 
-end 
-
-function makeqfixedn(n::Integer, d::AbstractVector{<:Integer}, R::Integer)
-    return MMatrix{2n+1, R+1, Float64}(undef)
-end 
-
+# test written.
+"""
+    makeqfixedn(n::Integer, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}) 
+"""
 function makeqfixedn(n::Integer, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
     uniquedandRs = unique(zip(d, R))
-    return Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs)
+    return makeqfixedn(n, uniquedandRs)
 end 
 
-function makeq(nmax::Integer, d::AbstractVector{<:Integer}, R::Integer)
-    return [MMatrix{2n+1, R+1, Float64}(undef) for n in 1:nmax]
-end 
+# tests written 
+"""
+    makeq(nmax::Integer, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
 
+Construct a vector of length nmax, where the n-th item is a dictionary with keys (d[i], R[i]) and values real vectors of length 2n+1. 
+"""
 function makeq(nmax::Integer, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer})
     uniquedandRs = unique(zip(d, R))
-    return [Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquedandRs) for n in 1:nmax]
+    return [makeqfixedn(n, uniquedandRs) for n in 1:nmax]
 end 
 
-checklength(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}) = length(y) == length(d) == length(R)
+# tests written 
+"""
+    updateq!(q::AbstractDict{<:Tuple{Integer, Integer}, <:AbstractVector{<:Real}}, binomialcoefficients::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, n::Integer, ϵ::Real)
 
-checklength(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::Integer) = length(y) == length(d)
-
-checklength(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::Integer, counts::AbstractVector{<:Integer}) = length(y) == length(d) == length(counts)
-
-checklength(y::AbstractVector{<:Real}, d::AbstractVector{<:Integer}, R::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}) = length(y) == length(d) == length(counts) == length(R)
-
-function updateq!(q::AbstractMatrix{<:Real}, binomialcoefficients::AbstractVector{<:Integer}, uniquecoverages::Integer, n::Integer, ϵ::Real)
-    for k in 0:2n
-        dist = Binomial(uniquecoverages, k*(1.0-ϵ)/(2n) + (2n-k)*ϵ/(2n))
-        for d in 0:uniquecoverages
-            q[k+1, d+1] = binomialcoefficients[k+1] * pdf(dist, d)
-        end 
-    end              
-end 
-
+Update the dictionary q, so that q[(d, R)][k+1] is the probability of d derived reads out of R when you have k derived alleles with n inidividuals. 
+"""
 function updateq!(q::AbstractDict{<:Tuple{Integer, Integer}, <:AbstractVector{<:Real}}, binomialcoefficients::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, n::Integer, ϵ::Real)
     for R in uniquecoverages
         for k in 0:2n
@@ -273,48 +249,37 @@ function updateq!(q::AbstractDict{<:Tuple{Integer, Integer}, <:AbstractVector{<:
     end          
 end 
 
-calcloglik(counts::AbstractVector{<:Integer}, q::AbstractMatrix{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{Integer, AbstractVector{<:Integer}}, M::AbstractMatrix{<:Real}, hvals::AbstractMatrix{<:Real}, index::Integer) = counts[index] * log(max(0.0, dot(view(q, :, reads[index]+1), M, view(hvals, :, index))))
+"""
+    calcloglik(counts::AbstractVector{<:Integer}, q::AbstractDict{<:Tuple{Integer, Integer}, <:AbstractVector{<:Real}}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, M::AbstractMatrix{<:Real}, hvals::AbstractMatrix{<:Real}, index::Integer)
 
-calcloglik(counts::AbstractVector{<:Integer}, q::AbstractDict{<:Tuple{Integer, Integer}, <:AbstractVector{<:Real}}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, M::Matrix{<:Real}, hvals::Matrix{<:Real}, index::Integer) = counts[index]*log(max(0.0, dot(q[reads[index], coverages[index]], M, view(hvals, :, index))))
+Calculate the log-likelihood at locus index. 
+"""
+calcloglik(counts::AbstractVector{<:Integer}, q::AbstractDict{<:Tuple{Integer, Integer}, <:AbstractVector{<:Real}}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, M::AbstractMatrix{<:Real}, hvals::AbstractMatrix{<:Real}, index::Integer) = counts[index]*log(max(0.0, dot(q[reads[index], coverages[index]], M, view(hvals, :, index))))
 
-myunique(R::Integer) = R 
+"""
+    readcsvfile(filename::AbstractString)
 
-myunique(R::AbstractVector{<:Integer}) = unique(R)
-
+Read CSV file and turns it into a DataFrame (from DataFrames package). It automatically detects whether the CSV file has a header or not. 
+"""
 function readcsvfile(filename::AbstractString)
+    # read the first line to determine if it is a header or not. 
     dftest = CSV.read(filename, DataFrame, header = false, limit=1)  
-    if typeof(dftest[1,1]) <: AbstractString
+    if typeof(dftest[1,1]) <: AbstractString 
+        # the first item in the first row was a string, so the csv file has a header.
         df = CSV.read(filename, DataFrame, header = true)
     else
+        # the first item in the first row was not a string, so the csv file has no header. 
         df = CSV.read(filename, DataFrame, header = false)
     end 
     return df 
 end 
 
-##
-##
-## fixed R, error model, fixed n. 
-##
-##
 """
-    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{AbstractVector{<:Integer}, Integer}, uniquecoverages::Union{AbstractVector{<:Integer}, Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer)
+    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer)
 
-Adaptive Metropolis (Haario et al. 2001, mentioned in Rosenthal 2010 "Optimal proposal distributions and adaptive MCMC, section 3.2), with prior on τC, τA and ϵ, the true number of individuals is assumed to be known. Instead of using the recommended scaling factor 1.4161, we use the first nsteps÷4 steps to find a scaling factor that results in an acceptance ratio between 0.1 and 0.6. Setting messages ≤ 0, results in no messages being print, if message>0, then every message steps, a message is print, updating the progress.
-
-If not specified, the initial values are choosen from the prior.
-
-This function returns a vector of length nchains. Each element contains the results of one chain; it is a tuple of five vectors: a vector containing the a vector containing the τC-values, a vector containing the τA-values, a vector containing the ϵ values, a vector telling whether a certain proposal was accepted or not and a vector with unnormalised posterior log-densities. So for example 
-
-```julia
-results = MHsampler(nchains, nsteps, prioronn, prioronτCτA, R, d, y, messages)
-τCsample, τAsample, ϵsample, acceptedvec, logjointprob = results[1]
-```
-
-gives the results of the first chain.
-
-Here we assume that the true number of individuals in the sediment is known and that the coverage is constant.
+Calculate the exact posterior up to a fixed unknown constant that depends on the data, but does not depend on the parameters. 
 """
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::Union{AbstractVector{<:Integer}, Integer}, uniquecoverages::Union{AbstractVector{<:Integer}, Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer)
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer)
     # Check conditions.
     all(0 .≤ ϵrange .< 0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
@@ -364,12 +329,11 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     @assert index == nrows + 1 
     return (ns, τCs, τAs, ϵs, logliks)
 end # function.
-##
-##
-## End fixed R with counts
-##
 
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::Union{Integer, AbstractVector{<:Integer}}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
+"""
+    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
+"""
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
     # Check conditions.
     all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
@@ -384,7 +348,7 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     minimum(reads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
     all(reads .≤ R) || throw(DomainError("All reads should be at most the coverage."))
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
-    checklength(y, reads, R) || throw(DimensionMismatch("y, reads (and, in case R is a vector, also R) should be of the same length."))
+    length(y) == length(reads) == length(R) || throw(DimensionMismatch("y, reads and R should be of the same length."))
     
     # Remove frequencies 0.0 and 1.0 and zero coverages. 
     allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
@@ -392,7 +356,7 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     
     y, reads, R, counts = filtervectorsandapplycountmap(y, reads, R, allowedindices)
 
-    uniqueR = myunique(R)
+    uniqueR = unique(R)
 
     return exactposterior(nrange, τCrange, τArange, ϵrange, reads, R, uniqueR, counts, y, messages)
 end # function.
@@ -408,60 +372,11 @@ derivedreadsvec = df[!, 2]
 freqs = df[!, 3]
 counts = df[!, 4]
 =#
-"""
- MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, df::AbstractDataFrame, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
-
-df is a DataFrame (from the DataFrames package) in DICE 2-pop format: It should contain exactly 4 columns, the first one contains the number of ancestral reads, the second the number of derived reads, the third the frequency of the derived allele in the anchor population and the fourth column contains the number of loci with exactly this combination of data. 
-"""
-function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, df::AbstractDataFrame, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
-    R = df[!, 1] + df[!, 2]
-    d = df[!, 2]
-    y = df[!, 3]
-    counts = df[!, 4]
-    return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, R, d, y, counts, messages, scalingmessages)
-end 
 
 """
- MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::AbstractString, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::AbstractVector{<:Integer}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
 
-dicefile is a (zipped) CSV-file in DICE 2-pop format: It should contain exactly 4 columns, the first one contains the number of ancestral reads, the second the number of derived reads, the third the frequency of the derived allele in the anchor population and the fourth column contains the number of loci with exactly this combination of data.
-"""
-function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::AbstractString, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
-    # Can handle both CSV file with and without headers. 
-    df = readcsvfile(dicefile)
-    return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, df, messages, scalingmessages)
-end  
-
-"""
- MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::IO, messages::Integer=nsteps÷100, scalingmessages::Bool=true, header::Bool=true)
-
-dicefile is an opened CSV-file in DICE 2-pop format: It should contain exactly 4 columns, the first one contains the number of ancestral reads, the second the number of derived reads, the third the frequency of the derived allele in the anchor population and the fourth column contains the number of loci with exactly this combination of data.
-
-With the named argument header one can indicate whether the CSV file has a header. 
-"""
-function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::IO, messages::Integer=nsteps÷100, scalingmessages::Bool=true, header::Bool=true)
-    # Can handle both CSV file with and without headers. 
-    df = CSV.read(dicefile, DataFrame, header = header) 
-    return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, df, messages, scalingmessages)
-end  
-
-
-function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Integer, AbstractVector{<:Integer}}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
-    checklength(y, d, R) || throw(DimensionMismatch("d, y  and/or R (in case R is a vector) should be of the same length."))
-    
-    # Remove frequencies 0.0 and 1.0
-    allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
-    any(allowedindices) || throw(ArgumentError("At least one element of y with corresponding positive coverage should be strictly between 0 and 1."))
-
-    y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
-    
-    return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, R, d, y, counts, messages, scalingmessages)
-end 
-
-"""
- MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::Union{Integer, AbstractVector{<:Integer}}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
-
-MCMC with simulated proposals. 
+MCMC with simulated proposals. There are counts[i] loci with coverage R[i], d[i] derived alleles and frequency y[i] in the anchor population. 
 """
 function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::AbstractVector{<:Integer}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
     # Check conditions.
@@ -477,14 +392,19 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
     minimum(d) ≥ 0 || throw(DomainError("All reads should be non-negative."))
     all(d .≤ R) || throw(DomainError("All reads should be at most the coverage."))
     all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
-    checklength(y, d, R, counts) || throw(DimensionMismatch("d, y, counts  and/or R (in case R is a vector) should be of the same length."))
+    length(y) == length(d) == length(R) == length(counts) || throw(DimensionMismatch("d, y, counts  and R should be of the same length."))
+    
     
     # Remove frequencies 0.0 and 1.0
     allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
     any(allowedindices) || throw(ArgumentError("At least one element of y with corresponding positive coverage should be strictly between 0 and 1."))
 
-    y, d, R, counts = filtervectorsandapplycountmap(y, d, R, counts, allowedindices)
-    uniqueR = myunique(R)
+    y = y[allowedindices]
+    d = d[allowedindices]
+    R = R[allowedindices]
+    counts = counts[allowedindices]
+
+    uniqueR = unique(R)
     smallestn, largestn = extrema(prioronn)
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
@@ -492,7 +412,6 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
     gridτC = range(smallestτC, largestτC, length=23)[begin+1:end] # avoid a 0.0 value
     gridτA = range(smallestτA, largestτA, length=23)[begin+1:end] # avoid a 0.0 value
     gridϵ = range(smallestϵ, largestϵ, length=24)[begin+1:end-1] # avoid a 0.0 and 0.5 value
-    # ook nog aanpassen. 
     ns, τCs, τAs, ϵs, logliks = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, d, R, uniqueR, counts, y, 0)
     maxlikindex = argmax(logliks)
     nmaxlik = ns[maxlikindex]
@@ -513,7 +432,8 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
         @assert n ∉ ns[.!filteronn]
     end 
     
-    d, R = makesizedvectors(d, R)
+    d = SizedVector{length(d), Int}(d)
+    R = SizedVector{length(R), Int}(R)
     Qs = Vector{EigenExpansion}(undef, nmax)
     Qꜜs = Vector{EigenExpansion}(undef, nmax)
     hvals = Vector{Any}(undef, nmax) # contains the matrices with values y^k(1-y)^{2n-k}.
@@ -528,7 +448,6 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
     # which contain the states of the Markov chain. 
     results = Vector{Tuple{Vector{Int}, Matrix{Float64}, Matrix{Float64}, Matrix{Float64}, BitMatrix, Matrix{Float64}}}(undef,nchains)
     @threads for chainindex in eachindex(results) 
-        #p = [MVector{2n+1, Float64}(undef) for n in 1:nmax]
         q = makeq(nmax, d, R)
         nsample = Vector{Int}(undef, nsteps)
         τCsample = Matrix{Float64}(undef, nsteps, nmax)
@@ -574,7 +493,9 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
         distproposalϵ = fill(Normal(0.0, σ),nmax)
         nproposalprobvec = fill(0.2/(nmax-1), nmax)
         nproposalprobvec[nprevious] = 0.8
-        distproposaln = Categorical(nproposalprobvec) # so with 80% chance nproposal is 
+        distproposaln = Categorical(nproposalprobvec) # so with 80% chance nproposal is
+        # equal to the previous value, or equal to one of the other values 
+        # 1,..., nprevious-1, nprevious+1,...,nmax with probability 0.2/(nmax-1).  
         scalefactor = fill(2.38^2/4, nmax) # = 2.38^2/4, as we have dimension of prior equal to 4.
         τCproposal = Vector{Float64}(undef, nmax)
         τAproposal = Vector{Float64}(undef, nmax)
@@ -597,7 +518,8 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
             end 
             logacceptanceprobability .= loglikproposal .- loglikprevious .+ logpdfpriorproposal .- logpdfpriorprevious
             acceptanceprobability .= exp.(logacceptanceprobability)
-            # accept or reject the proposal with probability max(1, acceptanceprobability), note that rand() samples from the uniform distribution.
+            # accept or reject the proposal with probability max(1, acceptanceprobability), 
+            # note that rand() samples from the uniform distribution.
             for index in eachindex(accepted, acceptanceprobability)
                 accepted[index] = rand() ≤ acceptanceprobability[index]
             end 
@@ -656,14 +578,9 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
                         elseif acceptancerate > 0.15 # acceptancerate too large, take bigger steps.
                             scalefactor[n] = 4*scalefactor[n]/3
                             scalingmessages && println("Chain ", chainindex, " talking, I scaled the scalefactor with factor 4/3, new scalefactor = ", scalefactor, '.')
-                        end # So do nothing when the acceptancerate is between 0.1 and 0.6.     
+                        end # So do nothing when the acceptancerate is between 0.1 and 0.15.     
                     end 
-                    # update Σ to the empirical covariance matrix of [τC, τA] based on the first step steps. 
-                    #Σ = scalefactor[n] * (cov([τCsample[1:10:step, n] τAsample[1:10:step, n]], corrected=true) + 1.0e-10*I) # 1.0e-10*I is a small treshold, to prevent getting (almost) the zero matrix. In addition it guarantees that Σ is positive definite, as the empirical covariance matrix is positive 
-                    # semi-definite, so adding a positive definite matrix makes the whole positive definite. 
                     distproposalτCτA[n] = MvNormal(scalefactor[n]*Σ+1.0e-14*I)
-                    # Do I need to do something for the discrete parameter? NO, in the simulations, the sampler gets stuck in one value of n,
-                    # so not really necessary. 
                     distproposalϵ[n] = Normal(0.0, sqrt(scalefactor[n]) * σ + 1.0e-14)
                 end 
             end
@@ -677,6 +594,61 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
     end # Chains. 
     return results
 end # function.
+
+"""
+    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::AbstractVector{<:Integer}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+
+R[i] is the coverage, d[i] the number of derived reads and y[i] the frequency of the derived allele in the anchor population at locus i. 
+"""
+function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::AbstractVector{<:Integer}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+    length(y) == length(d) == length(R) || throw(DimensionMismatch("d, y  and/or R (in case R is a vector) should be of the same length."))
+    
+    # Remove frequencies 0.0 and 1.0
+    allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
+    any(allowedindices) || throw(ArgumentError("At least one element of y with corresponding positive coverage should be strictly between 0 and 1."))
+
+    y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
+    
+    return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, R, d, y, counts, messages, scalingmessages)
+end 
+
+"""
+    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, df::AbstractDataFrame, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+
+df is a DataFrame (from the DataFrames package) in DICE 2-pop format: It should contain exactly 4 columns, the first one contains the number of ancestral reads, the second the number of derived reads, the third the frequency of the derived allele in the anchor population and the fourth column contains the number of loci with exactly this combination of data. 
+"""
+function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, df::AbstractDataFrame, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+    R = df[!, 1] + df[!, 2]
+    d = df[!, 2]
+    y = df[!, 3]
+    counts = df[!, 4]
+
+    return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, R, d, y, counts, messages, scalingmessages)
+end 
+
+"""
+    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::IO, messages::Integer=nsteps÷100, scalingmessages::Bool=true, header::Bool=true)
+
+dicefile is an opened CSV-file in DICE 2-pop format: It should contain exactly 4 columns, the first one contains the number of ancestral reads, the second the number of derived reads, the third the frequency of the derived allele in the anchor population and the fourth column contains the number of loci with exactly this combination of data.
+
+With the named argument "header" one should indicate whether the CSV file has a header. Default is true.
+"""
+function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::IO, messages::Integer=nsteps÷100, scalingmessages::Bool=true, header::Bool=true)
+    df = CSV.read(dicefile, DataFrame, header = header) 
+    return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, df, messages, scalingmessages)
+end  
+
+
+"""
+    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::AbstractString, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+
+ dicefile is a (zipped) CSV-file in DICE 2-pop format: It should contain exactly 4 columns, the first one contains the number of ancestral reads, the second the number of derived reads, the third the frequency of the derived allele in the anchor population and the fourth column contains the number of loci with exactly this combination of data.
+"""
+function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::AbstractString, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+    # Can handle both CSV file with and without headers. 
+    df = readcsvfile(dicefile)
+    return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, df, messages, scalingmessages)
+end  
 
 end # module 
 
