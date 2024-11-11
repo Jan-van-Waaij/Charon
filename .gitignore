@@ -14,3 +14,6 @@
 *.tree
 *.txt
 *.tsv 
+# Ignore Manifest.toml files.
+**/Manifest.toml
+ 
