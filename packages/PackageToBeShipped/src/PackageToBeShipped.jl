@@ -22,7 +22,7 @@ using CSV # for processing CSV files.
 export MCMCsampler # MCMC sampler.
 export exactposterior # Calculate the posterior up to a fixed constant depending on the data, 
 # but not depending on the parameters. Can be used for maximum likelihood estimation.
-export unpackposterior 
+export unpackposterior # Constructs the posterior from the posterior from from the conditional chains. 
 
 # Likelihood functions
 # Tests written
