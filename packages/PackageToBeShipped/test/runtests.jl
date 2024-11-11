@@ -306,7 +306,7 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         chains = [(nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob)]
         df = unpackposterior(chains, nsteps)
         @test df.nsample == nsample 
-        for step in 1:nsteps 
+        for index in 1:nsteps 
             @test df.τCsample[index] % nmax == df.nsample[index] % nmax 
             @test df.τCsample[index] % nmax == -df.nsample[index] % nmax 
         end 

@@ -260,7 +260,7 @@ calcloglik(counts::AbstractVector{<:Integer}, q::AbstractDict{<:Tuple{Integer, I
 """
     readcsvfile(filename::AbstractString)
 
-Read CSV file and turns it into a DataFrame (from DataFrames package). It automatically detects whether the CSV file has a header or not. 
+Read CSV file and turn it into a DataFrame (from DataFrames package). It automatically detects whether the CSV file has a header or not. 
 """
 function readcsvfile(filename::AbstractString)
     # read the first line to determine if it is a header or not. 
@@ -410,9 +410,9 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
     smallestϵ, largestϵ = extrema(prioronϵ)
-    gridτC = range(smallestτC, largestτC, length=23)[begin+1:end] # avoid a 0.0 value
-    gridτA = range(smallestτA, largestτA, length=23)[begin+1:end] # avoid a 0.0 value
-    gridϵ = range(smallestϵ, largestϵ, length=24)[begin+1:end-1] # avoid a 0.0 and 0.5 value
+    gridτC = range(smallestτC, largestτC, length=23)[2:end] # avoid a 0.0 value
+    gridτA = range(smallestτA, largestτA, length=23)[2:end] # avoid a 0.0 value
+    gridϵ = range(smallestϵ, largestϵ, length=24)[2:end-1] # avoid a 0.0 and 0.5 value
     ns, τCs, τAs, ϵs, logliks = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, d, R, uniqueR, counts, y, 0)
     maxlikindex = argmax(logliks)
     nmaxlik = ns[maxlikindex]
@@ -632,7 +632,7 @@ end
 
 dicefile is an opened CSV-file in DICE 2-pop format: It should contain exactly 4 columns, the first one contains the number of ancestral reads, the second the number of derived reads, the third the frequency of the derived allele in the anchor population and the fourth column contains the number of loci with exactly this combination of data.
 
-If the file is a zipped file, open it using a zip decompressor:
+If you have Julia 1.3 or higher, and the file is a zipped file, open it using a zip decompressor:
 ```julia
 using CodecZlib
 dicefile = GzipDecompressorStream(open("path/to/your/file.csv.gz"))
