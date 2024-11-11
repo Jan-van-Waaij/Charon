@@ -6,6 +6,7 @@ using StatsBase # for countmap
 using Random # for setting the seed
 using CSV # to test readcsvfile 
 using GZip # to test readcsvfile 
+using DataFrames # to test unpackposterior
 
 using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobderivedreads!, preparedata, filtervectorsandapplycountmap, makeqfixedn, makeq, updateq!, readcsvfile
 
@@ -278,7 +279,39 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         @test Matrix(dfh) == Matrix(dfw) == Matrix(dfhz) == Matrix(dfwz)
     end 
 
-
-
+    @testset "unpackposterior" begin
+        # unpackposterior(chains::Vector{Tuple}, nsteps::Integer)
+        # chains is a vector of tuples.
+        # each tuple consists of six arrays: a vector, three matrices, a bitmatrix and a matrix.  
+        #=
+        nsample = Vector{Int}(undef, nsteps)
+        τCsample = Matrix{Float64}(undef, nsteps, nmax)
+        τAsample = Matrix{Float64}(undef, nsteps, nmax)
+        ϵsample = Matrix{Float64}(undef, nsteps, nmax)
+        acceptedvec = BitMatrix(undef, nsteps, nmax+1) 
+        =#
+        nsteps = 100
+        nmax = 10 
+        nsample = repeat(1:10, 10)
+        τCsample = Matrix{Float64}(undef, nsteps, nmax)
+        logjointprob = Matrix{Float64}(undef, nsteps, nmax+1)
+        for step in 1:nsteps 
+            for n in 1:nmax 
+                τCsample[step, n] = (step-1)*nmax+n 
+            end 
+        end  
+        τAsample = -τCsample 
+        ϵsample = τCsample .^ 2 
+        acceptedvec = BitMatrix(undef, nsteps, max+1) 
+        chains = [(nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob)]
+        df = unpackposterior(chains, nsteps)
+        @test df.nsample == nsample 
+        for step in 1:nsteps 
+            @test df.τCsample[index] % nmax == df.nsample[index] % nmax 
+            @test df.τCsample[index] % nmax == -df.nsample[index] % nmax 
+        end 
+        @test df.ϵsample == df.τCsample .^ 2
+        @test df.accepted  == trues(nsteps)
+    end
 
 end # testset PackageToBeShipped

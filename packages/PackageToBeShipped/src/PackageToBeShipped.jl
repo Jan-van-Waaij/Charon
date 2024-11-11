@@ -22,6 +22,7 @@ using CSV # for processing CSV files.
 export MCMCsampler # MCMC sampler.
 export exactposterior # Calculate the posterior up to a fixed constant depending on the data, 
 # but not depending on the parameters. Can be used for maximum likelihood estimation.
+export unpackposterior 
 
 # Likelihood functions
 # Tests written
@@ -654,6 +655,45 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
     df = readcsvfile(dicefile)
     return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, df, messages, scalingmessages)
 end  
+
+
+function unpackposterior(chains::AbstractVector{<:Tuple{AbstractVector{<:Integer}, AbstractMatrix{<:Real}, AbstractMatrix{<:Real}, AbstractMatrix{<:Real}, AbstractMatrix{Bool}, AbstractMatrix{<:Real}}}, nsteps::Integer)
+    results = DataFrame(nsample = Int[],
+            τCsample = Float64[],
+            τAsample = Float64[],
+            ϵsample = Float64[],
+            accepted = Bool[],
+            logjointprob = Float64[],
+            chainid = Int[]
+            )
+    for index in eachindex(chains)
+        nsample, τCsample, τAsample, ϵsample, _, logjointprob = chains[index]
+        τCsampleunpacked = Vector{Float64}(undef, nsteps)
+        τAsampleunpacked = Vector{Float64}(undef, nsteps)
+        ϵsampleunpacked = Vector{Float64}(undef, nsteps)
+        for index in 1:nsteps
+            τCsampleunpacked[index] = τCsample[index, nsample[index]]
+            τAsampleunpacked[index] = τAsample[index, nsample[index]]
+            ϵsampleunpacked[index] = ϵsample[index, nsample[index]]
+        end 
+        acceptedvecunpacked = BitVector(undef, nsteps)
+        acceptedvecunpacked[1] = true 
+        for index in 2:nsteps
+            everythingthesame = (τCsampleunpacked[index] == τCsampleunpacked[index-1]) && (τAsampleunpacked[index] == τAsampleunpacked[index-1]) && (ϵsampleunpacked[index] == ϵsampleunpacked[index-1]) && (nsample[index] == nsample[index-1])
+            acceptedvecunpacked[index] = !everythingthesame
+        end 
+        df = DataFrame(nsample = nsample,
+                            τCsample = τCsampleunpacked,
+                            τAsample = τAsampleunpacked,
+                            ϵsample = ϵsampleunpacked,
+                            accepted = acceptedvecunpacked,
+                            logjointprob = logjointprob[:,1],
+                            chainid = fill(Int(index), nsteps)
+                            )
+        results = vcat(results, df)
+    end 
+    return results
+end 
 
 end # module 
 
