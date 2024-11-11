@@ -14,6 +14,11 @@
 *.tree
 *.txt
 *.tsv 
+# Except for test files.
+!packages/PackageToBeShipped/test/testwithheader.csv
+!packages/PackageToBeShipped/test/testwithheader.csv.gz 
+!packages/PackageToBeShipped/test/testwithoutheader.csv 
+!packages/PackageToBeShipped/test/testwithoutheader.csv.gz
 # Ignore Manifest.toml files.
 **/Manifest.toml
  
