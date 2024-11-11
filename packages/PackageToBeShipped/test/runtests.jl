@@ -302,7 +302,7 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         end  
         τAsample = -τCsample 
         ϵsample = τCsample .^ 2 
-        acceptedvec = BitMatrix(undef, nsteps, max+1) 
+        acceptedvec = BitMatrix(undef, nsteps, nmax+1) 
         chains = [(nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob)]
         df = unpackposterior(chains, nsteps)
         @test df.nsample == nsample 
