@@ -308,7 +308,7 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         @test df.nsample == nsample 
         for index in 1:nsteps 
             @test df.τCsample[index] % nmax == df.nsample[index] % nmax 
-            @test df.τCsample[index] % nmax == -df.nsample[index] % nmax 
+            @test df.τAsample[index] % nmax == -df.nsample[index] % nmax 
         end 
         @test df.ϵsample == df.τCsample .^ 2
         @test df.accepted  == trues(nsteps)
