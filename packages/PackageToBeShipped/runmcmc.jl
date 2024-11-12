@@ -2,7 +2,8 @@ using Pkg
 
 
 Pkg.activate("Runmcmc")
-Pkg.add(["PackageToBeShipped", "Distributions", "CSV", "DataFrames"])
+Pkg.add(path="/home/projects/SedaDNA_Demo/simulationsMSPRIME/", subdir="packages/PackageToBeShipped/")
+Pkg.add(["Distributions", "CSV", "DataFrames"])
 
 using PackageToBeShipped, Distributions, CSV, DataFrames 
 
@@ -29,7 +30,9 @@ prioronn = DiscreteUniform(1, 10) # discrete uniform prior on {1, 2, ..., 10}.
 prioronϵ = Uniform(0, 0.5) # uniform prior on interval[0, 0.5].
 
 
-resultsdataframe = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, dicefile)
+chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, dicefile)
 
-CSV.write(resultsfile, resultsdataframe)
+results = unpackposterior(chains, nsteps)
+
+CSV.write(resultsfile, results)
 

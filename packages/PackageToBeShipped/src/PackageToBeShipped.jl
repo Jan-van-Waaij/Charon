@@ -276,11 +276,11 @@ function readcsvfile(filename::AbstractString)
 end 
 
 """
-    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer)
+    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer)
 
 Calculate the exact posterior up to a fixed unknown constant that depends on the data, but does not depend on the parameters. 
 """
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer)
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer)
     # Check conditions.
     all(0 .≤ ϵrange .< 0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
@@ -297,8 +297,8 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
 
     index = 1
     for n in nrange
-        Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
-        q = makeqfixedn(n, reads, coverages)
+        Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, frequencies)
+        q = makeqfixedn(n, derivedreads, coverages)
         M = Matrix{Float64}(undef, 2n+1, 2n+1)
         for τC in τCrange 
             expτCQꜜ = exp(Qꜜ, τC)
@@ -309,8 +309,8 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
                     # update q
                     updateq!(q, binomialcoefficients, uniquecoverages, n, ϵ)
                     loglik = 0.0
-                    for index in eachindex(reads, counts)
-                        loglik += calcloglik(counts, q, reads, coverages, M, hvals, index)
+                    for index in eachindex(derivedreads, counts)
+                        loglik += calcloglik(counts, q, derivedreads, coverages, M, hvals, index)
                     end
                     ns[index] = n 
                     τCs[index] = τC 
@@ -332,9 +332,9 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
 end # function.
 
 """
-    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
+    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
 """
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
     # Check conditions.
     all(0 .≤ ϵrange .<0.5) || throw(DomainError("ϵ should be in [0.0,0.5)."))
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
@@ -345,21 +345,21 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
     minimum(τArange) > 0 || throw(ArgumentError("All values in τArange should be positive."))
     length(ϵrange) > 0 || throw(ArgumentError("ϵrange should have at least one element."))
     minimum(ϵrange) > 0 || throw(ArgumentError("All values in ϵrange should be positive."))
-    maximum(R) > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
-    minimum(reads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
-    all(reads .≤ R) || throw(DomainError("All reads should be at most the coverage."))
-    all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
-    length(y) == length(reads) == length(R) || throw(DimensionMismatch("y, reads and R should be of the same length."))
+    maximum(coverages) > 0 || throw(ArgumentError("Inference is impossible when all coverages are zero."))
+    minimum(derivedreads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
+    all(derivedreads .≤ coverages) || throw(DomainError("All reads should be at most the coverage."))
+    all(0.0 .≤ frequencies .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
+    length(frequencies) == length(derivedreads) == length(coverages) || throw(DimensionMismatch("y, reads and R should be of the same length."))
     
     # Remove frequencies 0.0 and 1.0 and zero coverages. 
-    allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
+    allowedindices = (0.0 .< frequencies .< 1.0) .& (coverages .> 0)
     any(allowedindices) || throw(ArgumentError("At least one element of y with positive coverage should be strictly between 0 and 1."))
     
-    y, reads, R, counts = filtervectorsandapplycountmap(y, reads, R, allowedindices)
+    frequencies, derivedreads, coverages, counts = filtervectorsandapplycountmap(frequencies, derivedreads, coverages, allowedindices)
 
-    uniqueR = unique(R)
+    uniqueR = unique(coverages)
 
-    return exactposterior(nrange, τCrange, τArange, ϵrange, reads, R, uniqueR, counts, y, messages)
+    return exactposterior(nrange, τCrange, τArange, ϵrange, coverages, uniqueR, derivedreads, frequencies, counts, messages)
 end # function.
 
 #=
@@ -375,11 +375,11 @@ counts = df[!, 4]
 =#
 
 """
-    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::AbstractVector{<:Integer}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
 
 MCMC with simulated proposals. There are counts[i] loci with coverage R[i], d[i] derived alleles and frequency y[i] in the anchor population. 
 """
-function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::AbstractVector{<:Integer}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
     # Check conditions.
     length(prioronτCτA) == 2 || throw(DimensionMismatch("prior on [τC, τA] must be of length 2."))
     minimum(prioronn) ≥ 1 || throw(ArgumentError("prioronn should have support on positive integers. There is always at least one individual."))
@@ -389,23 +389,23 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
     maximum(prioronϵ) ≤ 0.5 || throw(ArgumentError("prioronϵ should have support on [0,0.5], but $prioronϵ can take values larger than 0.5."))
     nchains > 0 || throw(ArgumentError("There should be at least one chain."))
     nsteps > 0 || throw(ArgumentError("nsteps should be positive."))
-    any(r -> r>0, R) || throw(DomainError("At least some coverages should be positive.")) 
-    minimum(d) ≥ 0 || throw(DomainError("All reads should be non-negative."))
-    all(d .≤ R) || throw(DomainError("All reads should be at most the coverage."))
-    all(0.0 .≤ y .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
-    length(y) == length(d) == length(R) == length(counts) || throw(DimensionMismatch("d, y, counts  and R should be of the same length."))
+    any(r -> r>0, coverages) || throw(DomainError("At least some coverages should be positive.")) 
+    minimum(derivedreads) ≥ 0 || throw(DomainError("All reads should be non-negative."))
+    all(derivedreads .≤ coverages) || throw(DomainError("All reads should be at most the coverage."))
+    all(0.0 .≤ frequencies .≤ 1.0) || throw(DomainError("The frequencies should be between 0.0 and 1.0."))
+    length(frequencies) == length(derivedreads) == length(coverages) == length(counts) || throw(DimensionMismatch("d, y, counts  and R should be of the same length."))
     
     
     # Remove frequencies 0.0 and 1.0
-    allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
+    allowedindices = (0.0 .< frequencies .< 1.0) .& (coverages .> 0)
     any(allowedindices) || throw(ArgumentError("At least one element of y with corresponding positive coverage should be strictly between 0 and 1."))
 
-    y = y[allowedindices]
-    d = d[allowedindices]
-    R = R[allowedindices]
+    frequencies = frequencies[allowedindices]
+    derivedreads = derivedreads[allowedindices]
+    coverages = coverages[allowedindices]
     counts = counts[allowedindices]
 
-    uniqueR = unique(R)
+    uniqueR = unique(coverages)
     smallestn, largestn = extrema(prioronn)
     smallestτC, smallestτA = minimum(prioronτCτA)
     largestτC, largestτA = maximum(prioronτCτA)
@@ -413,7 +413,7 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
     gridτC = range(smallestτC, largestτC, length=23)[2:end] # avoid a 0.0 value
     gridτA = range(smallestτA, largestτA, length=23)[2:end] # avoid a 0.0 value
     gridϵ = range(smallestϵ, largestϵ, length=24)[2:end-1] # avoid a 0.0 and 0.5 value
-    ns, τCs, τAs, ϵs, logliks = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, d, R, uniqueR, counts, y, 0)
+    ns, τCs, τAs, ϵs, logliks = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, derivedreads, coverages, uniqueR, counts, frequencies, 0)
     maxlikindex = argmax(logliks)
     nmaxlik = ns[maxlikindex]
     τAmaxliksconditionedonn = Vector{Float64}(undef, nmax)
@@ -433,14 +433,14 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
         @assert n ∉ ns[.!filteronn]
     end 
     
-    d = SizedVector{length(d), Int}(d)
-    R = SizedVector{length(R), Int}(R)
+    derivedreads = SizedVector{length(derivedreads), Int}(derivedreads)
+    coverages = SizedVector{length(coverages), Int}(coverages)
     Qs = Vector{EigenExpansion}(undef, nmax)
     Qꜜs = Vector{EigenExpansion}(undef, nmax)
     hvals = Vector{Any}(undef, nmax) # contains the matrices with values y^k(1-y)^{2n-k}.
     binomialcoefficients = Vector{Any}(undef, nmax)
     for n in 1:nmax
-        Qs[n], Qꜜs[n], hvals[n], binomialcoefficients[n] = preparedata(n, y)
+        Qs[n], Qꜜs[n], hvals[n], binomialcoefficients[n] = preparedata(n, frequencies)
     end
     hvals = [item for item in hvals] # change type of hvals to more specific one then Any.
     binomialcoefficients = [item for item in binomialcoefficients] # same.
@@ -449,7 +449,7 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
     # which contain the states of the Markov chain. 
     results = Vector{Tuple{Vector{Int}, Matrix{Float64}, Matrix{Float64}, Matrix{Float64}, BitMatrix, Matrix{Float64}}}(undef,nchains)
     @threads for chainindex in eachindex(results) 
-        q = makeq(nmax, d, R)
+        q = makeq(nmax, derivedreads, coverages)
         nsample = Vector{Int}(undef, nsteps)
         τCsample = Matrix{Float64}(undef, nsteps, nmax)
         τAsample = Matrix{Float64}(undef, nsteps, nmax)
@@ -472,7 +472,7 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
         loglikprevious = Vector{Float64}(undef, nmax)
         loglikproposal = Vector{Float64}(undef, nmax)
         for n in 1:nmax
-            loglikprevious[n] = logprobderivedreads!(q[n], d, R, uniqueR, counts, τCprevious[n], τAprevious[n], ϵprevious[n], n, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
+            loglikprevious[n] = logprobderivedreads!(q[n], derivedreads, coverages, uniqueR, counts, τCprevious[n], τAprevious[n], ϵprevious[n], n, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
         end
         # check if the initial value is valid. 
         any(loglikprevious .== -Inf) && throw(DomainError("The data does not support the initial value."))
@@ -512,7 +512,7 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
                 ϵproposal[index] = ϵprevious[index] + rand(distproposalϵ[index])
             end
             for n in 1:nmax
-                loglikproposal[n] = logprobderivedreads!(q[n], d, R, uniqueR, counts, τCproposal[n], τAproposal[n], ϵproposal[n], n, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
+                loglikproposal[n] = logprobderivedreads!(q[n], derivedreads, coverages, uniqueR, counts, τCproposal[n], τAproposal[n], ϵproposal[n], n, Qs[n], Qꜜs[n], binomialcoefficients[n], hvals[n])
             end 
             for n in 1:nmax
                 logpdfpriorproposal[n] = logpdf(prioronτCτA, [τCproposal[n], τAproposal[n]]) + logpdf(prioronϵ, ϵproposal[n])
@@ -597,20 +597,20 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
 end # function.
 
 """
-    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::AbstractVector{<:Integer}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
 
 R[i] is the coverage, d[i] the number of derived reads and y[i] the frequency of the derived allele in the anchor population at locus i. 
 """
-function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::AbstractVector{<:Integer}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
-    length(y) == length(d) == length(R) || throw(DimensionMismatch("d, y  and/or R (in case R is a vector) should be of the same length."))
+function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+    length(frequencies) == length(derivedreads) == length(coverages) || throw(DimensionMismatch("d, y  and/or R (in case R is a vector) should be of the same length."))
     
     # Remove frequencies 0.0 and 1.0
-    allowedindices = (0.0 .< y .< 1.0) .& (R .> 0)
+    allowedindices = (0.0 .< frequencies .< 1.0) .& (coverages .> 0)
     any(allowedindices) || throw(ArgumentError("At least one element of y with corresponding positive coverage should be strictly between 0 and 1."))
 
-    y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
+    frequencies, derivedreads, coverages, counts = filtervectorsandapplycountmap(frequencies, derivedreads, coverages, allowedindices)
     
-    return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, R, d, y, counts, messages, scalingmessages)
+    return MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, coverages, derivedreads, frequencies, counts, messages, scalingmessages)
 end 
 
 """

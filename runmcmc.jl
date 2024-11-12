@@ -3,17 +3,20 @@ using Pkg
 
 Pkg.activate("Runmcmc")
 #Pkg.add(["PackageToBeShipped", "Distributions", "CSV", "DataFrames"])
+Pkg.add(path="/home/projects/SedaDNA_Demo/simulationsMSPRIME/", subdir="packages/PackageToBeShipped/")
 Pkg.add(["Distributions", "CSV", "DataFrames"])
+Pkg.update()
 
 using PackageToBeShipped, Distributions, CSV, DataFrames 
 
-if length(ARGS) != 2 
-    println("You should provide two arguments: (1) path to the dice file and (2) path to the results.")
+if length(ARGS) != 3
+    println("You should provide three arguments: (1) path to the dice file and (2) path to the results.")
     exit(1)
 end 
 
 dicefile = ARGS[1]
 resultsfile = ARGS[2]
+resultsfile2 = ARGS[3]
 
 if !isfile(dicefile)
     println("No file found at $dicefile.")
@@ -69,3 +72,6 @@ for index in eachindex(chains)
                         )
     CSV.write(resultsfile, df, append=true)
 end 
+
+df2 = unpackposterior(chains, nsteps)
+CSV.write(resultsfile2, df2)
