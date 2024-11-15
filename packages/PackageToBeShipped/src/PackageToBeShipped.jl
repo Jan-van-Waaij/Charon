@@ -282,7 +282,7 @@ end
 
 Calculate the exact posterior up to a fixed unknown constant that depends on the data but does not depend on the parameters. 
 """
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer)
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}; messages::Integer=0)
     # Check conditions.
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
     minimum(nrange) > 0 || throw(ArgumentError("all n values in nrange should be positive."))
@@ -351,7 +351,7 @@ end # function.
 """
     exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
 """
-function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
+function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}; messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
     # Check conditions.
     length(nrange) > 0 || throw(ArgumentError("nrange should have at least one element."))
     minimum(nrange) > 0 || throw(ArgumentError("all n values in nrange should be positive."))
@@ -375,7 +375,7 @@ function exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVec
 
     uniquecoverages = unique(coverages)
 
-    return exactposterior(nrange, τCrange, τArange, ϵrange, coverages, uniquecoverages, derivedreads, frequencies, counts, messages)
+    return exactposterior(nrange, τCrange, τArange, ϵrange, coverages, uniquecoverages, derivedreads, frequencies, counts; messages = messages)
 end # function.
 
 """
@@ -417,7 +417,7 @@ function MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivar
     gridτC = range(smallestτC, largestτC, length=23)[2:end] # avoid a 0.0 value
     gridτA = range(smallestτA, largestτA, length=23)[2:end] # avoid a 0.0 value
     gridϵ = range(smallestϵ, largestϵ, length=24)[2:end-1] # avoid a 0.0 and 0.5 value
-    ns, τCs, τAs, ϵs, logliks = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, coverages, uniquecoverages, derivedreads, frequencies, counts, 0)
+    ns, τCs, τAs, ϵs, logliks = exactposterior(smallestn:largestn, gridτC, gridτA, gridϵ, coverages, uniquecoverages, derivedreads, frequencies, counts)
     maxlikindex = argmax(logliks)
     nmaxlik = ns[maxlikindex]
     τAmaxliksconditionedonn = Vector{Float64}(undef, nmax)

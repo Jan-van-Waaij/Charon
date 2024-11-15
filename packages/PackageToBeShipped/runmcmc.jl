@@ -32,7 +32,7 @@ prioronϵ = Uniform(0, 0.5) # uniform prior on interval[0, 0.5].
 
 chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, dicefile)
 
-results = unpackposterior(chains, nsteps)
+results = unpackposterior(nsteps, chains)
 
 CSV.write(resultsfile, results)
 
