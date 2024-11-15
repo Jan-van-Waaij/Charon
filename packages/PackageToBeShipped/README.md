@@ -1,4 +1,4 @@
-# PackageToBeShipped.jl Estimation of population parameters from environmental DNA.
+# PackageToBeShipped.jl: Estimation of population parameters from environmental DNA.
 
 PackageToBeShipped.jl is a Julia package for estimating population parameters from sediment DNA. I have tested this package extensively on all minor 1.X Julia versions (1.0-1.11). However, it is always better to use a recent version of Julia. If you have any problems, please reach out to me. 
 
@@ -29,13 +29,13 @@ add PackageToBeShipped
 If you want, you can install more packages in your environment. For instance, most likely, you will need CSV and DataFrames:
 
 ```julia
-] add CSV DataFrames.
+add CSV DataFrames.
 ```
 Other valuable packages are GZip and CodecZlib for working with zipped files, StatsBase and Distributions for working with probabilities, LinearAlgebra for matrices, vectors, and related linear algebra functions, and Distributed for distributed computing.
 
 After adding at least one package to the environment, Julia will create a new folder, `EnvironmentName`, in your current working directory. Alternatively, you could set an existing folder as the environment:
 ```julia
-] activate path/to/the/folder
+activate path/to/the/folder
 ``` 
 After you add at least one package, Julia will create the files Project.toml and Manifest.toml in that particular folder. Note that this action does not change the working environment. 
 
@@ -58,7 +58,7 @@ where the output is saved in `outputfile`. `dicefile` might be a CSV file or a z
 
 ### Steps to take. 
 In this paragraph, I describe the steps for manually running the sampler. 
-1. Save your data in the DICE-2 format as a (zipped) CSV file.
+1. Save your data in the DICE-2 format as a (zipped) CSV file, [as described here](#data-format). 
 2. Start a Julia session with, for example, four threads if you want to sample four chains parallel.
 ```
 julia --threads=4 
@@ -75,7 +75,7 @@ in the package modus. Run
 ```julia
 status
 ```
-again to check whether the packages PackageToBeShipped, DataFrames, Distributions and CSV are installed. If any of them are lacking, please add them to your environment in the package modus via 
+again to check whether the packages PackageToBeShipped, DataFrames, Distributions and CSV have been installed. If any of them are lacking, please add them to your environment in the package modus via 
 ```julia
 add PackageName
 ```
@@ -130,14 +130,23 @@ The output of this function
 ```
 nsample, τCsample, τAsample, ϵsample, accepted, logjointprob = chains[1]
 ```
-`nsample` is the MCMC chain for the number of individuals. `τCsample`, `τAsample`, and `ϵsample` are (in this example) 100'000x10 matrices, where the k-th column is the MCMC chain of `τC`, `τA`, and `ϵ` respectively with the number of individuals conditioned on k. `accepted` and `logjointprob` are 100'000x11 matrices, where the first column of each matrix indicates whether the mcmc chain for n is accepted and the logjoint probability, respectively. The k+1-th column is the acceptance vector / log joint probability vector of the MCMC conditioned on k individuals.
+`nsample` is the MCMC chain for the number of individuals. `τCsample`, `τAsample`, and `ϵsample` are (in this example) 100'000x10 matrices, where the k-th column is the MCMC chain of `τC`, `τA`, and `ϵ`, respectively, with the number of individuals conditioned on k. `accepted` and `logjointprob` are 100'000x11 matrices, where the first column of each matrix indicates whether the mcmc chain for n is accepted and the logjoint probability, respectively. The k+1-th column is the acceptance vector / log joint probability vector of the MCMC conditioned on k individuals.
 
 You can obtain the unconditioned sample from the posterior as follows 
 ```julia
 using PackageToBeShipped 
 results = unpackposterior(chains, nsteps)
 ```
-`results` is a DataFrame with a sample from the posterior. 
+`results` is a DataFrame with a sample from the posterior. It has 7 columns: 
+1. nsample sample of the number of individuals
+2. τCsample sample of τC values
+3. τAsample sample of τA values
+4. ϵsample sample of ϵ values 
+5. accepted whether the proposal was accepted. If not, the row is equal to the previous row. 
+6. logjointprob  the log joint probability of the likelihood and prior, which is the density of posterior up to a constant that only depends on the data, but not on the parameters. 
+7. chainid the id of the chain, a number in 1, ..., nchains. 
+
+[]()
 
 9. You can save the data frame as a CSV file as follows:
 ```julia
@@ -156,9 +165,9 @@ using PackageToBeShipped
 ### MCMCsampler 
 This is the MCMC sampler. It has five methods. 
 ```julia 
-    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::AbstractVector{<:Integer}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
 
-    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, R::AbstractVector{<:Integer}, d::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
+    MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
 
     MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, df::AbstractDataFrame, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
 
@@ -166,17 +175,26 @@ This is the MCMC sampler. It has five methods.
 
     MCMCsampler(nchains::Integer, nsteps::Integer, prioronn::DiscreteUnivariateDistribution, prioronτCτA::ContinuousMultivariateDistribution, prioronϵ::ContinuousUnivariateDistribution, dicefile::AbstractString, messages::Integer=nsteps÷100, scalingmessages::Bool=true)
 ```
+Data formats:
+
+You can input the data in three formats. 
+1. As an (opened) (zipped) DICE file, or in the form of a DataFrame, also in DICE format. So the first column is the number of ancestral reads, the second column is the number of derived reads, the third column is the frequency in the anchor population, and the fourth column is the count of the number of loci where this combination of three numbers occur. 
+2. Or, by providing three vectors: `coverages`, `derivedreads`, `frequencies`, of length equal to the number of SNPs, where at loci `i`, there are `derivedreads[i]` derived reads, `coverages[i]` coverage and `frequencies[i]` frequency in the anchor population. 
+3. The third format is given with four vectors: `coverages`, `derivedreads`, `frequencies`, `counts`. This means that there are `counts[i]` loci with `coverages[i]` coverage, `derivedreads[i]` derived reads and frequency `frequencies[i]` in the anchor population.
+
+If you provide data in formats 1 or 2 then the program will automatically convert it to format 3. 
+
 Parameters:
-* `nchains`, number of chains, a positive integer. If you want to run all your chains in parallel, start julia with number of threads equal or higher to `nchains`. 
-* `nsteps` number of samples per chain, a positive integer. 
+* `nchains`, number of chains, which is a positive integer. If you want to run all your chains in parallel, start julia with number of threads equal or higher to `nchains`. 
+* `nsteps` number of samples per chain, which is a positive integer. 
 * `prioronn` the prior on n, specified as a subtype of `DiscreteUnivariateDistribution` of the Distributions Julia package. Our implementation requires that `prioronn` has support on {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, because otherwise rounding errors will accumulate too much. 
 * `prioronτCτA` is the prior on (τC, τA), which allows for correlation between τC and τA. Its type is a subtype of ContinuousMultivariateDistribution. It should have support contained in [0,∞)x[0,∞). 
 * `prioronϵ` is the prior on ϵ. It should have support in [0, 0.5). It is a subtype of `ContinuousUnivariateDistribution` in the Distributions package. 
-* `R` a vector with coverages = ancestral reads + derived reads. Is a subtype of `AbstractVector{<:Integer}`. All coverages should be non-negative integers, and at least one should be positive. 
-* `d` a vector of derived reads. Is a subtype of `AbstractVector{<:Integer}`. All elements of the vector should be non-negative integers.
-* `y` a vector of frequencies. Is a subtype of AbstractVector{<:Real}. Each frequency is between 0.0 and 1.0. At least one frequency should be strictly between 0.0 and 1.0 with corresponding positive coverage. 
-* `counts`, all elements should be non-negative. For each index, `counts[index]` indicates how many loci there are with `d[index]` derived reads, coverage `R[index]` and frequency `y[index]`. If `counts` is not provided, it will be calculated from `d`, `R` and `y`. 
-* `messages` is an integer. If `messages` is non-positive, no message is printed. If `message` is positive, every `message` steps a message will be printed with the progress of the sampler. The default value is `nsteps÷100`. 
+* `coverages` a vector with coverages = ancestral reads + derived reads. Is a subtype of `AbstractVector{<:Integer}`. All coverages should be non-negative integers, and at least one should be positive. 
+* `derivedreads` a vector of derived reads. Is a subtype of `AbstractVector{<:Integer}`. All elements of the vector should be non-negative integers.
+* `frequencies` a vector of frequencies. Is a subtype of AbstractVector{<:Real}. Each frequency is between 0.0 and 1.0. At least one frequency should be strictly between 0.0 and 1.0 with corresponding positive coverage. 
+* `counts`, all elements should be non-negative. For each index, `counts[index]` indicates how many loci there are with `derivedreads[index]` derived reads, coverage `coverages[index]` and frequency `frequencies[index]`. If `counts` is not provided, it will be calculated from `derivedreads`, `coverages` and `frequencies`. 
+* `messages` is an integer. If `messages` is non-positive, no message will be printed. If `messages` is positive, every `messages` steps a message will be printed with the progress of the sampler. The default value is `nsteps÷100`, so every 1% progress a message is printed.  
 * `scalingmessage` is either `true` (default) or `false`. If true, a message will be printed when the scaling constant changes. 
 * `df` a DataFrame from the DataFrames package in the DICE-2 format. So the first column should be the number of ancestral reads, the second column the number of derived reads, the third column the frequencies in the anchor population, and the fourth column the counts of how many times this particular combination of ancestral reads, derived reads and frequency occurs. 
 * `dicefile` is either an opened DICE file, or a path to a DICE file. 
@@ -189,16 +207,32 @@ The output is a vector with nchains items. Each item represents a chain. Each it
 
 `exactposterior` is a function to calculate the posterior up to a fixed constant, only depending on the data, but not on the parameters. You can use this function for maximum likelihood estimation. `MCMCsampler` uses this function to find a good starting point for the sampler. It has two methods: 
 ```julia 
-    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, reads::AbstractVector{<:Integer}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, counts::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer)
-    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, R::AbstractVector{<:Integer}, reads::AbstractVector{<:Integer}, y::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
+    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, uniquecoverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, counts::AbstractVector{<:Integer}, messages::Integer)
+    exactposterior(nrange::AbstractVector{<:Integer}, τCrange::AbstractVector{<:Real}, τArange::AbstractVector{<:Real}, ϵrange::AbstractVector{<:Real}, coverages::AbstractVector{<:Integer}, derivedreads::AbstractVector{<:Integer}, frequencies::AbstractVector{<:Real}, messages::Integer=length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100)
 ```
-The posterior is calculated for each combination of parameters (n, τC, τA, ϵ) with n in `nrange`, τC in `τCrange`, τA in `τArange` and ϵ in `ϵrange`. So make sure that `length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)` is not too large, as otherwise it will take a very long time. 
+The posterior is calculated for each combination of parameters (n, τC, τA, ϵ) with n in `nrange`, τC in `τCrange`, τA in `τArange` and ϵ in `ϵrange`. So make sure that `length(nrange)*length(τCrange)*length(τArange)*length(ϵrange)` is not too large, as otherwise it will take a very long time and you might run out of memory. 
 
 Parameters:
 * `nrange` vector of n values. Subtype of AbstractVector{<:Integer}. Should be a subset of {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}. 
 * `τCrange` vector of τC values. Subtype of AbstractVector{<:Real}. All values should be non-negative. 
 * `τArange` vector of τA values. Subtype of AbstractVector{<:Real}. All values should be non-negative. 
 * `ϵrange` vector of ϵ values. Is a subtype of AbstractVector{<:Real}. 
-* `reads`
+* `coverages` a vector with coverages = ancestral reads + derived reads. Is a subtype of `AbstractVector{<:Integer}`. All coverages should be non-negative integers, and at least one should be positive.
+* `uniquecoverages` should be equal to `unique(coverages)`.  
+* `derivedreads` a vector of derived reads. Is a subtype of `AbstractVector{<:Integer}`. All elements of the vector should be non-negative integers.
+* `frequencies` a vector of frequencies. Is a subtype of AbstractVector{<:Real}. Each frequency is between 0.0 and 1.0. At least one frequency should be strictly between 0.0 and 1.0 with corresponding positive coverage. 
+* `counts`, all elements should be non-negative. For each index, `counts[index]` indicates how many loci there are with `derivedreads[index]` derived reads, coverage `coverages[index]` and frequency `frequencies[index]`. If `counts` is not provided, it will be calculated from `derivedreads`, `coverages` and `frequencies`. 
+* `messages` is an integer. If `messages` is non-positive, no message will be printed. If `messages` is positive, every `messages` steps a message will be printed with the progress of the sampler. The default value is `length(n)*length(τCrange)*length(τArange)*length(ϵrange)÷100`, so every 1% progress a message is printed.
+
+The output are 5 vectors: `ns, τCs, τAs, ϵs, logliks`, of each of length `length(n)*length(τCrange)*length(τArange)*length(ϵrange)`, where `logliks[index]` is the log likelihood, up to an additive constant, with parameters `ns[index]`, `τCs[index]`, `τAs[index]` and `ϵs[index]`. The additive constant only depends on the data, but not on the parameters. 
 
 ### unpackposterior 
+
+This function is used to build the unconditional posterior from the MCMC samples conditioned on n, as described in the paper. It has one method with two arguments:
+
+```julia
+unpackposterior(chains::AbstractVector{<:Tuple{AbstractVector{<:Integer}, AbstractMatrix{<:Real}, AbstractMatrix{<:Real}, AbstractMatrix{<:Real}, AbstractMatrix{Bool}, AbstractMatrix{<:Real}}}, nsteps::Integer)
+```
+Parameters:
+* `chains` this the tuple that is the output of `MCMCsampler`. 
+* `nsteps` is the number of MCMC samples, a positive integer. 

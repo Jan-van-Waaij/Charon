@@ -17,16 +17,16 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         A = Tridiagonal(x, y, x)
         F = EigenExpansion(A)
         @test A ≈ F.P*F.D*F.Pinv
-        @test exp(Matrix(A)) ≈ exp(F,1.0)
-        @test typeof(exp(F, 1.0)) == typeof(F.P)
+        @test exp(Matrix(A)) ≈ exp(1.0, F)
+        @test typeof(exp(1.0, F)) == typeof(F.P)
 
         A = rand(2,2)
         B = A*A'
         F = EigenExpansion(B)
-        @test typeof(exp(F,2.0)) == typeof(F.P)
+        @test typeof(exp(2.0, F)) == typeof(F.P)
         @test B ≈ F.P*F.D*F.Pinv
-        @test exp(B) ≈ exp(F, 1.0)
-        @test exp(2.0*B) ≈ exp(F, 2.0)
+        @test exp(B) ≈ exp(1.0, F)
+        @test exp(2.0*B) ≈ exp(2.0, F)
     end
 
     @testset "==" begin
@@ -50,29 +50,6 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         @test FMT == FMU
     end
 
-    @testset "makeQ" begin
-        @test makeQ(1) == [0 1 0
-                           0 -1 0
-                           0 1 0]
-
-        for n in 1:10
-            Q = makeQ(n)
-            for k in 0:2n 
-                for L in 0:2n 
-                    if L == k-1 
-                        @test Q[k+1, L+1] == 0.5*k*(k-1)
-                    elseif L == k 
-                        @test Q[k+1, L+1] == -k*(2n-k)
-                    elseif L == k+1 
-                        @test Q[k+1, L+1] == 0.5*(2n-k)*(2n-k-1)
-                    else 
-                        @test Q[k+1, L+1] == 0
-                    end # if-elseif-else block 
-                end # L 
-            end # k 
-        end  # n 
-    end # testset makeQ 
-    
     @testset "makeQꜜ" begin
         @test makeQꜜ(1) == [0 3 0
                             0 -2 1
@@ -95,23 +72,46 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
             end # k 
         end # n 
     end # testset makeQꜜ
-    
+
+    @testset "makeQ" begin
+        @test makeQ(1) == [0 1 0
+                           0 -1 0
+                           0 1 0]
+
+        for n in 1:10
+            Q = makeQ(n)
+            for k in 0:2n 
+                for L in 0:2n 
+                    if L == k-1 
+                        @test Q[k+1, L+1] == 0.5*k*(k-1)
+                    elseif L == k 
+                        @test Q[k+1, L+1] == -k*(2n-k)
+                    elseif L == k+1 
+                        @test Q[k+1, L+1] == 0.5*(2n-k)*(2n-k-1)
+                    else 
+                        @test Q[k+1, L+1] == 0
+                    end # if-elseif-else block 
+                end # L 
+            end # k 
+        end  # n 
+    end # testset makeQ 
+
     @testset "calcmatrix" begin
         for n in 1:10
             Q = makeQ(n)
             Qꜜ = makeQꜜ(n)
             FQ = EigenExpansion(Q)
             FQꜜ = EigenExpansion(Qꜜ)
-            @test calcmatrix(FQ, FQꜜ, 0.0, 0.0) ≈ I
+            @test calcmatrix(0.0, 0.0, FQꜜ, FQ) ≈ I
             τC = rand()
             τA = rand()
-            M = calcmatrix(FQ, FQꜜ, τC, τA)
+            M = calcmatrix(τC, τA, FQꜜ, FQ)
             @test typeof(FQ.P) == typeof(M)
-            @test M == exp(FQ, τA)*exp(FQꜜ, τC)
-            M = calcmatrix(FQ, FQꜜ, 0.0, τA)
-            @test M ≈ exp(FQ, τA)
-            M = calcmatrix(FQ, FQꜜ, τC, 0.0)
-            @test M ≈ exp(FQꜜ, τC)
+            @test M == exp(τA, FQ)*exp(τC, FQꜜ)
+            M = calcmatrix(0.0, τA, FQꜜ, FQ)
+            @test M ≈ exp(τA, FQ)
+            M = calcmatrix(τC, 0.0, FQꜜ, FQ)
+            @test M ≈ exp(τC, FQꜜ)
         end 
     end
 
@@ -121,9 +121,9 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
             t = preparedata(n, y)
             @test length(t) == 4 
             @test t isa NamedTuple 
-            Q, Qꜜ, hvals, binomialcoefficients = t
-            @test Q == EigenExpansion(makeQ(n))
+            Qꜜ, Q, binomialcoefficients, hvals = t
             @test Qꜜ == EigenExpansion(makeQꜜ(n))
+            @test Q == EigenExpansion(makeQ(n))
             @test size(hvals) == (2n+1, length(y))
             for k in 0:2n 
                 for yindex in eachindex(y) 
@@ -132,10 +132,10 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
             end 
             @test binomialcoefficients == binomial.(2n, 0:2n)
 
-            Q = t.Q 
             Qꜜ = t.Qꜜ
-            hvals = t.hvals 
+            Q = t.Q 
             binomialcoefficients = t.binomialcoefficients
+            hvals = t.hvals
             @test Q == EigenExpansion(makeQ(n))
             @test Qꜜ == EigenExpansion(makeQꜜ(n))
             @test size(hvals) == (2n+1, length(y))
@@ -164,21 +164,21 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
                 Random.seed!(1987)
                 reads = [rand(0:coverage) for coverage in coverages]
                 @assert all(0 .≤ reads .≤ coverages)
-                uniquereadsandcoverages = unique(zip(reads, coverages))
-                q = Dict((d, R) => Vector{Float64}(undef, 2n+1) for (d, R) in uniquereadsandcoverages)
+                uniquereadsandcoverages = unique(zip(coverages, reads))
+                q = Dict((R, d) => Vector{Float64}(undef, 2n+1) for (R, d) in uniquereadsandcoverages)
                 cm = countmap(zip(y, reads, coverages))
                 y = [key[1] for key in keys(cm)]
                 reads = [key[2] for key in keys(cm)]
                 coverages = [key[3] for key in keys(cm)]
                 counts = collect(values(cm))
-                Q, Qꜜ, hvals, binomialcoefficients = preparedata(n, y)
+                Qꜜ, Q, binomialcoefficients, hvals = preparedata(n, y)
                 τC = 0.3 
                 τA = 0.2 
-                @test logprobderivedreads!(q, reads, coverages, uniquecoverages, counts, -0.1, τA, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
-                @test logprobderivedreads!(q, reads, coverages, uniquecoverages, counts, τC, -0.1, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
-                @test logprobderivedreads!(q, reads, coverages, uniquecoverages, counts, τC, τA, -0.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
-                @test logprobderivedreads!(q, reads, coverages, uniquecoverages, counts, τC, τA, 1.1, n, Q, Qꜜ, binomialcoefficients, hvals) == -Inf 
-                logpdffunction = logprobderivedreads!(q, reads, coverages, uniquecoverages, counts, 0.0, 0.0, ϵ, n, Q, Qꜜ, binomialcoefficients, hvals)
+                @test logprobderivedreads!(q, n, -0.1, τA, ϵ, coverages, uniquecoverages, reads, counts, Qꜜ, Q, binomialcoefficients, hvals) == -Inf 
+                @test logprobderivedreads!(q, n, τC, -0.1, ϵ, coverages, uniquecoverages, reads, counts,  Qꜜ, Q, binomialcoefficients, hvals) == -Inf 
+                @test logprobderivedreads!(q, n, τC, τA, -0.1, coverages, uniquecoverages, reads, counts, Qꜜ, Q, binomialcoefficients, hvals) == -Inf 
+                @test logprobderivedreads!(q, n, τC, τA, 1.1, coverages, uniquecoverages, reads, counts,  Qꜜ, Q, binomialcoefficients, hvals) == -Inf 
+                logpdffunction = logprobderivedreads!(q, n, 0.0, 0.0, ϵ, coverages, uniquecoverages, reads, counts,  Qꜜ, Q, binomialcoefficients, hvals)
                 #@assert logpdffunction > -Inf 
                 logpdftheoretical = 0.0
                 for index in eachindex(reads, coverages, counts, y)
@@ -202,7 +202,7 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         d = vcat([1, 1, 2, 3, 4], rand([1,2,3], 10))
         R = vcat([3, 3, 2, 3, 4], rand(4:6, 10 ))
         allowedindices = vcat(trues(5), falses(10))
-        y, d, R, counts = filtervectorsandapplycountmap(y, d, R, allowedindices)
+        R, d, y, counts = filtervectorsandapplycountmap(R, d, y, allowedindices)
         @test Set(y) == Set([1, 2, 3, 4])
         @test Set(d) == Set([1, 2, 3, 4])
         @test Set(R) == Set([2, 3, 4])
@@ -213,14 +213,14 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         for n in 1:10 
             d = rand(1:10, 1000)
             R = [rand(d[i]:10) for i in 1:1000]
-            uniquedandR = unique(zip(d, R))
-            q = makeqfixedn(n, d, R)
-            @test length(q) == length(uniquedandR)
+            uniqueRandd = unique(zip(R, d))
+            q = makeqfixedn(n, R, d)
+            @test length(q) == length(uniqueRandd)
             for value in values(q) 
                 @test length(value) == 2n+1
             end
-            q = makeqfixedn(n, uniquedandR)
-            @test length(q) == length(uniquedandR)
+            q = makeqfixedn(n, uniqueRandd)
+            @test length(q) == length(uniqueRandd)
             for value in values(q) 
                 @test length(value) == 2n+1
             end 
@@ -231,11 +231,11 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         for nmax in 1:10 
             d = rand(1:10, 1000)
             R = [rand(d[i]:10) for i in 1:1000]
-            q = makeq(nmax, d, R)
+            q = makeq(nmax, R, d)
             @test length(q) == nmax
-            lendic = length(unique(zip(d, R)))
-            for key in keys(q) 
-                @test length(q[key]) == lendic 
+            lendic = length(unique(zip(R, d)))
+            for item in q 
+                @test length(item) == lendic 
             end  
             for n in 1:nmax 
                 for value in values(q[n]) 
@@ -247,14 +247,14 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
 
     @testset "updateq!" begin 
         for n in 1:10 
-            dic = Dict((d, R) => Vector{Float64}(undef,2n+1) for R in 1:10 for d in 0:R)
+            dic = Dict((R, d) => Vector{Float64}(undef,2n+1) for R in 1:10 for d in 0:R)
             binomialcoefficients = binomial.(2n, 0:2n)
-            updateq!(dic, binomialcoefficients, 1:10, n, 0.1)
+            updateq!(dic, n, 0.1, 1:10, binomialcoefficients)
             for R in 1:10
                 for d in 0:R 
                     for k in 0:2n 
                         dist = Binomial(R, k*0.9/(2n)+(2n-k)*0.1/(2n))
-                        @test dic[(d,R)][k+1] == binomialcoefficients[k+1] * pdf(dist, d)
+                        @test dic[(R, d)][k+1] == binomialcoefficients[k+1] * pdf(dist, d)
                     end 
                 end 
             end 
@@ -270,13 +270,17 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         filewithheaderzipped = "testwithheader.csv.gz"
         filewithoutheaderzipped = "testwithoutheader.csv.gz"
 
-        dfh = readcsvfile(filewithheader)
-        dfw = readcsvfile(filewithoutheader)
-        dfhz = readcsvfile(filewithheaderzipped)
-        dfwz = readcsvfile(filewithoutheaderzipped)
+        dfh = readcsvfile(filewithheader, nothing)
+        dfw = readcsvfile(filewithoutheader, nothing)
+        dfhz = readcsvfile(filewithheaderzipped, nothing)
+        dfwz = readcsvfile(filewithoutheaderzipped, nothing)
+        dfhk = readcsvfile(filewithheader, true)
+        dfwk = readcsvfile(filewithoutheader, false)
+        dfhzk = readcsvfile(filewithheaderzipped, true)
+        dfwzk = readcsvfile(filewithoutheaderzipped, false)
 
         #@test Matrix(dfhz) == Matrix(dfwz)
-        @test Matrix(dfh) == Matrix(dfw) == Matrix(dfhz) == Matrix(dfwz)
+        @test Matrix(dfh) == Matrix(dfw) == Matrix(dfhz) == Matrix(dfwz) == Matrix(dfhk) == Matrix(dfwk) == Matrix(dfhzk) == Matrix(dfwzk)
     end 
 
     @testset "unpackposterior" begin
@@ -304,7 +308,7 @@ using PackageToBeShipped: EigenExpansion, makeQ, makeQꜜ, calcmatrix, logprobde
         ϵsample = τCsample .^ 2 
         acceptedvec = BitMatrix(undef, nsteps, nmax+1) 
         chains = [(nsample, τCsample, τAsample, ϵsample, acceptedvec, logjointprob)]
-        df = unpackposterior(chains, nsteps)
+        df = unpackposterior(nsteps, chains)
         @test df.nsample == nsample 
         for index in 1:nsteps 
             @test df.τCsample[index] % nmax == df.nsample[index] % nmax 
