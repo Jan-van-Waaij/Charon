@@ -20,7 +20,8 @@ using GZip, # to work with zipped files,
       DataFrames, # to work with DataFrames,
       CSV, # for CSV files.
       StatsBase, # for the mean function
-      CairoMakie # for plots 
+      CairoMakie, # for plots 
+      LaTeXStrings # to use latex for the labels. 
 
 nsteps = 100_000 # number of steps in mcmc chain 
 nchains = 4 # number of chains. 
@@ -93,6 +94,98 @@ filename = "results.csv"
 CSV.write(filename, results)
 cmd = `gzip -f $filename`
 run(cmd)
+
+# HIER VERDER!!!!!!!!
+using GZip, # to work with zipped files,
+      DataFrames, # to work with DataFrames,
+      CSV, # for CSV files.
+      StatsBase, # for the mean function
+      CairoMakie # for plots 
+
+nsteps = 100_000 # number of steps in mcmc chain 
+nchains = 4 # number of chains. 
+trueϵ = 0.003 # true error rate used in the simulations. 
+
+filename = "compareCEUSwithallanchors3indvidualscoverage20.csv.gz"
+results = CSV.read(filename, DataFrame)
+
+results = results[[2,1,3,4],:]
+f = Figure(; size = (400, 400))
+ax = Axis(f[1,1] , xlabel = L"\tau_A", ylabel = "Anchor population", 
+                    title = "Credible intervals", yticks=(1:size(results,1), results.:anchor))
+ys = [1, 2, 3, 4]
+xs = results.:τA_median 
+lowerrors = xs - results.:τA_low 
+higherrors = results.:τA_high - xs 
+errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = :red, direction = :x)
+scatter!(ax, xs, ys; markersize = 5, color = :black)
+f
+save("CEUSvsanchorstauA.png", f)
+
+
+f = Figure(; size = (400, 400))
+ax = Axis(f[1,1] , xlabel = L"\tau_C", ylabel = "Anchor population", 
+                    title = "Credible intervals", yticks=(1:size(results,1), results.:anchor))
+ys = [1, 2, 3, 4]
+xs = results.:τC_median 
+lowerrors = xs - results.:τC_low 
+higherrors = results.:τC_high - xs 
+errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = :red, direction = :x)
+scatter!(ax, xs, ys; markersize = 5, color = :black)
+f
+save("CEUSvsanchorstauC.png", f)
+
+
+
+#
+gresults = groupby(results, :truenumind)
+f = Figure(; size = (800, 400))
+#axvec = [(i, j) for i in 1:4 for j in 1:2]
+axvec = [(1,j) for j in 1:2]
+#axes = [Axis(f[axvec[truenumind]...] , xlabel = "n", ylabel = "Depth of coverage", 
+#        title = "Number of individuals: $truenumind") for truenumind in 1:8]
+#axes = [Axis(f[axvec[truenumind]...] , xlabel = "n", ylabel = "Depth of coverage", 
+#title = "Number of individuals: $truenumind") for truenumind in [1,8]]
+axes = [Axis(f[axvec[1]...] , xlabel = "ϵ", ylabel = "Depth of coverage", 
+title = "Number of individuals: 1"), Axis(f[axvec[2]...] , xlabel = "ϵ", ylabel = "Depth of coverage", 
+title = "Number of individuals: 8")]
+    
+linkxaxes!(axes...)
+for truenumindindex in [1,2]
+    ax = axes[truenumindindex]
+    truenumind = [1,8][truenumindindex]
+    ys = gresults[truenumind].:coverage
+    xs = gresults[truenumind].:ϵ_median
+    lowerrors = xs - gresults[truenumind].:ϵ_low
+    higherrors = gresults[truenumind].:ϵ_high - xs 
+    errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = :red, direction = :x)
+    scatter!(ax, xs, ys; markersize = 5, color = :black)
+    #vlines!(ax, truenumind, color = :blue )
+    vlines!(ax, trueϵ, color = :blue) 
+end 
+
+gresults = groupby(results, :truenumind)
+f = Figure(; size = (1600, 1600))
+axvec = [(i, j) for i in 1:4 for j in 1:2]
+#axvec = [(1,j) for j in 1:2]
+axes = [Axis(f[axvec[truenumind]...] , xlabel = "n", ylabel = "Depth of coverage", 
+        title = "Number of individuals: $truenumind") for truenumind in 1:8]    
+linkxaxes!(axes...)
+for truenumind in 1:8
+    ax = axes[truenumind]
+    ys = gresults[truenumind].:coverage
+    xs = gresults[truenumind].:n_median
+    lowerrors = xs - gresults[truenumind].:n_low
+    higherrors = gresults[truenumind].:n_high - xs 
+    errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = :red, direction = :x)
+    scatter!(ax, xs, ys; markersize = 5, color = :black)
+    vlines!(ax, truenumind, color = :blue )
+    #vlines!(ax, trueϵ, color = :blue) 
+end 
+f 
+
+
+#
 
 
 gresults = groupby(results, [:ancient, :anchor, :truenumind])
@@ -197,6 +290,10 @@ filenameparts = ["n", "tauC", "tauA", "eps"]
 truevalue = [0.0, 0.25, 0.25, 0.003]
 colors = [:red, :turquoise1, :magenta2, :darkgreen]
 
+axes = [Axis(f[axvec[truenumind]...] , xlabel = labels[parameterindex], ylabel = "coverage", 
+                    title = "Number of individuals: $truenumind") for truenumind in 1:8]
+            linkxaxes!(axes...)
+
 for parameterindex in eachindex(parameters, labels, truevalue, colors)
     f = Figure(; size = (1600, 1600))
     parameterlow = Symbol(parameters[parameterindex], :_low)
@@ -205,9 +302,55 @@ for parameterindex in eachindex(parameters, labels, truevalue, colors)
     @show parameterlow
     @show parametermedium
     @show parameterhigh
+    
+    #axes = [Axis(f[axvec[truenumind]...] , xlabel = labels[parameterindex], ylabel = "Depth of coverage", title = "Number of individuals: $truenumind") for truenumind in 1:8]
+    axes = [Axis(f[1,1] , xlabel = labels[parameterindex], ylabel = "Depth of coverage", title = "Number of individuals: 1"),
+        Axis(f[2,1] , xlabel = labels[parameterindex], ylabel = "Depth of coverage", title = "Number of individuals: 8")
+    ]
+        
+    linkxaxes!(axes...)
+
     for truenumind in 1:8
         @assert unique(gresults[truenumind].:truenumind) == [truenumind]
-        ax = Axis(f[axvec[truenumind]...] , xlabel = labels[parameterindex], ylabel = "coverage", title = "Number of individuals: $truenumind")
+        #ax = Axis(f[axvec[truenumind]...] , xlabel = labels[parameterindex], ylabel = "Depth of coverage", title = "Number of individuals: $truenumind")
+        ax = axes[truenumind]
+        ys = gresults[truenumind].:coverage
+        xs = gresults[truenumind][:, parametermedium]
+        lowerrors = xs - gresults[truenumind][:, parameterlow]
+        higherrors = gresults[truenumind][:, parameterhigh] - xs 
+        errorbars!(ax, xs, ys, lowerrors, higherrors; whiskerwidth = 10, color = colors[parameterindex], direction = :x)
+        scatter!(ax, xs, ys; markersize = 5, color = :black)
+        if parameterindex == 1 
+            vlines!(ax, truenumind, color = :blue )
+        else 
+            vlines!(ax, truevalue[parameterindex], color=:blue)
+        end 
+    end 
+    save(string("appendix_credibleintervals", filenameparts[parameterindex], ".png"), f)
+end
+
+
+truenumindvec = [1, 8]
+for parameterindex in eachindex(parameters, labels, truevalue, colors)
+    f = Figure(; size = (1600, 1600))
+    parameterlow = Symbol(parameters[parameterindex], :_low)
+    parametermedium = Symbol(parameters[parameterindex], :_median)
+    parameterhigh = Symbol(parameters[parameterindex], :_high) 
+    @show parameterlow
+    @show parametermedium
+    @show parameterhigh
+    
+    axes = [Axis(f[1,1] , xlabel = labels[parameterindex], ylabel = "Depth of coverage", title = "Number of individuals: 1"),
+        Axis(f[1,2] , xlabel = labels[parameterindex], ylabel = "Depth of coverage", title = "Number of individuals: 8")
+    ]
+        
+    linkxaxes!(axes...)
+
+    for index in 1:2
+        truenumind = truenumindvec[index]
+        @assert unique(gresults[truenumind].:truenumind) == [truenumind]
+        #ax = Axis(f[axvec[truenumind]...] , xlabel = labels[parameterindex], ylabel = "Depth of coverage", title = "Number of individuals: $truenumind")
+        ax = axes[index]
         ys = gresults[truenumind].:coverage
         xs = gresults[truenumind][:, parametermedium]
         lowerrors = xs - gresults[truenumind][:, parameterlow]
@@ -222,6 +365,7 @@ for parameterindex in eachindex(parameters, labels, truevalue, colors)
     end 
     save(string("credibleintervals", filenameparts[parameterindex], ".png"), f)
 end
+
 
 
 f = Figure(; size = (1600, 1600))

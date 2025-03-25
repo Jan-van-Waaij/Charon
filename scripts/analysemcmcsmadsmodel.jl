@@ -26,7 +26,8 @@ using GZip, # to work with zipped files,
       StatsBase # for the mean function
 
 ancientpops = ["CHBS", "YRIS", "CEUS", "KARS"]
-anchorpops = ["YRI", "CEU", "CHB", "KAR"]
+ancientpops = ["CEUS"]
+anchorpops = ["CEU"] #["YRI", "CEU", "CHB", "KAR"]
 truenumindvec = 1:8
 coveragevec = 5:5:100 #[100, 50, 20, 10]
 allcombinations = [(anchorpop, ancientpop, truenumind, coverage) for anchorpop in anchorpops for ancientpop in ancientpops for truenumind in truenumindvec for coverage in coveragevec ] # 64 elementen. 
@@ -53,7 +54,7 @@ results = DataFrame(
     ϵ_median = Float64[],
     ϵ_high = Float64[],
 )
-      
+     
 
 for (anchorpop, ancientpop, truenumind, coverage) in allcombinations
     csvfile = joinpath("/", "home", "projects", "SedaDNA_Demo", "simulationsMSPRIME", "data", "mcmcsamples", "MadsModel", string("Madsmodel_ancient_pop_", ancientpop, "_anchor_pop_", anchorpop, "_true_num_ind_", truenumind,  "_cov_", coverage, ".csv"))
