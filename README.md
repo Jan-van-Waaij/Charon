@@ -7,7 +7,7 @@ CHARON: **C**alculating **HA**plotype distribution to **R**esolve **O**riginal *
 1. **Number of Diploid Individuals**: An estimate of the current population size based on genetic data.
 2. **Demography**: Drift time from a particular population and can determine which population has the lowest drift time thus the closest proxy.
 
-Fun fact, Pluto has 5 moons Charon, Styx, Nix, Kerberos, and Hydra.
+The name comes from the largest moon of Pluto which has 5 moons Charon, Styx, Nix, Kerberos, and Hydra.
 
 ## Assumptions
 
