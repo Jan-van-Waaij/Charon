@@ -1,5 +1,3 @@
-# CHARON
-
 
 # CHARON: Environmental DNA Drift Time and Population Estimation Tool
 
@@ -9,10 +7,12 @@ CHARON: **C**alculating **HA**plotype distribution to **R**esolve **O**riginal *
 1. **Number of Diploid Individuals**: An estimate of the current population size based on genetic data.
 2. **Demography**: Drift time from a particular population and can determine which population has the lowest drift time thus the closest proxy.
 
+Fun fact, Pluto has 5 moons Charon, Styx, Nix, Kerberos, and Hydra.
 
 ## Assumptions
 
-We generally assume
+We generally assume:
+
 - **equal contribution**: Each individual contrinuted more or less the same amount of DNA to the mix 
 - **same population of origin**: All the individuals come from the same population.
   
@@ -22,14 +22,23 @@ To install the tool, clone this repository and follow the setup instructions pro
 
 ## Usage
 
-1. Prepare your eDNA sample data in the native format.
-2. 
-3. Run the tool using the command-line interface or graphical user interface.
-4. Input your data file when prompted.
-5. The tool will process the data and output estimates for drift time and population size.
+1. Prepare your eDNA sample data in the native format. CHARON required 2 files:
+A) A base count derived from the BAM files for each segregating position in the population as such:
+
+      [derive count]  [total count]
+
+For instance, say at position 239923 on chr 1, there are 4 reads supporting a derived variant and a total of 20 reads. The line for this position would be:
+
+      4 20
+
+B) we
+   
+3. 
+4. Run the tool using the command-line interface or graphical user interface.
+5. Input your data file when prompted.
+6. The tool will process the data and output estimates for drift time and population size.
 
 For detailed instructions and examples, refer to the `USER_GUIDE.md` file.
-
 ## License
 
 This project is licensed under the MIT License. See the `LICENSE` file for details.
