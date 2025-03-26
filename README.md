@@ -18,7 +18,12 @@ We generally assume:
   
 ## Installation
 
-To install the tool, clone this repository and follow the setup instructions provided in the `INSTALL.md` file.
+<!-- To install the tool, clone this repository and follow the setup instructions provided in the `INSTALL.md` file. -->
+In Julia run 
+```julia
+using Pkg
+Pkg.add("Charon")
+```
 
 ## Usage
 
