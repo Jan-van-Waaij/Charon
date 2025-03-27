@@ -43,6 +43,13 @@ To minimise the risk of conflicting package versions, use a new [environment](ht
 
 ## Using the sampler
 
+### Data format
+
+Our program can work with genetic data in the [DICE-2 format](https://github.com/grenaud/dice?tab=readme-ov-file#2-pop-method-input-data-format). 
+
+A CSV file in DICE-2 format has four columns. In this order: number of ancestral reads, number of derived reads, the frequency of the anchor population, and in how many loci this combination of reads and frequency occurs. So, the first two columns contain non-negative integers, the third column is a real number between 0.0 and 1.0, and the last column is a positive integer. 
+
+
 ### Convenience script.
 [Click here for an example script.](runmcmc.jl) This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and four chains with 100'000 samples. The script saves the output as a CSV file. You can use your favourite software to analyse it. It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
 ```julia
@@ -57,35 +64,27 @@ In this paragraph, I describe the steps for manually running the sampler.
 ```
 julia --threads=4 
 ```
-3. We must activate the environment we [created before](#activate-an-environment). You can check whether you are in the correct environment by running 
-```julia
-status 
-```
-in the package modus. If not, let's activate the environment that we created before by running
-```julia
-activate path/to/EnvironmentName 
-```
-in the package modus. Run
-```julia
-status
-```
-again to check whether the packages PackageToBeShipped, DataFrames, Distributions and CSV have been installed. If any of them are lacking, please add them to your environment in the package modus via 
-```julia
-add PackageName
-```
-Alternatively, you can start your Julia session in the right environment with 
-```julia 
-julia --threads=4 --project=path/to/environment 
-```
-Make sure all the required packages are in the environment. 
+#### Hint
+Create and use an [environment](https://pkgdocs.julialang.org/v1/environments/). 
 
-4. Load the packages. 
-In the REPL, run 
+#### Load packages
+Load the packages Charon, Distributions, CSV and DataFrames. 
+
+In Julia run 
 ```julia
 # load the packages. 
-using PackageToBeShipped, Distributions, CSV, DataFrames
+using Charon, Distributions, CSV, DataFrames
 ```
-5. Let us specify the path to the file where our data is stored. 
+If one of them is not installed, you can install them with 
+```julia
+using Pkg
+Pkg.add("PackageName")
+```
+where you replace PackageName with the name of the uninstalled package. 
+
+#### Specify files
+
+Specify the paths of the dice file and the location where you want to safe the output. 
 ```julia
 dicefile = "path/to/dicefile.csv" # UNIX-systems
 dicefile = "path\\to\\dicefile.csv" # Windows-sytems. 
@@ -99,22 +98,29 @@ You can use `cd` to change your working directory:
 ```
 shell> cd path/to/dicefilefolder
 ```
-Press backspace to come back to the normal REPL. 
+Press backspace to come back to the normal REPL. You can also specify an absolute path. 
 
-6. Let us specify a prior on n, (τC, τA) and ϵ. For example, you could use a uniform prior for all three:
+#### Specify prior 
+
+We need to specify a prior on n, (τC, τA) and ϵ. For example, you could use a uniform prior for all three:
 ```julia
 using Distributions # Julia package for probability distributions. 
 prioronτCτA = Product([Uniform(), Uniform()]) # uniform product prior [0,1]x[0,1] on (τC, τA).
 prioronn = DiscreteUniform(1, 10) # discrete uniform prior on {1, 2, ..., 10}.
 prioronϵ = Uniform(0, 0.5) # uniform prior on interval[0, 0.5].
 ```
-7. Specify how many MCMC samples you want and how many chains you want to sample. For example, if you want four chains with each 100'000 samples, you can specify 
+Check the [Distributions documentation](https://juliastats.org/Distributions.jl/stable/) for other distributions. 
+
+
+#### Specify chains and number of samples. 
+Specify how many MCMC samples you want and how many chains you want to sample. For example, if you want four chains with each 100'000 samples, you can specify 
 ```julia
 nchains = 4 
 nsteps = 100_000
 ```
 
-8. We can now run our sampler, which might take a while. 
+#### Run sampler
+We can now run our sampler, which might take a while. 
 ```julia
 using PackageToBeShipped 
 chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, dicefile)
@@ -128,7 +134,7 @@ nsample, τCsample, τAsample, ϵsample, accepted, logjointprob = chains[1]
 
 You can obtain the unconditioned sample from the posterior as follows 
 ```julia
-using PackageToBeShipped 
+using Charon 
 results = unpackposterior(nsteps, chains)
 ```
 `results` is a DataFrame with a sample from the posterior. It has 7 columns: 
