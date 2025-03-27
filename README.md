@@ -30,7 +30,7 @@ Pkg.add("Charon")
 Prepare your eDNA sample data in the native format. CHARON required 2 files:
 A) A base count derived from the BAM files for each segregating position in the population as such:
 
-       [derive count]  [total count]
+       [derived count]  [total count]
 
 For instance, say at position 239923 on chr 1, there are 4 reads supporting a derived variant and a total of 20 reads. The line for this position would be:
 
@@ -100,7 +100,6 @@ This project is licensed under the MIT License. See the `LICENSE` file for detai
 
 ---
 
-Ensure that you replace placeholders like `INSTALL.md`, `USER_GUIDE.md`, and `CONTRIBUTING.md` with actual files or relevant sections in your repository. Additionally, include any specific dependencies or prerequisites required to run the software. 
 
 
 
