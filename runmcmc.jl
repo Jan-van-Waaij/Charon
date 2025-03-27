@@ -2,7 +2,6 @@ using Pkg
 
 
 Pkg.activate("Runmcmc")
-#Pkg.add(["PackageToBeShipped", "Distributions", "CSV", "DataFrames"])
 Pkg.add(["Charon", "Distributions", "CSV", "DataFrames"])
 
 using Charon, Distributions, CSV, DataFrames 
