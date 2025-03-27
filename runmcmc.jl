@@ -1,10 +1,9 @@
 using Pkg 
 
-
 Pkg.activate("Runmcmc")
 Pkg.add(["Charon", "Distributions", "CSV", "DataFrames"])
 
-using PackageToBeShipped, Distributions, CSV, DataFrames 
+using Charon, Distributions, CSV, DataFrames 
 
 if length(ARGS) != 2 
     println("You should provide two arguments: (1) path to the dice file and (2) path to the results.")
