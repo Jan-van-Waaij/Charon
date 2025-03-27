@@ -38,6 +38,12 @@ using Pkg
 Pkg.add("Charon")
 ```
 
+You also need the packages [Distributions](https://juliastats.org/Distributions.jl/stable/), [CSV](https://csv.juliadata.org/stable/) and [DataFrames](https://dataframes.juliadata.org/stable/).
+```julia
+using Pkg 
+Pkg.add(["Distributions", "CSV", "DataFrames"])
+```
+
 #### Hint
 To minimise the risk of conflicting package versions, use a new [environment](https://pkgdocs.julialang.org/v1/environments/).
 
@@ -51,7 +57,7 @@ A CSV file in DICE-2 format has four columns. In this order: number of ancestral
 
 
 ### Convenience script.
-[Click here for an example script.](runmcmc.jl) This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and four chains with 100'000 samples. The script saves the output as a CSV file. You can use your favourite software to analyse it. It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
+[Click here for an example script.](runmcmc.jl) This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and generates four chains with 100'000 samples. The script saves the output as a CSV file. You can use your favourite software to analyse the output. It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
 ```julia
 julia --threads=4 path/to/runmcmc.jl path/to/dicefile path/to/outputfile
 ```
@@ -84,7 +90,7 @@ where you replace PackageName with the name of the uninstalled package.
 
 #### Specify files
 
-Specify the paths of the dice file and the location where you want to safe the output. 
+Specify the paths of the dice file and the location where you want to save the output. 
 ```julia
 dicefile = "path/to/dicefile.csv" # UNIX-systems
 dicefile = "path\\to\\dicefile.csv" # Windows-sytems. 
@@ -122,7 +128,7 @@ nsteps = 100_000
 #### Run sampler
 We can now run our sampler, which might take a while. 
 ```julia
-using PackageToBeShipped 
+using Charon 
 chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, dicefile)
 ```
 The output of this function 
