@@ -39,7 +39,7 @@ Pkg.add("Charon")
 ```
 
 #### Hint
-To minimise the risk of conflicting version, use a new [environment](https://pkgdocs.julialang.org/v1/environments/).
+To minimise the risk of conflicting package versions, use a new [environment](https://pkgdocs.julialang.org/v1/environments/).
 
 ## Using the sampler
 
