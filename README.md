@@ -18,12 +18,140 @@ We generally assume:
   
 ## Installation
 
+### Install Julia (Juliaup). 
+Go to [julialang.org](https://julialang.org/downloads/) and follow the installation instructions for your platform.
+
+### Add Julia to the path. 
+Check if Julia is added to your path by typing, for instance, `julia --version`. [If not, follow the instructions.](https://julialang.org/downloads/platform/)
+
 <!-- To install the tool, clone this repository and follow the setup instructions provided in the `INSTALL.md` file. -->
+
+### Start Julia
+
+Type `julia` in your terminal to start Julia. 
+
+### Install Charon.
+
 In Julia run 
 ```julia
 using Pkg
 Pkg.add("Charon")
 ```
+
+#### Hint
+To minimise the risk of conflicting version, use a new [environment](https://pkgdocs.julialang.org/v1/environments/).
+
+## Using the sampler
+
+### Convenience script.
+[Click here for an example script.](runmcmc.jl) This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and four chains with 100'000 samples. The script saves the output as a CSV file. You can use your favourite software to analyse it. It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
+```julia
+julia --threads=4 path/to/runmcmc.jl path/to/dicefile path/to/outputfile
+```
+where the output is saved in `outputfile`. `dicefile` might be a CSV file or a zipped CSV file. 
+
+### Steps to take. 
+In this paragraph, I describe the steps for manually running the sampler. 
+1. Save your data in the DICE-2 format as a (zipped) CSV file, [as described here](#data-format). 
+2. Start a Julia session with, for example, four threads if you want to sample four chains parallel.
+```
+julia --threads=4 
+```
+3. We must activate the environment we [created before](#activate-an-environment). You can check whether you are in the correct environment by running 
+```julia
+status 
+```
+in the package modus. If not, let's activate the environment that we created before by running
+```julia
+activate path/to/EnvironmentName 
+```
+in the package modus. Run
+```julia
+status
+```
+again to check whether the packages PackageToBeShipped, DataFrames, Distributions and CSV have been installed. If any of them are lacking, please add them to your environment in the package modus via 
+```julia
+add PackageName
+```
+Alternatively, you can start your Julia session in the right environment with 
+```julia 
+julia --threads=4 --project=path/to/environment 
+```
+Make sure all the required packages are in the environment. 
+
+4. Load the packages. 
+In the REPL, run 
+```julia
+# load the packages. 
+using PackageToBeShipped, Distributions, CSV, DataFrames
+```
+5. Let us specify the path to the file where our data is stored. 
+```julia
+dicefile = "path/to/dicefile.csv" # UNIX-systems
+dicefile = "path\\to\\dicefile.csv" # Windows-sytems. 
+dicefile = joinpath("path", "to", "dicefile.csv") # works on all systems 😄. 
+```
+where "path/to/dicefile.csv" is the relative path to dicefile.csv from your working directory. `dicefile` might also be a zipped csv file. You can find the working directory as follows: Press ";" to come in the [shell mode](https://docs.julialang.org/en/v1/stdlib/REPL/#man-shell-mode).  
+```julia-repl
+shell> pwd
+```
+You can use `cd` to change your working directory:
+```
+shell> cd path/to/dicefilefolder
+```
+Press backspace to come back to the normal REPL. 
+
+6. Let us specify a prior on n, (τC, τA) and ϵ. For example, you could use a uniform prior for all three:
+```julia
+using Distributions # Julia package for probability distributions. 
+prioronτCτA = Product([Uniform(), Uniform()]) # uniform product prior [0,1]x[0,1] on (τC, τA).
+prioronn = DiscreteUniform(1, 10) # discrete uniform prior on {1, 2, ..., 10}.
+prioronϵ = Uniform(0, 0.5) # uniform prior on interval[0, 0.5].
+```
+7. Specify how many MCMC samples you want and how many chains you want to sample. For example, if you want four chains with each 100'000 samples, you can specify 
+```julia
+nchains = 4 
+nsteps = 100_000
+```
+
+8. We can now run our sampler, which might take a while. 
+```julia
+using PackageToBeShipped 
+chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, dicefile)
+```
+The output of this function 
+`chains` is a vector of tuples. Each tuple represents an MCMC chain. Each tuple consists of six arrays. For instance, if we want to analyse the first chain, we get 
+```
+nsample, τCsample, τAsample, ϵsample, accepted, logjointprob = chains[1]
+```
+`nsample` is the MCMC chain for the number of individuals. `τCsample`, `τAsample`, and `ϵsample` are (in this example) 100'000x10 matrices, where the k-th column is the MCMC chain of `τC`, `τA`, and `ϵ`, respectively, with the number of individuals conditioned on k. `accepted` and `logjointprob` are 100'000x11 matrices, where the first column of each matrix indicates whether the mcmc chain for n is accepted and the logjoint probability, respectively. The k+1-th column is the acceptance vector / log joint probability vector of the MCMC conditioned on k individuals.
+
+You can obtain the unconditioned sample from the posterior as follows 
+```julia
+using PackageToBeShipped 
+results = unpackposterior(nsteps, chains)
+```
+`results` is a DataFrame with a sample from the posterior. It has 7 columns: 
+1. nsample sample of the number of individuals
+2. τCsample sample of τC values
+3. τAsample sample of τA values
+4. ϵsample sample of ϵ values 
+5. accepted whether the proposal was accepted. If not, the row is equal to the previous row. 
+6. logjointprob  the log joint probability of the likelihood and prior, which is the density of posterior up to a constant that only depends on the data, but not on the parameters. 
+7. chainid the id of the chain, a number in 1, ..., nchains. 
+
+[]()
+
+9. You can save the data frame as a CSV file as follows:
+```julia
+using CSV 
+resultscsvfile = "path/to/results.csv" # place on your hard disk
+# where you want to store your csv file. 
+CSV.write(resultscsvfile, results)
+```
+You can use the DataFrame and the CSV file for further analysis.
+
+
 
 ## Usage
 
