@@ -4,7 +4,7 @@
 Environmental DNA or forensic DNA can contain the DNA of multiple human individuals. Sequencing this DNA and aligning it to the human reference will result in alignments in BAM format. 
 CHARON: **C**alculating **HA**plotype distribution to **R**esolve **O**riginal **N**umber of individuals and demography takes a BAM file representing whole genome sequencing data from potentially multiple humans and infers:
  
-1. **Number of Diploid Individuals**: An estimate of the current population size based on genetic data.
+1. **Number of Diploid Individuals**: An estimate of the current population size based on genetic data.
 2. **Demography**: Drift time from a particular population and can determine which population has the lowest drift time thus the closest proxy.
 
 The name comes from the largest moon of Pluto which has 5 moons Charon, Styx, Nix, Kerberos, and Hydra.
