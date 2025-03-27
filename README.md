@@ -54,7 +54,7 @@ After installing, you can use the following base count:
 
 and allele frequency:
 
-   wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_freq_IBS.gz
+    wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_freq_IBS.gz
 
 Then run:
 
