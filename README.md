@@ -7,7 +7,7 @@ CHARON: **C**alculating **HA**plotype distribution to **R**esolve **O**riginal *
 1. **Number of Diploid Individuals**: An estimate of the current population size based on genetic data.
 2. **Demography**: Drift time from a particular population and can determine which population has the lowest drift time thus the closest proxy.
 
-The name comes from the largest moon of Pluto which has 5 moons Charon, Styx, Nix, Kerberos, and Hydra.
+The name comes from the largest moon of Pluto, which has 5 moons: Charon, Styx, Nix, Kerberos, and Hydra.
 
 ## Assumptions
 
@@ -36,11 +36,11 @@ For instance, say at position 239923 on chr 1, there are 4 reads supporting a de
 
       4 20
 
-B) A file describing the frequency of the derived base as a floating point number such as in a population:
+B) A file describing the frequency of the derived base (as a floating point number) such as in a population:
 
        [freq]
 
-For instance, say at our position 239923 on chr 1, 20% of a particular population has the derived variant then the line for this position would be:
+For instance, say at our position 239923 on chr 1, 20% of a particular population has the derived variant, then the line for this position would be:
 
        0.2
 
