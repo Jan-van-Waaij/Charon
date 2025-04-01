@@ -22,7 +22,7 @@ We generally assume:
 Go to [julialang.org](https://julialang.org/downloads/) and follow the installation instructions for your platform.
 
 ### Add Julia to the path. 
-Check if Julia is added to your path by typing, for instance, `julia --version`. [If not, follow the instructions.](https://julialang.org/downloads/platform/)
+Check if Julia is added to your path by typing, for instance, `julia --version` in the terminal. [If not, follow the instructions.](https://julialang.org/downloads/platform/)
 
 <!-- To install the tool, clone this repository and follow the setup instructions provided in the `INSTALL.md` file. -->
 
