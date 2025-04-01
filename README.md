@@ -38,7 +38,7 @@ using Pkg
 Pkg.add("Charon")
 ```
 
-You also need the packages [Distributions](https://juliastats.org/Distributions.jl/stable/), [CSV](https://csv.juliadata.org/stable/) and [DataFrames](https://dataframes.juliadata.org/stable/).
+You also need to install the packages [Distributions](https://juliastats.org/Distributions.jl/stable/), [CSV](https://csv.juliadata.org/stable/) and [DataFrames](https://dataframes.juliadata.org/stable/).
 ```julia
 using Pkg 
 Pkg.add(["Distributions", "CSV", "DataFrames"])
@@ -55,13 +55,18 @@ Our program can work with genetic data in the [DICE-2 format](https://github.com
 
 A CSV file in DICE-2 format has four columns. In this order: number of ancestral reads, number of derived reads, the frequency of the anchor population, and in how many loci this combination of reads and frequency occurs. So, the first two columns contain non-negative integers, the third column is a real number between 0.0 and 1.0, and the last column is a positive integer. 
 
+### Example file
+An example DICE file is available via 
+```bash
+wget /public/edna_allelefreq/IBS_ind4.dice.gz
+```
 
 ### Convenience script.
-[Click here for an example script.](runmcmc.jl) This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and generates four chains with 100'000 samples. The script saves the output as a CSV file. You can use your favourite software to analyse the output. It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
+[Click here for an example script.](runmcmc.jl) This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and generates four chains with 100'000 samples. The script saves the output as a CSV file. You can use your favourite software to analyse the output. Save runmcmc.jl on your computer. Pl It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
 ```julia
 julia --threads=4 path/to/runmcmc.jl path/to/dicefile path/to/outputfile
 ```
-where the output is saved in `outputfile`. `dicefile` might be a CSV file or a zipped CSV file. 
+where the output is saved in `outputfile`. `dicefile` might be a CSV file or a zipped CSV file. An example DICE file can be found [here](Example-file). 
 
 ### Steps to take. 
 In this paragraph, I describe the steps for manually running the sampler. 
