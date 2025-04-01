@@ -172,7 +172,7 @@ resultscsvfile = "path/to/results.csv" # place on your hard disk
 # where you want to store your csv file. 
 CSV.write(resultscsvfile, results)
 ```
-You can use the DataFrame and the CSV file for further analysis.
+You can use the DataFrame or the CSV file for further analysis.
 
 
 
