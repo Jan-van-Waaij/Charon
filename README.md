@@ -60,6 +60,10 @@ An example DICE file is available via
 ```bash
 wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4.dice.gz
 ```
+Or in Windows Power Shell:
+```powershell
+Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4.dice.gz" -OutFile "IBS_ind4.dice.gz"
+```
 
 ### Convenience script.
 [Click here for an example script.](runmcmc.jl) This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and generates four chains with 100'000 samples. The script saves the output as a CSV file. You can use your favourite software to analyse the output. Save runmcmc.jl on your computer. It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
