@@ -72,6 +72,12 @@ julia --threads=4 path/to/runmcmc.jl path/to/dicefile path/to/outputfile
 ```
 where the output is saved in `outputfile`. `dicefile` might be a CSV file or a zipped CSV file. An example DICE file can be found [here](#Example-file). 
 
+#### Example
+So if you have downloaded `IBS_ind4.dice.gz` and `runmcmc.jl` from the former steps and have saved them in the same folder, and you navigate to the folder in the terminal, then the following command runs the MCMC and saves the results to `output.csv`.
+```julia
+julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
+```
+
 ### Steps to take. 
 In this paragraph, I describe the steps for manually running the sampler. 
 1. Save your data in the DICE-2 format as a (zipped) CSV file, [as described here](#data-format). 
