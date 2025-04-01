@@ -66,7 +66,7 @@ wget /public/edna_allelefreq/IBS_ind4.dice.gz
 ```julia
 julia --threads=4 path/to/runmcmc.jl path/to/dicefile path/to/outputfile
 ```
-where the output is saved in `outputfile`. `dicefile` might be a CSV file or a zipped CSV file. An example DICE file can be found [here](###Example-file). 
+where the output is saved in `outputfile`. `dicefile` might be a CSV file or a zipped CSV file. An example DICE file can be found [here](#Example-file). 
 
 ### Steps to take. 
 In this paragraph, I describe the steps for manually running the sampler. 
