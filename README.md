@@ -113,7 +113,7 @@ cd("path/to/directory") # unix
 cd("path\\to\\directory") # windows
 cd("C:\\path\\to\\directory") # absolute path in windows 
 cd(joinpath("path", "to", "directory")) # all platforms.
-cd("joinpath("C:\\", "path", "to", "directory")) # Windows, absolute path. 
+cd(joinpath("C:\\", "path", "to", "directory")) # Windows, absolute path. 
 ```
 The path can be a relative or absolute path. 
 
