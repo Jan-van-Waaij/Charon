@@ -100,8 +100,8 @@ Specify the paths of the dice file and the location where you want to save the o
 dicefile = "path/to/dicefile.csv" # UNIX-systems
 dicefile = "path\\to\\dicefile.csv" # Windows-sytems. 
 dicefile = joinpath("path", "to", "dicefile.csv") # works on all systems 😄.
-cd("C:\\path\\to\\directory") # absolute path in windows 
-cd("joinpath("C:\\", "path", "to", "directory")) # Windows, absolute path. 
+dicefile = "C:\\path\\to\\directory" # absolute path in windows 
+dicefile = joinpath("C:\\", "path", "to", "directory") # Windows, absolute path. 
 ```
 where "path/to/dicefile.csv" is the relative path to dicefile.csv from your working directory. `dicefile` might also be a zipped csv file. You can find the working directory as follows: 
 ```julia
