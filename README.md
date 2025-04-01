@@ -101,15 +101,19 @@ dicefile = "path/to/dicefile.csv" # UNIX-systems
 dicefile = "path\\to\\dicefile.csv" # Windows-sytems. 
 dicefile = joinpath("path", "to", "dicefile.csv") # works on all systems 😄. 
 ```
-where "path/to/dicefile.csv" is the relative path to dicefile.csv from your working directory. `dicefile` might also be a zipped csv file. You can find the working directory as follows: Press ";" to come in the [shell mode](https://docs.julialang.org/en/v1/stdlib/REPL/#man-shell-mode).  
-```julia-repl
-shell> pwd
+where "path/to/dicefile.csv" is the relative path to dicefile.csv from your working directory. `dicefile` might also be a zipped csv file. You can find the working directory as follows: 
+```julia
+pwd()
 ```
-You can use `cd` to change your working directory:
+You can change the directory with 
 ```
-shell> cd path/to/dicefilefolder
+cd("path/to/directory") # unix
+cd("path\\to\\directory") # windows
+cd("C:\\path\\to\\directory") # absolute path in windows 
+cd(joinpath("path", "to", "directory")) # all platforms.
+cd("joinpath("C:\\", "path", "to", "directory")) # Windows, absolute path. 
 ```
-Press backspace to come back to the normal REPL. You can also specify an absolute path. 
+The path can be a relative or absolute path. 
 
 #### Specify prior 
 
