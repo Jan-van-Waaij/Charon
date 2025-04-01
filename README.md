@@ -58,7 +58,7 @@ A CSV file in DICE-2 format has four columns. In this order: number of ancestral
 ### Example file
 An example DICE file is available via 
 ```bash
-wget /public/edna_allelefreq/IBS_ind4.dice.gz
+wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4.dice.gz
 ```
 
 ### Convenience script.
