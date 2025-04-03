@@ -66,19 +66,19 @@ A CSV file in DICE-2 format has four columns. In this order: number of ancestral
 
 In some situations, for instance if you want to test your sample against many anchors, it can be convenient to use a seperate base count file for the sediment sample and a seperate frequency file for the anchor population. In this case the base count file consist of two columns, where the first column is the number of derived reads, and the second column is the coverage. Like this 
 ```
-0    12
-3    4
-4    4
-0    5 
+5    8
+1    5
+0    5
+2    4 
 ```
 The second file is one column with numbers between 0.0 and 1.0, like this
 ```
-0.12
-0.32
+0.48
 0.01
-0.30
+0.03
+0.23
 ```
-Both files should have the same number of rows. 
+Both files should have the same number of rows. Each row corresponds to a certain locus. The n-th row in the base count file corresponds to the frequency in the n-th row of the frequency file. 
 
 ### Example files
 
