@@ -49,6 +49,27 @@ To minimise the risk of conflicting package versions, use a new [environment](ht
 
 ## Using the sampler
 
+### Prepare data
+
+Prepare your eDNA sample data in the native format. CHARON required 2 files:
+A) A base count derived from the BAM files for each segregating position in the population as such:
+
+       [derived count]  [total count]
+
+For instance, say at position 239923 on chr 1, there are 4 reads supporting a derived variant and a total of 20 reads. The line for this position would be:
+
+      4 20
+
+B) A file describing the frequency of the derived base (as a floating point number) such as in a population:
+
+       [freq]
+
+For instance, say at our position 239923 on chr 1, 20% of a particular population has the derived variant, then the line for this position would be:
+
+       0.2
+
+Please note that both files should have the same number of lines. Both files can be zipped.
+
 ### Data formats
 
 #### DICE-2 format
@@ -241,29 +262,6 @@ resultscsvfile = "path/to/results.csv" # place on your hard disk
 CSV.write(resultscsvfile, results)
 ```
 You can use the DataFrame or the CSV file for further analysis.
-
-
-
-## Usage
-
-Prepare your eDNA sample data in the native format. CHARON required 2 files:
-A) A base count derived from the BAM files for each segregating position in the population as such:
-
-       [derived count]  [total count]
-
-For instance, say at position 239923 on chr 1, there are 4 reads supporting a derived variant and a total of 20 reads. The line for this position would be:
-
-      4 20
-
-B) A file describing the frequency of the derived base (as a floating point number) such as in a population:
-
-       [freq]
-
-For instance, say at our position 239923 on chr 1, 20% of a particular population has the derived variant, then the line for this position would be:
-
-       0.2
-
-Please note that both files should have the same number of lines. Both files can be zipped.
 
 ## Quick start and test data
 
