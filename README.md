@@ -101,7 +101,7 @@ The second file is one column with numbers between 0.0 and 1.0, like this
 ```
 Both files should have the same number of rows. Each row corresponds to a certain locus. The n-th row in the base count file corresponds to the frequency in the n-th row of the frequency file. 
 
-### Example files
+#### Example files
 
 
 
@@ -156,7 +156,7 @@ In this paragraph, I describe the steps for manually running the sampler.
 ```
 julia --threads=4 
 ```
-#### Hint
+##### Hint
 Create and use an [environment](https://pkgdocs.julialang.org/v1/environments/). 
 
 #### Load packages
