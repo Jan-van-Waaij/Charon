@@ -72,6 +72,7 @@ Please note that both files should have the same number of lines. Both files can
 
 ### Data formats
 
+We allow two data formats. 
 #### DICE-2 format
 Our program can work with genetic data in the [DICE-2 format](https://github.com/grenaud/dice?tab=readme-ov-file#2-pop-method-input-data-format). 
 
