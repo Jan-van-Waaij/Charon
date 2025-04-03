@@ -54,7 +54,13 @@ To minimise the risk of conflicting package versions, use a new [environment](ht
 #### DICE-2 format
 Our program can work with genetic data in the [DICE-2 format](https://github.com/grenaud/dice?tab=readme-ov-file#2-pop-method-input-data-format). 
 
-A CSV file in DICE-2 format has four columns. In this order: number of ancestral reads, number of derived reads, the frequency of the anchor population, and in how many loci this combination of reads and frequency occurs. So, the first two columns contain non-negative integers, the third column is a real number between 0.0 and 1.0, and the last column is a positive integer. 
+A CSV file in DICE-2 format has four columns. In this order: number of ancestral reads, number of derived reads, the frequency of the anchor population, and in how many loci this combination of reads and frequency occurs. So, the first two columns contain non-negative integers, the third column is a real number between 0.0 and 1.0, and the last column is a positive integer. So an example is 
+```
+3    5    0.48    10
+4    1    0.01    2
+5    0    0.03    3
+4    2    0.23    5
+```
 
 #### Seperate basecount and frequency files
 
