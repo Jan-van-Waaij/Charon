@@ -69,7 +69,7 @@ In some situations, for instance if you want to test your sample against many an
 5    8
 1    5
 0    5
-2    4 
+2    6 
 ```
 The second file is one column with numbers between 0.0 and 1.0, like this
 ```
