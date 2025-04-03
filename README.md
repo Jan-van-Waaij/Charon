@@ -114,7 +114,7 @@ or
 ```julia
 julia --threads=4 path/to/runmcmc.jl path/to/basecountfile path/to/frequencyfile path/to/outputfile
 ```
-where the output is saved in `outputfile`. `dicefile`, `basecountfile`, and `frequencyfile` might be a CSV files or a zipped CSV files. An example files can be found [here](#Example-files). 
+where the output is saved in `outputfile`. `dicefile`, `basecountfile`, and `frequencyfile` might be a CSV files or a zipped CSV files. Example files can be found [here](#Example-files). 
 
 #### Example
 So if you have downloaded `IBS_ind4.dice.gz` (or `IBS_ind4_basecount_IBS_ind4.gz` and `IBS_ind4_freq_IBS.gz`) and `runmcmc.jl` from the former steps and have saved them in the same folder, and you navigate to the folder in the terminal, then the following command runs the MCMC and saves the results to `output.csv`.
