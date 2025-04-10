@@ -16,15 +16,39 @@ We generally assume:
 - **equal contribution**: Each individual contributed more or less the same amount of DNA to the mix 
 - **same population of origin**: All the individuals come from the same population.
   
-## Installation
+## Install Julia 
 
-### Install Julia (Juliaup). 
 Go to [julialang.org](https://julialang.org/downloads/) and follow the installation instructions for your platform.
 
 ### Add Julia to the path. 
 Check if Julia is added to your path by typing, for instance, `julia --version` in the terminal. [If not, follow the instructions.](https://julialang.org/downloads/platform/)
 
 <!-- To install the tool, clone this repository and follow the setup instructions provided in the `INSTALL.md` file. -->
+
+## Quick start and test data
+
+After installing, you can use the following base count:
+
+```bash
+wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_basecount_IBS_ind4.gz
+```
+
+and allele frequency:
+
+```bash
+wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_freq_IBS.gz
+```
+
+and download the following [script](runmcmc.jl) 
+
+Install [Julia](https://julialang.org/downloads/), and run:
+
+```julia
+julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
+```
+where output is a CSV file with the MCMC samples. 
+
+## Detailed description. 
 
 ### Start Julia
 
@@ -55,23 +79,25 @@ Prepare your eDNA sample data in the native format. CHARON required 2 files:
 A) A base count derived from the BAM files for each segregating position in the population as such:
 
 ```
-       [derived count]  [total count]
+[derived count]  [total count]
 ```
 
 For instance, say at position 239923 on chr 1, there are 4 reads supporting a derived variant and a total of 20 reads. The line for this position would be:
 
-      4 20
+```
+4 20
+```
 
 B) A file describing the frequency of the derived base (as a floating point number) such as in a population:
 
 ```
-       [freq]
+[freq]
 ```
 
 For instance, say at our position 239923 on chr 1, 20% of a particular population has the derived variant, then the line for this position would be:
 
 ```
-       0.2
+0.2
 ```
 
 Please note that both files should have the same number of lines. Both files can be zipped.
@@ -269,29 +295,6 @@ resultscsvfile = "path/to/results.csv" # place on your hard disk
 CSV.write(resultscsvfile, results)
 ```
 You can use the DataFrame or the CSV file for further analysis.
-
-## Quick start and test data
-
-After installing, you can use the following base count:
-
-```bash
-wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_basecount_IBS_ind4.gz
-```
-
-and allele frequency:
-
-```bash
-wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_freq_IBS.gz
-```
-
-and download the following [script](runmcmc.jl) 
-
-Install [Julia](https://julialang.org/downloads/), and run:
-
-```julia
-julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
-```
-where output is a CSV file with the MCMC samples. 
  
  ### How to transform CRAM/BAM files into CHARON's native format?
 
