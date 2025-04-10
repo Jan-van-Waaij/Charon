@@ -58,7 +58,7 @@ instead of `wget`.
 
 ### Start Julia
 
-Type `julia` in your terminal to start Julia. 
+Type `julia` in your terminal to start Julia.
 
 ### Install Charon.
 
@@ -108,11 +108,8 @@ For instance, say at our position 239923 on chr 1, 20% of a particular populatio
 
 Please note that both files should have the same number of lines. Both files can be zipped.
 
-### Data formats
-
-We allow two data formats. 
-#### DICE-2 format
-Our program can work with genetic data in the [DICE-2 format](https://github.com/grenaud/dice?tab=readme-ov-file#2-pop-method-input-data-format). 
+#### Alternative data format.
+We also allow data in the [DICE-2 format](https://github.com/grenaud/dice?tab=readme-ov-file#2-pop-method-input-data-format). 
 
 A CSV file in DICE-2 format has four columns. In this order: number of ancestral reads, number of derived reads, the frequency of the anchor population, and in how many loci this combination of reads and frequency occurs. So, the first two columns contain non-negative integers, the third column is a real number between 0.0 and 1.0, and the last column is a positive integer. So an example is 
 ```
@@ -121,24 +118,6 @@ A CSV file in DICE-2 format has four columns. In this order: number of ancestral
 5    0    0.03    3
 4    2    0.23    5
 ```
-
-#### Seperate basecount and frequency files
-
-In some situations, for instance if you want to test your sample against many anchors, it can be convenient to use a seperate base count file for the sediment sample and a seperate frequency file for the anchor population. In this case the base count file consist of two columns, where the first column is the number of derived reads, and the second column is the coverage. Like this 
-```
-5    8
-1    5
-0    5
-2    6 
-```
-The second file is one column with numbers between 0.0 and 1.0, like this
-```
-0.48
-0.01
-0.03
-0.23
-```
-Both files should have the same number of rows. Each row corresponds to a certain locus. The n-th row in the base count file corresponds to the frequency in the n-th row of the frequency file. 
 
 #### Example files
 
@@ -174,16 +153,20 @@ Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_i
 ### Convenience script.
 [Click here for an example script.](runmcmc.jl) This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and generates four chains with 100'000 samples. It works both with the DICE-2 format and the other format with seperate base count and frequency files. The script saves the output as a CSV file. You can use your favourite software to analyse the output. Save runmcmc.jl on your computer. It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
 ```julia
-julia --threads=4 path/to/runmcmc.jl path/to/dicefile path/to/outputfile
-```
-or
-```julia
 julia --threads=4 path/to/runmcmc.jl path/to/basecountfile path/to/frequencyfile path/to/outputfile
+```
+or 
+```julia
+julia --threads=4 path/to/runmcmc.jl path/to/dicefile path/to/outputfile
 ```
 where the output is saved in `outputfile`. `dicefile`, `basecountfile`, and `frequencyfile` might be a CSV files or a zipped CSV files. Example files can be found [here](#Example-files). 
 
 #### Example
-So if you have downloaded `IBS_ind4.dice.gz` (or `IBS_ind4_basecount_IBS_ind4.gz` and `IBS_ind4_freq_IBS.gz`) and `runmcmc.jl` from the former steps and have saved them in the same folder, and you navigate to the folder in the terminal, then the following command runs the MCMC and saves the results to `output.csv`.
+So if you have downloaded `IBS_ind4_basecount_IBS_ind4.gz` and `IBS_ind4_freq_IBS.gz` (or `IBS_ind4.dice.gz`) and `runmcmc.jl` from the former steps and have saved them in the same folder, and you navigate to the folder in the terminal, then the following command runs the MCMC and saves the results to `output.csv`.
+```julia
+julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
+```
+or
 ```julia
 julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
 ```
@@ -347,7 +330,7 @@ which represent the allele frequencies for each population to test.
 For detailed instructions and examples, refer to the `USER_GUIDE.md` file.
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is licensed under the MIT License. See the [license file](LICENSE.md) for details.
 
 
 ---
