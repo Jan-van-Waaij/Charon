@@ -41,8 +41,7 @@ wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_freq_IBS.gz
 
 and download the following [script](runmcmc.jl) 
 
-Install [Julia](https://julialang.org/downloads/), and run:
-
+Run:
 ```julia
 julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
 ```
