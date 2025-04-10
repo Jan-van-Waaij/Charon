@@ -328,12 +328,7 @@ which represent the allele frequencies for each population to test.
 
 
 For detailed instructions and examples, refer to the `USER_GUIDE.md` file.
-## License
 
-This project is licensed under the MIT License. See the [license file](LICENSE.md) for details.
-
-
----
 
 
 
@@ -361,3 +356,10 @@ glactools  cat   1000gmeld2_1.acf.gz 1000gmeld2_2.acf.gz 1000gmeld2_3.acf.gz 100
 ```
 
 The last file should be identical to the one we have on our ftp.
+
+## License
+
+This project is licensed under the MIT License. See the [license file](LICENSE.md) for details.
+
+
+---
