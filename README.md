@@ -173,7 +173,7 @@ julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
 
 ### Steps to take. 
 In this paragraph, I describe the steps for manually running the sampler. 
-1. Save your data in one of the two allowed data formats, [as described here](#data-formats). 
+1. Save your data in one of the two allowed data formats, [as described here](#Prepare-data). 
 2. Start a Julia session with, for example, four threads if you want to sample four chains in parallel.
 ```
 julia --threads=4 
