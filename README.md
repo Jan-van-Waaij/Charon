@@ -13,7 +13,7 @@ The name comes from the largest moon of Pluto, which has 5 moons: Charon, Styx, 
 
 We generally assume:
 
-- **equal contribution**: Each individual contributed more or less the same amount of DNA to the mix 
+- **equal contribution**: Each individual contributed more or less the same amount of DNA to the mix. 
 - **same population of origin**: All the individuals come from the same population.
   
 ## Install Julia 
@@ -198,32 +198,22 @@ where you replace PackageName with the name of the uninstalled package.
 
 #### Specify files
 
-Specify the paths of the dice file and the location where you want to save the output. 
+Specify the relative, or absolute paths to the basecount and frequency files. The working directory can be found with `pwd()` and can be changed with `cd("path/to/folder")`.
+```julia
+basecountfile = "path/to/basecountfile.csv" # unix
+basecountfile = "path\\to\\basecountfile.csv" # windows
+basecountfile = "C:\\path\\to\\basecountfile.csv" # absolute path windows
+basecountfile = joinpath("path", "to", "basecountfile.csv") # works on any platform
+basecountfile = joinpath("C:\\", "path", "to", "basecountfile.csv") # Windows, absolute path.
+```
+Similarly, set the path for the frequency file. 
+```julia
+frequencyfile = "path/to/frequencyfile.csv" # unix
+```
+Alternatively, you can specify the path of the dice file. 
 ```julia
 dicefile = "path/to/dicefile.csv" # UNIX-systems
-dicefile = "path\\to\\dicefile.csv" # Windows-sytems. 
-dicefile = joinpath("path", "to", "dicefile.csv") # works on all systems 😄.
-dicefile = "C:\\path\\to\\directory" # absolute path in windows 
-dicefile = joinpath("C:\\", "path", "to", "directory") # Windows, absolute path. 
 ```
-alternatively, you can use seperate base count and frequency files as follows
-```julia
-basecountfile = "path/to/basecountfile.csv"
-frequencyfile = "path/to/frequencyfile.csv"
-```
-where "path/to/dicefile.csv" is the relative path to dicefile.csv from your working directory. `dicefile` (or `basecountfile` and `frequencyfile`) might also be zipped csv files. You can find the working directory as follows: 
-```julia
-pwd()
-```
-You can change the directory with 
-```
-cd("path/to/directory") # unix
-cd("path\\to\\directory") # windows
-cd("C:\\path\\to\\directory") # absolute path in windows 
-cd(joinpath("path", "to", "directory")) # all platforms.
-cd(joinpath("C:\\", "path", "to", "directory")) # Windows, absolute path. 
-```
-The path can be a relative or absolute path. 
 
 #### Specify prior 
 
