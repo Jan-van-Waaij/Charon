@@ -54,7 +54,7 @@ Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_i
 instead of `wget`.
 
 
-## Detailed description. 
+## Detailed description of the software 
 
 ### Start Julia
 
