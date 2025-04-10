@@ -203,7 +203,7 @@ Specify the relative, or absolute paths to the basecount and frequency files. Th
 basecountfile = "path/to/basecountfile.csv" # unix
 basecountfile = "path\\to\\basecountfile.csv" # windows
 basecountfile = "C:\\path\\to\\basecountfile.csv" # absolute path windows
-basecountfile = joinpath("path", "to", "basecountfile.csv") # works on any platform
+basecountfile = joinpath("path", "to", "basecountfile.csv") # works on all platforms
 basecountfile = joinpath("C:\\", "path", "to", "basecountfile.csv") # Windows, absolute path.
 ```
 Similarly, set the path for the frequency file. 
@@ -238,13 +238,14 @@ nsteps = 100_000
 We can now run our sampler, which might take a while. 
 ```julia
 using Charon 
-chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, dicefile)
-```
-or 
-```julia
-using Charon 
 chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, basecountfile, frequencyfile)
 ```
+or
+```julia
+using Charon 
+chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, dicefile)
+```
+
 The output of this function 
 `chains` is a vector of tuples. Each tuple represents an MCMC chain. Each tuple consists of six arrays. For instance, if we want to analyse the first chain, we get 
 ```
@@ -297,13 +298,13 @@ The file /path/all_hg38withchr.epo.gz is tab-delimited with one line per positio
 ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/all_hg38withchr.epo.gz. 
 ```
 
-The file mappablechr1_22_99.bed.gz is a bed file of highly mappable regions on chromosomes 1-22. It can be found: 
+The file `mappablechr1_22_99.bed.gz` is a bed file of highly mappable regions on chromosomes 1-22. It can be found: 
 
 ```
 ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/mappablechr1_22_99.bed.gz
 ```
 
-The file  /path/GRCh38_full_analysis_set_plus_decoy_hla.fa is the FASTA file of the 1000 Genomes reference. The second nested command, the "samtools view" transforms CRAM to BAM.
+The file  `/path/GRCh38_full_analysis_set_plus_decoy_hla.fa` is the FASTA file of the 1000 Genomes reference. The second nested command, the "samtools view" transforms CRAM to BAM.
 
 This will give you an ACF of your BAM file, you need to use glactools' intersect to intersect it with the 1000 Genomes allele frequency:
 
