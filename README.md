@@ -259,15 +259,15 @@ using Charon
 results = unpackposterior(nsteps, chains)
 ```
 `results` is a DataFrame with a sample from the posterior. It has 7 columns: 
-1. nsample sample of the number of individuals
-2. τCsample sample of τC values
-3. τAsample sample of τA values
-4. ϵsample sample of ϵ values 
-5. accepted whether the proposal was accepted. If not, the row is equal to the previous row. 
-6. logjointprob  the log joint probability of the likelihood and prior, which is the density of posterior up to a constant that only depends on the data, but not on the parameters. 
-7. chainid the id of the chain, a number in 1, ..., nchains. 
+1. `nsample` sample of the number of individuals
+2. `τCsample` sample of τC values
+3. `τAsample` sample of τA values
+4. `ϵsample` sample of ϵ values 
+5. `accepted` whether the proposal was accepted. If not, the row is equal to the previous row. 
+6. `logjointprob`  the log joint probability of the likelihood and prior, which is the density of posterior up to a constant that only depends on the data, but not on the parameters. 
+7. `chainid` the id of the chain, a number in 1, ..., nchains. 
 
-9. You can save the data frame as a CSV file as follows:
+You can save the data frame as a CSV file as follows:
 ```julia
 using CSV 
 resultscsvfile = "path/to/results.csv" # place on your hard disk
