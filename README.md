@@ -39,8 +39,7 @@ and allele frequency:
 wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_freq_IBS.gz
 ```
 
-and download the following [script](runmcmc.jl) 
-Put all three files in one folder, and navigate to that folder in the terminal. Then run 
+and download the following [script](runmcmc.jl). Put all three files in one folder, and navigate to that folder in the terminal. Then run 
 ```julia
 julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
 ```
