@@ -40,11 +40,9 @@ wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_freq_IBS.gz
 ```
 
 and download the following [script](runmcmc.jl) 
-
-Run:
+Put all three files in one folder, and navigate to that folder in the terminal. Then run 
 ```julia
-julia --threads=4 path/to/runmcmc.jl path/to/IBS_ind4_basecount_IBS_ind4.gz path/to/IBS_ind4_freq_IBS.gz path/to/output.csv
-julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
+julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
 ```
 where output is a CSV file with the MCMC samples. 
 
