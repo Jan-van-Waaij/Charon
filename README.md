@@ -48,6 +48,15 @@ julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
 ```
 where output is a CSV file with the MCMC samples. 
 
+### Windows
+If you use Windows Powershell, you can use 
+```powershell
+Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_basecount_IBS_ind4.gz" -OutFile "IBS_ind4_basecount_IBS_ind4.gz"
+Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_freq_IBS.gz" -OutFile "IBS_ind4_freq_IBS.gz"
+```
+instead of `wget`.
+
+
 ## Detailed description. 
 
 ### Start Julia
