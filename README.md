@@ -51,6 +51,7 @@ runs an MCMC sampler, whose output is saved to `output.csv`. This might take a w
 5. accepted: was the proposal accepted?
 6. logjointprob: the log probability, up to a additive constant,
 7. chainid: whether this is the first, second, ... chain.
+
 Each row is a draw from the posterior. 
 
 ### Windows
