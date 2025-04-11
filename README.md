@@ -43,7 +43,15 @@ and download the following [script](runmcmc.jl). Put all three files in one fold
 ```julia
 julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
 ```
-runs an MCMC sampler, whose output is saved to `output.csv`. This might take a while. 
+runs an MCMC sampler, whose output is saved to `output.csv`. This might take a while. The output consists of 7 columnns, 
+1. nsample: n values
+2. τCsample: τC values
+3. τAsample: τA values
+4. ϵsample: ϵ values 
+5. accepted: was the proposal accepted?
+6. logjointprob: the log probability, up to a additive constant,
+7. chainid: whether this is the first, second, ... chain.
+Each row is a draw from the posterior. 
 
 ### Windows
 If you use Windows Powershell, you can use 
