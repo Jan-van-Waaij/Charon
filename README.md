@@ -269,7 +269,7 @@ nsample, τCsample, τAsample, ϵsample, accepted, logjointprob = chains[1]
 You can obtain the unconditioned sample from the posterior as follows 
 ```julia
 using Charon 
-results = unpackposterior(nsteps, chains)
+results = unpackposterior(chains)
 ```
 `results` is a DataFrame with a sample from the posterior. It has 7 columns: 
 1. `nsample` sample of the number of individuals
