@@ -43,7 +43,15 @@ and download the following [script](runmcmc.jl). Put all three files in one fold
 ```julia
 julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
 ```
-runs an MCMC sampler, whose output is saved to `output.csv`. This might take a while. See the "Output format" below to interpret the output.
+runs an MCMC sampler, whose output is saved to `output.csv`. This might take a while. See the [Output format](Output-format) below to interpret the output.
+
+### Windows
+If you use Windows Powershell, you can use 
+```powershell
+Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_basecount_IBS_ind4.gz" -OutFile "IBS_ind4_basecount_IBS_ind4.gz"
+Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_freq_IBS.gz" -OutFile "IBS_ind4_freq_IBS.gz"
+```
+instead of `wget`.
 
 ## Output format
 
@@ -58,13 +66,7 @@ The output is a [CSV-file](https://en.wikipedia.org/wiki/Comma-separated_values)
 
 Each row is a draw from the posterior. 
 
-### Windows
-If you use Windows Powershell, you can use 
-```powershell
-Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_basecount_IBS_ind4.gz" -OutFile "IBS_ind4_basecount_IBS_ind4.gz"
-Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_freq_IBS.gz" -OutFile "IBS_ind4_freq_IBS.gz"
-```
-instead of `wget`.
+
 
 
 ## Detailed description of the software 
