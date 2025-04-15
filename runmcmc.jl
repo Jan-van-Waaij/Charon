@@ -1,6 +1,6 @@
 using Pkg 
 
-Pkg.activate("Runmcmc")
+Pkg.activate(; temp=true)
 Pkg.add(["Charon", "Distributions", "CSV", "DataFrames"])
 
 using Charon, Distributions, CSV, DataFrames 
@@ -42,7 +42,7 @@ else
     exit(4)
 end 
     
-results = unpackposterior(nsteps, chains)
+results = unpackposterior(chains)
 
 CSV.write(resultsfile, results)
 
