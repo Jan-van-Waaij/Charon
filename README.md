@@ -221,11 +221,11 @@ basecountfile = "C:\\path\\to\\basecountfile.csv" # absolute path windows
 basecountfile = joinpath("path", "to", "basecountfile.csv") # works on all platforms
 basecountfile = joinpath("C:\\", "path", "to", "basecountfile.csv") # Windows, absolute path.
 ```
-Similarly, set the path for the frequency file. 
+Similarly, set the path to the frequency file. 
 ```julia
 frequencyfile = "path/to/frequencyfile.csv" # unix
 ```
-Alternatively, you can specify the path of the dice file. 
+Alternatively, you can specify the path to the dice file. 
 ```julia
 dicefile = "path/to/dicefile.csv" # UNIX-systems
 ```
@@ -268,14 +268,22 @@ The output of this function
 ```
 nsample, τCsample, τAsample, ϵsample, accepted, logjointprob = chains[1]
 ```
-`nsample` is the MCMC chain for the number of individuals. `τCsample`, `τAsample`, and `ϵsample` are (in this example) 100'000x10 matrices, where the k-th column is the MCMC chain of `τC`, `τA`, and `ϵ`, respectively, with the number of individuals conditioned on k. `accepted` and `logjointprob` are 100'000x11 matrices, where the first column of each matrix indicates whether the mcmc chain for n is accepted and the logjoint probability, respectively. The k+1-th column is the acceptance vector / log joint probability vector of the MCMC conditioned on k individuals.
+* `nsample` is the MCMC chain for the number of individuals. 
+* `τCsample` is (in this example) a 100'000x10 matrix. The k-th  column is the τC sample of the posterior conditioned on k individuals.
+* `τAsample` similar to `τCsample`, but now for τA.
+* `ϵsample` similar to `τCsample`, but now for ϵ.
+* `accepted` is a 100'000x11 matrices of true/false values. The first column indicates whether a proposal for n is accepted. The k+1-th column indicates whether a proposal for (τC, τA,ϵ) of the posterior conditioned on k individuals was accepted.
+* `logjointprob` is a 100'000x11 matrices of log joint probability values. The first column indicates the log joint probability of the unconditioned posterior with `nsample[i]` individuals. The k+1-th column is the log joint probability conditioned on k individuals.  
 
 You can obtain the unconditioned sample from the posterior as follows 
 ```julia
 using Charon 
 results = unpackposterior(chains)
 ```
-`results` is a `DataFrame` from the [`DataFrames` package](https://dataframes.juliadata.org/stable/man/working_with_dataframes/) with a sample from the posterior. It has 7 columns: 
+`unpackposterior` does the following. It produces a [DataFrame](https://dataframes.juliadata.org/stable/man/working_with_dataframes/) with the unconditional posterior. Each row is an draw from the posterior. We have at at row i, for the first chain, `τC[i]=τCsample[nsample[i]]`, so it uses the `τC` value belonging conditioning on `k=nsample[i]`. Similar for `τA`, and `ϵ`. It concatenates all chains, and gives each an ID, going from 1,...,4 (in this example). 
+
+
+`results` is a `DataFrame` with a sample from the unconditioned posterior. It has 7 columns: 
 1. `nsample` sample of the number of individuals
 2. `τCsample` sample of τC values
 3. `τAsample` sample of τA values
@@ -283,6 +291,8 @@ results = unpackposterior(chains)
 5. `accepted` whether the proposal was accepted. If not, the row is equal to the previous row. 
 6. `logjointprob`  the log joint probability of the likelihood and prior, which is the density of posterior up to a constant that only depends on the data, but not on the parameters. 
 7. `chainid` the id of the chain, a number in 1, ..., nchains. 
+
+
 
 You can save the data frame as a CSV file as follows:
 ```julia
