@@ -43,7 +43,7 @@ and download the following [script](runmcmc.jl). Put all three files in one fold
 ```julia
 julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
 ```
-in your terminal and press enter. This executes an MCMC sampler, whose output is saved to `output.csv`. This might take a while. See the ["Output format" section](#Output-format) below to interpret the output. The script takes care of installing and loading the appropriate packages. It generates 100'000 samples, and sets uniform priors on n, τC, τA and ϵ. 
+in your terminal and press enter. This executes an MCMC sampler, whose output is saved to `output.csv`. This might take a while. See the ["Output format" section](#Output-format) below to interpret the output. The script takes care of installing and loading the appropriate Julia packages, including Charon. It generates 100'000 samples, and sets uniform priors on n, τC, τA and ϵ. 
 
 ### Windows
 If you use Windows Powershell, you can use 
@@ -194,9 +194,6 @@ Pkg.add(["Distributions", "CSV", "DataFrames"])
 To minimise the risk of conflicting package versions, use a new [environment](https://pkgdocs.julialang.org/v1/environments/).
 
 
-##### Hint
-Create and use an [environment](https://pkgdocs.julialang.org/v1/environments/). 
-
 #### Load packages
 Load the packages Charon, Distributions, CSV and DataFrames. 
 
@@ -278,7 +275,7 @@ You can obtain the unconditioned sample from the posterior as follows
 using Charon 
 results = unpackposterior(chains)
 ```
-`results` is a DataFrame with a sample from the posterior. It has 7 columns: 
+`results` is a `DataFrame` from the [`DataFrames` package](https://dataframes.juliadata.org/stable/man/working_with_dataframes/) with a sample from the posterior. It has 7 columns: 
 1. `nsample` sample of the number of individuals
 2. `τCsample` sample of τC values
 3. `τAsample` sample of τA values
