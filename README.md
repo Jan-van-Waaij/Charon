@@ -18,12 +18,13 @@ We generally assume:
   
 ## Install Julia 
 
+Our software is written in the Julia language, and should be run by the Julia interpretor. Julia compiles the code in the background and thereby achieves speeds comparable with C. The current version of the Charon package is 0.2 and it should run with every Julia 1.X version. 
+
 Go to [julialang.org](https://julialang.org/downloads/) and follow the installation instructions for your platform.
 
 ### Add Julia to the path. 
 Check if Julia is added to your path by typing, for instance, `julia --version` in the terminal. [If not, follow the instructions.](https://julialang.org/downloads/platform/)
 
-<!-- To install the tool, clone this repository and follow the setup instructions provided in the `INSTALL.md` file. -->
 
 ## Quick start and test data
 
@@ -38,12 +39,11 @@ and allele frequency:
 ```bash
 wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_freq_IBS.gz
 ```
-
-and download the following [script](runmcmc.jl). Put all three files in one folder, and navigate to that folder in the terminal. Then 
+and download the following [script](runmcmc.jl). Put all three files in one folder, and navigate to that folder in the terminal. Then copy-paste 
 ```julia
 julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
 ```
-runs an MCMC sampler, whose output is saved to `output.csv`. This might take a while. See the ["Output format" section](#Output-format) below to interpret the output.
+in your terminal and press enter. This executes an MCMC sampler, whose output is saved to `output.csv`. This might take a while. See the ["Output format" section](#Output-format) below to interpret the output. The script takes care of installing and loading the appropriate packages. It generates 100'000 samples, and sets uniform priors on n, τC, τA and ϵ. 
 
 ### Windows
 If you use Windows Powershell, you can use 
@@ -67,34 +67,7 @@ The output is a [CSV-file](https://en.wikipedia.org/wiki/Comma-separated_values)
 Each row is a draw from the posterior. 
 
 
-
-
-## Detailed description of the software 
-
-### Start Julia
-
-Type `julia` in your terminal to start Julia.
-
-### Install Charon.
-
-In Julia run 
-```julia
-using Pkg
-Pkg.add("Charon")
-```
-
-You also need to install the packages [Distributions](https://juliastats.org/Distributions.jl/stable/), [CSV](https://csv.juliadata.org/stable/) and [DataFrames](https://dataframes.juliadata.org/stable/).
-```julia
-using Pkg 
-Pkg.add(["Distributions", "CSV", "DataFrames"])
-```
-
-#### Hint
-To minimise the risk of conflicting package versions, use a new [environment](https://pkgdocs.julialang.org/v1/environments/).
-
-## Using the sampler
-
-### Prepare data
+## Prepare data
 
 Prepare your eDNA sample data in the native format. CHARON required 2 files:
 A) A base count derived from the BAM files for each segregating position in the population as such:
@@ -123,7 +96,7 @@ For instance, say at our position 239923 on chr 1, 20% of a particular populatio
 
 Please note that both files should have the same number of lines. Both files can be zipped.
 
-#### Alternative data format.
+### Alternative data format.
 We also allow data in the [DICE-2 format](https://github.com/grenaud/dice?tab=readme-ov-file#2-pop-method-input-data-format). 
 
 A CSV file in DICE-2 format has four columns. In this order: number of ancestral reads, number of derived reads, the frequency of the anchor population, and in how many loci this combination of reads and frequency occurs. So, the first two columns contain non-negative integers, the third column is a real number between 0.0 and 1.0, and the last column is a positive integer. So an example is 
@@ -134,7 +107,7 @@ A CSV file in DICE-2 format has four columns. In this order: number of ancestral
 4    2    0.23    5
 ```
 
-#### Example files
+### Example files
 
 
 
@@ -165,7 +138,7 @@ Or in Windows Power Shell:
 Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_freq_IBS.gz" -OutFile "IBS_ind4_freq_IBS.gz"
 ```
 
-### Convenience script.
+## Convenience script
 [Click here for an example script.](runmcmc.jl) This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and generates four chains with 100'000 samples. It works both with the DICE-2 format and the other format with seperate base count and frequency files. The script saves the output as a CSV file. You can use your favourite software to analyse the output. Save runmcmc.jl on your computer. It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
 ```julia
 julia --threads=4 path/to/runmcmc.jl path/to/basecountfile path/to/frequencyfile path/to/outputfile
@@ -176,7 +149,7 @@ julia --threads=4 path/to/runmcmc.jl path/to/dicefile path/to/outputfile
 ```
 where the output is saved in `outputfile`. `dicefile`, `basecountfile`, and `frequencyfile` might be a CSV files or a zipped CSV files. Example files can be found [here](#Example-files). 
 
-#### Example
+### Example
 So if you have downloaded `IBS_ind4_basecount_IBS_ind4.gz` and `IBS_ind4_freq_IBS.gz` (or `IBS_ind4.dice.gz`) and `runmcmc.jl` from the former steps and have saved them in the same folder, and you navigate to the folder in the terminal, then the following command runs the MCMC and saves the results to `output.csv`.
 ```julia
 julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
@@ -186,13 +159,41 @@ or
 julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
 ```
 
-### Steps to take. 
-In this paragraph, I describe the steps for manually running the sampler. 
-1. Save your data in one of the two allowed data formats, [as described here](#Prepare-data). 
-2. Start a Julia session with, for example, four threads if you want to sample four chains in parallel.
+
+
+
+## Detailed description of the software 
+
+Here follows a detailed description of the use of the MCMC sampler. Here we work interactively in the Julia REPL. You can also put your code in a script, and run it similar to the [example script](#Convenience-script). 
+
+### Start Julia
+
+Type 
 ```
 julia --threads=4 
 ```
+this starts `julia` with 4 threads, and enables you to run 4 mcmc chains in parallel. You can use another number of you want to run more or less chains in parallel. This starts the Julia [REPL](https://docs.julialang.org/en/v1/stdlib/REPL/). 
+
+### Install Charon.
+
+In Julia run 
+```julia
+using Pkg
+Pkg.add("Charon")
+```
+`Pkg` is the [Julia package manager](https://pkgdocs.julialang.org/v1/). It installs Julia packages and keeps track of package versions. This installs the `Charon` package to the current environment. No need to use `git clone`. `Charon` is retrieved from the [General registry](https://github.com/JuliaRegistries/General). 
+
+You also need to install the packages [Distributions](https://juliastats.org/Distributions.jl/stable/), [CSV](https://csv.juliadata.org/stable/) and [DataFrames](https://dataframes.juliadata.org/stable/). 
+```julia
+using Pkg 
+Pkg.add(["Distributions", "CSV", "DataFrames"])
+```
+`Distributions` is a software to work with probability distributions. We use it to specify priors. `CSV` is software to work with CSV files. `DataFrames` is software to work with data frames, comparable with `data.frame` in R, or `pandas` `DataFrame` in Python.  
+
+#### Hint
+To minimise the risk of conflicting package versions, use a new [environment](https://pkgdocs.julialang.org/v1/environments/).
+
+
 ##### Hint
 Create and use an [environment](https://pkgdocs.julialang.org/v1/environments/). 
 
@@ -212,6 +213,8 @@ Pkg.add("PackageName")
 where you replace PackageName with the name of the uninstalled package. 
 
 #### Specify files
+
+We assume here that the data is prepared in one of the two [prescribed data formats](#Prepare-data).
 
 Specify the relative, or absolute paths to the basecount and frequency files. The working directory can be found with `pwd()` and can be changed with `cd("path/to/folder")`.
 ```julia
@@ -239,6 +242,7 @@ prioronτCτA = Product([Uniform(), Uniform()]) # uniform product prior [0,1]x[0
 prioronn = DiscreteUniform(1, 10) # discrete uniform prior on {1, 2, ..., 10}.
 prioronϵ = Uniform(0, 0.5) # uniform prior on interval[0, 0.5].
 ```
+`Uniform()` is a Julia object that represents a [uniform distribution](https://en.wikipedia.org/wiki/Continuous_uniform_distribution) on [0,1]. `Product([Uniform(), Uniform()])` represents a [product measure](https://en.wikipedia.org/wiki/Product_measure), where each component is a uniform distribution. `DiscreteUniform(1, 10)` is a [discrete uniform distribution](https://en.wikipedia.org/wiki/Discrete_uniform_distribution) on the values 1, 2, 3, 4, 5, 6, 7, 8, 9, 10. So P(k)=1/10, for k=1,...,10. `Uniform(0, 0.5)` is the uniform distribution on the interval [0,0.5]. 
 Check the [Distributions documentation](https://juliastats.org/Distributions.jl/stable/) for other distributions. 
 
 
@@ -249,8 +253,9 @@ nchains = 4
 nsteps = 100_000
 ```
 
-#### Run sampler
-We can now run our sampler, which might take a while. 
+
+#### Execute sampler
+We can now execute our sampler, which might take a while. 
 ```julia
 using Charon 
 chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, basecountfile, frequencyfile)
@@ -290,6 +295,10 @@ resultscsvfile = "path/to/results.csv" # place on your hard disk
 CSV.write(resultscsvfile, results)
 ```
 You can use the DataFrame or the CSV file for further analysis.
+
+#### Exit Julia
+
+Type `CTRL+D` or `exit()`.
  
  ### How to transform CRAM/BAM files into CHARON's native format?
 
