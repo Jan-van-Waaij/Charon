@@ -164,7 +164,7 @@ julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
 
 ## Detailed description of the software 
 
-Here follows a detailed description of the use of the MCMC sampler. Here we work interactively in the Julia REPL. You can also put your code in a script, and run it similar to the [example script](#Convenience-script). 
+Here follows a detailed description of the use of the MCMC sampler. Here we work interactively in the Julia REPL. You can also put your code in a script, and run it similar to the [example script](#Convenience-script). The easiest way is to adjust the [`runmcmc.jl` file](runmcmc.jl).
 
 ### Start Julia
 
