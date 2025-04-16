@@ -188,7 +188,7 @@ You also need to install the packages [Distributions](https://juliastats.org/Dis
 using Pkg 
 Pkg.add(["Distributions", "CSV", "DataFrames"])
 ```
-`Distributions` is a software to work with probability distributions. We use it to specify priors. `CSV` is software to work with CSV files. `DataFrames` is software to work with data frames, comparable with `data.frame` in R, or `pandas` `DataFrame` in Python.  
+`Distributions` is a software to work with probability distributions. We use it to specify priors. `CSV` is software to work with CSV files. It can load and save CSV files. `DataFrames` is software to work with data frames, comparable with `data.frame` in R, or `pandas`' `DataFrame` in Python.  
 
 #### Hint
 To minimise the risk of conflicting package versions, use a new [environment](https://pkgdocs.julialang.org/v1/environments/).
