@@ -9,8 +9,15 @@ if ((VERSION < v"1.3") && ((ARGS[1][end-2:end] == ".gz") || (ARGS[2][end-2:end] 
     exit(2)
 end 
 
-@info "Add packages to environment."
+@info "Activate a new environment."
 using Pkg 
+if VERSION ≥ v"1.5" 
+    Pkg.activate(; temp=true)
+else 
+    Pkg.activate("Runmcmc")
+end 
+
+@info "Add packages to environment."
 Pkg.add(["Charon", "Distributions", "CSV", "DataFrames"])
 
 @info "Load the packages."
@@ -50,7 +57,7 @@ elseif length(ARGS) == 3
         exit(4)
     end
     @info "Run mcmc sampler."
-    chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, basecountfile, freqfile; messages = 0, scalingmessages=false)
+    chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, basecountfile, freqfile; scalingmessages=false)
 end 
     
 @info "Unpack posterior."
