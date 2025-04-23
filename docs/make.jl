@@ -18,5 +18,5 @@ makedocs(
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "https://github.com/Jan-van-Waaij/Charon"
+    repo = "github.com/Jan-van-Waaij/Charon"
 )
