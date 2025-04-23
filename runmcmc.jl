@@ -1,4 +1,4 @@
-@info "I am checking user input."
+@info "I am checking the user input."
 if !(2 ≤ length(ARGS) ≤ 3)
     println("You should provide either two or three arguments: if you provide two arguments, the first argument should be a path to the dice file and second argument a path to the results. If you provide three arguments, the first argument should be a path to the base count file, the second argument should be a path to the frequency file, and the third argument should be path to the output file.")
     exit(1)
@@ -17,7 +17,7 @@ else
     Pkg.activate("Runmcmc")
 end 
 
-@info "I am adding packages to environment."
+@info "I am adding packages to the new environment."
 Pkg.add(["Charon", "Distributions", "CSV", "DataFrames"])
 
 @info "I am loading the packages."
@@ -57,7 +57,7 @@ elseif length(ARGS) == 3
         exit(5)
     end
     @info "I am running the mcmc sampler."
-    chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, basecountfile, freqfile; messages = 0, scalingmessages=false)
+    chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, basecountfile, freqfile; scalingmessages=false)
 end 
     
 @info "I am unpacking the posterior."
