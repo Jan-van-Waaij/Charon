@@ -1,3 +1,5 @@
+
+
 using Documenter
 using Charon
 
@@ -18,5 +20,5 @@ makedocs(
 # See "Hosting Documentation" and deploydocs() in the Documenter manual
 # for more information.
 deploydocs(
-    repo = "github.com/Jan-van-Waaij/Charon.git"
+    #repo = "github.com/Jan-van-Waaij/Charon.git"
 )
