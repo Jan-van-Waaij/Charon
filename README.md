@@ -9,6 +9,10 @@ CHARON: **C**alculating **HA**plotype distribution to **R**esolve **O**riginal *
 
 The name comes from the largest moon of Pluto, which has 5 moons: Charon, Styx, Nix, Kerberos, and Hydra.
 
+## Documentation
+
+[jan-van-waaij.github.io/Charon.jl/](https://jan-van-waaij.github.io/Charon.jl/)
+
 ## Assumptions
 
 We generally assume:
