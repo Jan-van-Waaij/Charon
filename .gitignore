@@ -1,5 +1,7 @@
 # ignore all .gz-files: too large for github.
 *.gz
+# except for the following file:
+!Supplementary_material_S6.tar.gz
 # ignore ~ files.
 *~
 # ignore all hidden files and folders:
