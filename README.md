@@ -22,7 +22,7 @@ We generally assume:
   
 ## Install Julia 
 
-Our software is written in the Julia language, and should be run by the Julia interpretor. Julia compiles the code in the background and thereby achieves speeds comparable with C. The current version of the Charon package is 0.2 and it should run with every Julia 1.X version. 
+Our software is written in the Julia language, and should be run by the Julia interpretor. Julia compiles the code in the background and thereby achieves speeds comparable with C. The current version of the Charon package is 0.2.3 and it should run with every Julia 1.X version. 
 
 Go to [julialang.org](https://julialang.org/downloads/) and follow the installation instructions for your platform.
 
@@ -251,7 +251,7 @@ dicefile = "path/to/dicefile.csv" # UNIX-systems
 We need to specify a prior on n, (τC, τA) and ϵ. For example, you could use a uniform prior for all three:
 ```julia
 using Distributions # Julia package for probability distributions. 
-prioronτCτA = Product([Uniform(), Uniform()]) # uniform product prior [0,1]x[0,1] on (τC, τA).
+prioronτCτA = product_distribution([Uniform(), Uniform()]) # uniform product prior [0,1]x[0,1] on (τC, τA).
 prioronn = DiscreteUniform(1, 10) # discrete uniform prior on {1, 2, ..., 10}.
 prioronϵ = Uniform(0, 0.5) # uniform prior on interval[0, 0.5].
 ```
