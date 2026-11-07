@@ -1,0 +1,138 @@
+# Builds and tests the C++ version of CHARON on Linux, macOS and Windows.
+# Pushing a tag v* (for example v1.0.0) also publishes a GitHub release with the
+# static executables.
+name: C++ build and release
+
+on:
+  push:
+    branches: ["**"]
+    tags: ["v*"]
+    paths: ["cpp/**", ".github/workflows/cpp.yml", "README.md", "LICENSE.md"]
+  pull_request:
+    paths: ["cpp/**", ".github/workflows/cpp.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  linux:
+    # Built in Alpine Linux, which uses musl: the executables are fully static and run
+    # on any Linux distribution. The build runs in `docker run` (rather than a job
+    # container) so that the same steps work on the x86_64 and arm64 runners.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            arch: x86_64
+          - runner: ubuntu-24.04-arm
+            arch: aarch64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, test and package in Alpine Linux
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src alpine:3.20 sh -euxc '
+            apk add --no-cache build-base cmake eigen-dev zlib-dev zlib-static file tar
+            cmake -S cpp -B build -DCMAKE_BUILD_TYPE=Release -DCHARON_STATIC=ON -DCPACK_SYSTEM_NAME=linux-${{ matrix.arch }}
+            cmake --build build --parallel
+            (cd build && ctest --output-on-failure)
+            file build/charon
+            file build/charon | grep -q "statically linked"
+            (cd build && cpack -B ../dist)
+            rm -rf dist/_CPack_Packages
+            cd dist && for f in charon-*; do sha256sum "$f" > "$f.sha256"; done
+            chown -R '"$(id -u):$(id -g)"' /src/build /src/dist
+          '
+      - name: Run the static executable on the host
+        run: build/charon --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: charon-linux-${{ matrix.arch }}
+          path: dist/charon-*
+
+  macos:
+    # macOS has no fully static executables; zlib is linked statically, so the binary
+    # only depends on system libraries.
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            arch: arm64
+            target: "11.0"
+          - runner: macos-15-intel
+            arch: x86_64
+            target: "10.15"
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cmake -S cpp -B build -DCMAKE_BUILD_TYPE=Release -DCHARON_FETCH_DEPS=ON \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.target }} -DCPACK_SYSTEM_NAME=macos-${{ matrix.arch }}
+          cmake --build build --parallel
+      - name: Test
+        run: cd build && ctest --output-on-failure
+      - name: Show linked libraries
+        run: otool -L build/charon
+      - name: Package
+        run: |
+          cd build && cpack -B ../dist
+          cd ../dist && rm -rf _CPack_Packages && for f in charon-*; do shasum -a 256 "$f" > "$f.sha256"; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: charon-macos-${{ matrix.arch }}
+          path: dist/charon-*
+
+  windows:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+    steps:
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: >-
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-eigen3
+            mingw-w64-x86_64-zlib
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          cmake -S cpp -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCHARON_STATIC=ON -DCPACK_SYSTEM_NAME=windows-x86_64
+          cmake --build build --parallel
+      - name: Test
+        run: cd build && ctest --output-on-failure
+      - name: Check that the executable has no MinGW runtime dependencies
+        run: |
+          objdump -p build/charon.exe | grep "DLL Name"
+          ! objdump -p build/charon.exe | grep -iE "DLL Name: (libstdc|libgcc|libwinpthread|zlib)"
+      - name: Package
+        run: |
+          cd build && cpack -B ../dist
+          cd ../dist && rm -rf _CPack_Packages && for f in charon-*; do sha256sum "$f" > "$f.sha256"; done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: charon-windows-x86_64
+          path: dist/charon-*
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [linux, macos, windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: dist/charon-*
+          generate_release_notes: true

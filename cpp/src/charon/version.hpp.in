@@ -1,0 +1,8 @@
+#pragma once
+
+namespace charon {
+
+inline constexpr const char* kVersion = "@PROJECT_VERSION@";
+inline constexpr const char* kJuliaReferenceVersion = "@CHARON_JULIA_REFERENCE_VERSION@";
+
+}  // namespace charon

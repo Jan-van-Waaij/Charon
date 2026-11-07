@@ -24,3 +24,13 @@
 # Ignore Manifest.toml files.
 **/Manifest.toml
  
+
+# C++ version: keep the sources, the CI workflow and the test data,
+# ignore build directories and release packages.
+!/.github/
+!/.github/**
+!cpp/**/CMakeLists.txt
+!cpp/tests/data/*
+cpp/build*/
+dist/
+__pycache__/

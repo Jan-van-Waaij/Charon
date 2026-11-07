@@ -1,4 +1,3 @@
-
 # CHARON: Environmental DNA Drift Time and Population Estimation Tool
 
 Environmental DNA or forensic DNA can contain the DNA of multiple human individuals. Sequencing this DNA and aligning it to the human reference will result in alignments in BAM format. 
@@ -9,9 +8,16 @@ CHARON: **C**alculating **HA**plotype distribution to **R**esolve **O**riginal *
 
 The name comes from the largest moon of Pluto, which has 5 moons: Charon, Styx, Nix, Kerberos, and Hydra.
 
+CHARON is available in two implementations:
+
+* **`charon`, a single static executable written in C++ (recommended).** Download one file and run it: no compiler, interpreter or package manager is needed. It is a port of the Julia package with the same model, sampler, input formats and output, it runs considerably faster, and it is numerically more accurate for larger numbers of individuals (see [About the C++ version](#about-the-c-version)).
+* **`Charon.jl`, the original Julia package**, which you can use interactively from Julia with any prior from Distributions.jl. See [Julia package](#julia-package).
+
 ## Documentation
 
-[jan-van-waaij.github.io/Charon.jl/](https://jan-van-waaij.github.io/Charon.jl/)
+* This README documents the command line program `charon`. Run `charon --help` for a summary of all options.
+* Documentation of the Julia package: [jan-van-waaij.github.io/Charon.jl/](https://jan-van-waaij.github.io/Charon.jl/)
+* The method is described in the [article in G3](https://academic.oup.com/g3journal/article/16/7/jkag099/8677049) (see [Citation](#citation)).
 
 ## Assumptions
 
@@ -19,78 +25,189 @@ We generally assume:
 
 - **equal contribution**: Each individual contributed more or less the same amount of DNA to the mix. 
 - **same population of origin**: All the individuals come from the same population.
-  
-## Julia 
 
-**Julia** is a high-level, high-performance programming language designed for technical computing. It combines the ease of use of languages like Python and R with the speed of C++.
+## Installation
 
-- **Syntax and Ease of Use**: Julia's syntax is simple and intuitive, similar to Python and R, making it easy to learn and write. It supports multiple dispatch, allowing functions to behave differently based on their argument types, which is particularly useful for scientific computing.
+### Download the static executable (recommended)
 
-- **Dynamic and 1-Based Indexing**: Julia is a dynamic language, meaning types are checked at runtime, which offers flexibility and ease of use. Additionally, Julia uses 1-based indexing, similar to R, which can be more intuitive for those coming from a mathematical background.
+Download the archive for your platform from the [releases page](https://github.com/Jan-van-Waaij/Charon/releases/latest):
 
-- **Performance**: Julia is designed for speed. It compiles to efficient machine code using LLVM, offering performance comparable to C++ without sacrificing ease of use. This makes it ideal for tasks that require high computational power.
+| Platform | File |
+|---|---|
+| Linux, x86_64 (any distribution, fully static) | `charon-<version>-linux-x86_64.tar.gz` |
+| Linux, ARM64 (any distribution, fully static) | `charon-<version>-linux-aarch64.tar.gz` |
+| macOS, Apple silicon | `charon-<version>-macos-arm64.tar.gz` |
+| macOS, Intel | `charon-<version>-macos-x86_64.tar.gz` |
+| Windows, x86_64 (static, no DLLs needed) | `charon-<version>-windows-x86_64.zip` |
 
-- **Libraries and Ecosystem**: Julia has a rich ecosystem with numerous libraries for data analysis, machine learning, and scientific computing. It also integrates well with existing Python and R code, allowing users to leverage their existing tools and libraries.
+Every archive contains one folder with the executable `bin/charon` (`bin\charon.exe` on Windows) and, in `share/doc/charon`, this README and the license. A `.sha256` checksum is published next to each archive. For example, on Linux:
 
-- **Parallel and Distributed Computing**: Julia has built-in support for parallel and distributed computing, making it easier to write code that scales across multiple cores and machines.
+```bash
+VERSION=1.0.0
+wget https://github.com/Jan-van-Waaij/Charon/releases/download/v$VERSION/charon-$VERSION-linux-x86_64.tar.gz
+wget https://github.com/Jan-van-Waaij/Charon/releases/download/v$VERSION/charon-$VERSION-linux-x86_64.tar.gz.sha256
+sha256sum -c charon-$VERSION-linux-x86_64.tar.gz.sha256
+tar xzf charon-$VERSION-linux-x86_64.tar.gz
+./charon-$VERSION-linux-x86_64/bin/charon --version
+```
 
-Julia is a powerful tool for anyone looking to combine the simplicity of high-level languages with the performance of low-level languages. If you're familiar with R, Python, or C++, you'll find Julia to be a versatile and efficient addition to your programming toolkit.
+Optionally copy the executable to a folder in your `PATH`, for instance `cp charon-$VERSION-linux-x86_64/bin/charon ~/.local/bin/`. The Linux executables are fully statically linked, so they also run on old distributions and on compute clusters without any modules loaded. On macOS, if Gatekeeper blocks the downloaded file, run `xattr -d com.apple.quarantine bin/charon` once.
 
-## Install Julia 
+### Build from source
 
-Our software is written in the Julia language, and should be run by the Julia interpretor. Julia compiles the code in the background and thereby achieves speeds comparable with C. The current version of the Charon package is 0.2.3 and it should run with every Julia 1.X version. 
+You need a C++17 compiler (GCC ≥ 8, Clang ≥ 7, Apple Clang or MinGW-w64), CMake ≥ 3.14, and the [Eigen](https://eigen.tuxfamily.org) (≥ 3.3) and [zlib](https://zlib.net) libraries. All C++ sources are in the [`cpp`](cpp) folder.
 
-Go to [julialang.org](https://julialang.org/downloads/) and follow the installation instructions for your platform.
+Install the dependencies:
 
-### Add Julia to the path. 
-Check if Julia is added to your path by typing, for instance, `julia --version` in the terminal. [If not, follow the instructions.](https://julialang.org/downloads/platform/)
+| System | Command |
+|---|---|
+| Debian, Ubuntu | `sudo apt install build-essential cmake libeigen3-dev zlib1g-dev` |
+| Fedora, RHEL | `sudo dnf install gcc-c++ cmake eigen3-devel zlib-devel zlib-static glibc-static libstdc++-static` |
+| Alpine (musl, recommended for portable static binaries) | `apk add build-base cmake eigen-dev zlib-dev zlib-static` |
+| macOS (Homebrew) | `brew install cmake eigen` |
+| Windows (MSYS2 MINGW64 shell) | `pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-eigen3 mingw-w64-x86_64-zlib` |
 
+If Eigen or zlib cannot be installed, add `-DCHARON_FETCH_DEPS=ON` to the first `cmake` command below: CMake then downloads Eigen 3.4.0 and zlib 1.3.1 (checked against fixed SHA-256 hashes) and builds zlib itself.
+
+Build, test and install:
+
+```bash
+git clone https://github.com/Jan-van-Waaij/Charon.git
+cd Charon
+cmake -S cpp -B cpp/build -DCMAKE_BUILD_TYPE=Release
+cmake --build cpp/build --parallel
+ctest --test-dir cpp/build --output-on-failure    # CMake >= 3.20; otherwise: cd cpp/build && ctest
+cmake --install cpp/build --prefix ~/.local         # installs ~/.local/bin/charon
+```
+
+On Windows, run the same commands in the MSYS2 MINGW64 shell and add `-G Ninja` to the first `cmake` command.
+
+Build options (add them to the first `cmake` command as `-DOPTION=VALUE`):
+
+| Option | Default | Meaning |
+|---|---|---|
+| `CHARON_STATIC` | `ON` (Linux, Windows), `OFF` (macOS) | Link a fully static executable. On glibc systems this needs the static C library (`glibc-static` on Fedora; included in `libc6-dev` on Debian/Ubuntu). macOS does not support fully static executables. |
+| `CHARON_FETCH_DEPS` | `OFF` | Download Eigen and zlib instead of using system packages. On macOS this links zlib statically, so the executable only depends on libraries that ship with macOS. |
+| `CHARON_NATIVE` | `OFF` | Optimise for the CPU of the build machine (`-march=native`). Slightly faster, but the executable may not run on other computers. |
+| `CHARON_BUILD_TESTS` | `ON` | Build the unit tests (`charon_tests`) and register the tests with CTest. |
+
+#### Release package
+
+`cpp/build-release.sh` builds the static executable in release mode, runs all tests, warns if the result is not static, and writes `dist/charon-<version>-<os>-<arch>.tar.gz` with a `.sha256` checksum (use `cpp/build-release.sh --fetch` to download the dependencies). A glibc-based static executable built this way runs on Linux kernels ≥ 3.2. For the most portable Linux executable, build in Alpine Linux, which uses musl instead of glibc, for example with Docker:
+
+```bash
+docker run --rm -v "$PWD:/src" -w /src alpine:3.20 sh -c \
+  "apk add --no-cache build-base cmake eigen-dev zlib-dev zlib-static bash && cpp/build-release.sh && chown -R $(id -u):$(id -g) cpp/build-release dist"
+```
+
+The GitHub workflow [`.github/workflows/cpp.yml`](.github/workflows/cpp.yml) builds and tests `charon` on Linux (x86_64 and ARM64, in Alpine), macOS and Windows for every change to the C++ code, the README or the workflow. Pushing a tag such as `v1.0.0` publishes all executables as a GitHub release:
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
 
 ## Quick start and test data
 
-After installing, you can use the following base count:
+Download the example base count and frequency files (see [Example files](#example-files) for Windows commands):
 
 ```bash
 wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_basecount_IBS_ind4.gz
-```
-
-and allele frequency:
-
-```bash
 wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_freq_IBS.gz
 ```
-and download the following [script](runmcmc.jl):
-```bash
-wget https://jan-van-waaij.github.io/Charon.jl/runmcmc.jl 
-```
-Put all three files in one folder, and navigate to that folder in the terminal. Then copy-paste 
-```julia
-julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
-```
-in your terminal and press enter. This executes an MCMC sampler, whose output is saved to `output.csv`. This might take a few hours. See the ["Output format" section](#Output-format) below to interpret the output. The script takes care of installing and loading the appropriate Julia packages, including Charon. It generates 100'000 samples, and sets uniform priors on n, τC, τA and ϵ. 
 
-### Windows
-If you use Windows Powershell, you can use 
-```powershell
-Invoke-WebRequest -Uri "https://jan-van-waaij.github.io/Charon.jl/runmcmc.jl" -OutFile "runmcmc.jl"
-Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_basecount_IBS_ind4.gz" -OutFile "IBS_ind4_basecount_IBS_ind4.gz"
-Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_freq_IBS.gz" -OutFile "IBS_ind4_freq_IBS.gz"
+and run the MCMC sampler with four chains in parallel:
+
+```bash
+charon --threads 4 IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
 ```
-instead of `wget`.
+
+or, with the same data in the [DICE-2 format](#alternative-data-format):
+
+```bash
+wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4.dice.gz
+charon --threads 4 IBS_ind4.dice.gz output.csv
+```
+
+(use `./charon-1.0.0-linux-x86_64/bin/charon` instead of `charon` if you did not put it in your `PATH`). The defaults are those of the Julia convenience script `runmcmc.jl`: four chains of 100'000 samples each, and uniform priors on n ∈ {1, ..., 10}, τC ∈ [0, 1], τA ∈ [0, 1] and ϵ ∈ [0, 0.5]. The sampler first searches starting values on a grid, then reports its progress every 1%. The output is saved to `output.csv`; see the [Output format](#output-format) section below to interpret it. With the example data and 8 threads (`--threads 8`, Intel Xeon Cascade Lake server) this takes about 10 minutes and 200 MB of memory; with 4 threads it takes roughly twice as long.
+
+## Usage
+
+```
+charon [mcmc] [options] <dicefile> <outputfile>
+charon [mcmc] [options] <basecountfile> <frequencyfile> <outputfile>
+charon exactposterior [options] <dicefile> <outputfile>
+charon exactposterior [options] <basecountfile> <frequencyfile> <outputfile>
+```
+
+With two file names the input is a [DICE-2 file](#alternative-data-format); with three file names the input is a [base count file and a frequency file](#prepare-data). Input files may be gzipped (detected automatically) and may have a header line (detected automatically: a header is a first line that does not start with a number; override with `--header` or `--no-header`). Columns may be separated by commas, tabs, spaces or semicolons. The output is a CSV file; it is gzipped when the output file name ends in `.gz`.
+
+### MCMC options
+
+| Option | Default | Meaning |
+|---|---|---|
+| `-c`, `--chains N` | `4` | Number of chains. |
+| `-s`, `--steps N` | `100000` | Number of samples per chain. |
+| `-t`, `--threads N` | all cores | Number of threads. The chains run in parallel, and the threads of each chain evaluate its chains conditioned on n ∈ {1, ..., n_max} in parallel, so up to n_max threads per chain speed up the sampling. The grid search for starting values uses all threads. |
+| `--n-prior SPEC` | `uniform:1:10` | Prior on the number of individuals n: `uniform:A:B` (discrete uniform on {A, ..., B}) or `weights:w1,w2,...,wK` (P(n = k) proportional to wk). The largest possible n is 10. |
+| `--tauC-prior SPEC` | `uniform:0:1` | Prior on τC: `uniform:LO:HI`, `beta:A:B` (Beta(A, B) on [0, 1]) or `beta:A:B:LO:HI` (Beta(A, B) rescaled to [LO, HI]). |
+| `--tauA-prior SPEC` | `uniform:0:1` | Prior on τA, as for τC. |
+| `--eps-prior SPEC` | `uniform:0:0.5` | Prior on ϵ, as for τC; its support must lie within [0, 0.5]. |
+| `--seed N` | random | Random seed. The seed is printed at the start; a run with the same seed and settings gives identical results, whatever the number of threads. |
+| `--messages N` | steps/100 | Print a progress message every N steps (`0`: never). |
+| `--scaling-messages` | off | Report when the adaptive proposal scale factors change. |
+| `--raw-chains PREFIX` | off | Also write each complete chain, including the chains conditioned on every n, to `PREFIX_chain1.csv`, `PREFIX_chain2.csv`, ... (columns `nsample`, `τC_1`, ..., `τC_10`, `τA_1`, ..., `ϵ_1`, ..., `accepted_nsample`, `accepted_1`, ..., `logjointprob`, `logjointprob_1`, ...). |
+| `-q`, `--quiet` | off | No progress messages. |
+
+For example, four chains of 200'000 samples with a prior on n ∈ {1, ..., 6}, a Beta(2, 5) prior on τA and a fixed seed:
+
+```bash
+charon --chains 4 --steps 200000 --n-prior uniform:1:6 --tauA-prior beta:2:5 --seed 2026 \
+       IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv.gz
+```
+
+The priors on τC and τA are independent. The Julia package also allows correlated priors on (τC, τA) and any other distribution from Distributions.jl.
+
+### Grid evaluation (`exactposterior`)
+
+`charon exactposterior` computes the log-likelihood (the log posterior under a uniform prior, up to a constant) for every combination of the given values of n, τC, τA and ϵ, like `exactposterior` in the Julia package. This is useful for maximum likelihood estimation and for checking the MCMC output.
+
+| Option | Default | Meaning |
+|---|---|---|
+| `--n LIST` | `1:10` | Values of n (at most 10): a range `A:B` or a list such as `1,2,4`. |
+| `--tauC LIST` | 22 values 1/22, 2/22, ..., 1 | Values of τC: `LO:HI:N` (N equally spaced values from LO to HI) or a comma separated list. |
+| `--tauA LIST` | as τC | Values of τA. |
+| `--eps LIST` | 22 values 0.5/23, ..., 11/23 | Values of ϵ, in [0, 0.5). |
+| `--messages N` | about 1% | Print progress every N grid points (`0`: never). |
+| `-t`, `--threads N` | all cores | Number of threads. |
+
+```bash
+charon exactposterior --n 1:6 --tauC 0:0.5:51 --tauA 0.05,0.1,0.2 --eps 0.001:0.02:20 IBS_ind4.dice.gz grid.csv
+```
+
+The output has the columns `n`, `τC`, `τA`, `ϵ` and `loglik`, in the order n, τC, τA, ϵ (ϵ varies fastest).
 
 ## Output format
 
-The output is a [CSV-file](https://en.wikipedia.org/wiki/Comma-separated_values) consists of 7 columnns, 
+The output is a [CSV-file](https://en.wikipedia.org/wiki/Comma-separated_values) consisting of 7 columns, 
 1. nsample: n values
 2. τCsample: τC values
 3. τAsample: τA values
 4. ϵsample: ϵ values 
-5. accepted: was the proposal accepted?
-6. logjointprob: the log probability, up to a additive constant, only depending on the data, but not on the parameters,
+5. accepted: was the proposal accepted (did n, τC, τA or ϵ change compared to the previous row)?
+6. logjointprob: the log probability, up to an additive constant, only depending on the data, but not on the parameters,
 7. chainid: whether this is the first, second, ... chain.
 
-Each row is a draw from the posterior. 
+Each row is a draw from the posterior. The rows of each chain are in sampling order, so remove the first part of each chain as burn-in (in the article: 100'000 iterations, of which the first 50'000 were discarded, thinned by 10). The C++ and the Julia version write the same columns.
 
+For example, in R:
+
+```r
+draws <- read.csv("output.csv", check.names = FALSE)
+draws <- draws[ave(seq_len(nrow(draws)), draws$chainid, FUN = seq_along) > 50000, ]   # burn-in
+table(draws$nsample) / nrow(draws)                                                   # posterior of n
+quantile(draws[["τAsample"]], c(0.025, 0.5, 0.975))                                  # 95% credible interval of τA
+```
 
 ## Prepare data
 
@@ -135,7 +252,6 @@ A CSV file in DICE-2 format has four columns. In this order: number of ancestral
 ### Example files
 
 
-
 An example DICE file is available via 
 ```bash
 wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4.dice.gz
@@ -163,191 +279,8 @@ Or in Windows Power Shell:
 Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_freq_IBS.gz" -OutFile "IBS_ind4_freq_IBS.gz"
 ```
 
-## Convenience script
-Download the example [script](runmcmc.jl):
-```bash
-wget https://jan-van-waaij.github.io/Charon.jl/runmcmc.jl 
-```
- This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and generates four chains with 100'000 samples. It works both with the DICE-2 format and the other format with seperate base count and frequency files. The script saves the output as a CSV file. You can use your favourite software to analyse the output. Save runmcmc.jl on your computer. It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
-```julia
-julia --threads=4 path/to/runmcmc.jl path/to/basecountfile path/to/frequencyfile path/to/outputfile
-```
-or 
-```julia
-julia --threads=4 path/to/runmcmc.jl path/to/dicefile path/to/outputfile
-```
-where the output is saved in `outputfile`. `dicefile`, `basecountfile`, and `frequencyfile` might be a CSV files or a zipped CSV files. Example files can be found [here](#Example-files). The script installs Charon, and other necessary Julia packages, loads them and executes the MCMC sampler. 
 
-### Example
-So if you have downloaded `IBS_ind4_basecount_IBS_ind4.gz` and `IBS_ind4_freq_IBS.gz` (or `IBS_ind4.dice.gz`) and `runmcmc.jl` from the former steps and have saved them in the same folder, and you navigate to the folder in the terminal, then the following command runs the MCMC and saves the results to `output.csv`.
-```julia
-julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
-```
-or
-```julia
-julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
-```
-
-### Older versions of Julia
-Older version of Julia (≤1.4), do not have the `--threads` flag, instead you should set the environment variable `JULIA_NUM_THREADS`. In Unix systems 
-```base
-export JULIA_NUM_THREADS=4
-```
-or in Windows Powershell:
-```powershell
-$env:JULIA_NUM_THREADS = 4
-```
-Then, run 
-```julia
-julia runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
-```
-or
-```julia
-julia runmcmc.jl IBS_ind4.dice.gz output.csv
-```
-### Very old versions of Julia
-In very old versions of Julia (≤1.2), the script does not work with gzipped files. So first unzip your files, and then run them as above. 
-
-## Detailed description of the software 
-
-Here follows a detailed description of the use of the MCMC sampler. Here we work interactively in the Julia REPL. You can also put your code in a script, and run it similar to the [example script](#Convenience-script). The easiest way is to adjust the [`runmcmc.jl` file](runmcmc.jl).
-
-### Start Julia
-
-Type 
-```
-julia --threads=4 
-```
-this starts `julia` with 4 threads, and enables you to run 4 mcmc chains in parallel. You can use another number, if you want to run fewer or more chains in parallel. This starts the Julia [REPL](https://docs.julialang.org/en/v1/stdlib/REPL/). For Julia 1.4 or older, you need to set the `JULIA_NUM_THREADS` environment variable, as described [here](#older-versions-of-julia).
-
-
-### Install Charon.
-
-In Julia run 
-```julia
-using Pkg
-Pkg.add("Charon")
-```
-`Pkg` is the [Julia package manager](https://pkgdocs.julialang.org/v1/). It installs Julia packages and keeps track of package versions. This installs the `Charon` package to the current environment. No need to use `git clone`. `Charon` is retrieved from the [General registry](https://github.com/JuliaRegistries/General). 
-
-You also need to install the packages [Distributions](https://juliastats.org/Distributions.jl/stable/), [CSV](https://csv.juliadata.org/stable/) and [DataFrames](https://dataframes.juliadata.org/stable/). 
-```julia
-using Pkg 
-Pkg.add(["Distributions", "CSV", "DataFrames"])
-```
-`Distributions` is a software to work with probability distributions. We use it to specify priors. `CSV` is software to work with CSV files. It can load and save CSV files. `DataFrames` is software to work with data frames, comparable with `data.frame` in R, or `pandas`' `DataFrame` in Python.  
-
-#### Hint
-To minimise the risk of conflicting package versions, use a new [environment](https://pkgdocs.julialang.org/v1/environments/). You need to do that before loading the packages. You can install the packages in the new environment. If you use Julia 1.5 or newer, you can use a temporary environment with `using Pkg; Pkg.activate(; temp=true)` that last for as long as the session runs.
-
-
-#### Load packages
-Load the packages Charon, Distributions, CSV and DataFrames. Once you have loaded the packages, you can use it's functions. In this step the packages are precompiled. This might take a few seconds. 
-
-In Julia run 
-```julia
-# load the packages. 
-using Charon, Distributions, CSV, DataFrames
-```
-If one of them is not installed, you can install them with 
-```julia
-using Pkg
-Pkg.add("PackageName")
-```
-where you replace PackageName with the name of the uninstalled package. 
-
-#### Specify files
-
-We assume here that the data is prepared in one of the two [prescribed data formats](#Prepare-data).
-
-Specify the relative, or absolute paths to the basecount and frequency files. The working directory can be found with `pwd()` and can be changed with `cd("path/to/folder")`.
-```julia
-basecountfile = "path/to/basecountfile.csv" # unix
-basecountfile = "path\\to\\basecountfile.csv" # windows
-basecountfile = "C:\\path\\to\\basecountfile.csv" # absolute path windows
-basecountfile = joinpath("path", "to", "basecountfile.csv") # works on all platforms
-basecountfile = joinpath("C:\\", "path", "to", "basecountfile.csv") # Windows, absolute path.
-```
-Similarly, set the path to the frequency file. 
-```julia
-frequencyfile = "path/to/frequencyfile.csv" # unix
-```
-Alternatively, you can specify the path to the DICE file. 
-```julia
-dicefile = "path/to/dicefile.csv" # UNIX-systems
-```
-
-#### Specify prior 
-
-We need to specify a prior on n, (τC, τA) and ϵ. For example, you could use a uniform prior for all three:
-```julia
-using Distributions # Julia package for probability distributions. 
-prioronτCτA = product_distribution([Uniform(), Uniform()]) # uniform product prior [0,1]x[0,1] on (τC, τA).
-prioronn = DiscreteUniform(1, 10) # discrete uniform prior on {1, 2, ..., 10}.
-prioronϵ = Uniform(0, 0.5) # uniform prior on interval[0, 0.5].
-```
-`Uniform()` is a Julia object that represents a [uniform distribution](https://en.wikipedia.org/wiki/Continuous_uniform_distribution) on [0,1]. `product_distribution([Uniform(), Uniform()])` represents a [product measure](https://en.wikipedia.org/wiki/Product_measure), where each component is a uniform distribution. `DiscreteUniform(1, 10)` is a [discrete uniform distribution](https://en.wikipedia.org/wiki/Discrete_uniform_distribution) on the values 1, 2, 3, 4, 5, 6, 7, 8, 9, 10. So P(k)=1/10, for k=1,...,10. `Uniform(0, 0.5)` is the uniform distribution on the interval [0,0.5]. 
-Check the [Distributions documentation](https://juliastats.org/Distributions.jl/stable/) for other distributions. 
-
-
-#### Specify chains and number of samples. 
-Specify how many MCMC samples you want and how many chains you want to sample. For example, if you want four chains with each 100'000 samples, you can specify 
-```julia
-nchains = 4 
-nsteps = 100_000
-```
-
-
-#### Execute sampler
-We can now execute our sampler, which might take a few hours. 
-```julia
-using Charon 
-chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, basecountfile, frequencyfile)
-```
-or
-```julia
-using Charon 
-chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, dicefile)
-```
-
-The output of this function 
-`chains` is a vector of tuples. Each tuple represents an MCMC chain. Each tuple consists of six arrays. For instance, if we want to analyse the first chain, we get 
-```
-nsample, τCsample, τAsample, ϵsample, accepted, logjointprob = chains[1]
-```
-* `nsample` is the MCMC chain for the number of individuals. 
-* `τCsample` is (in this example) a 100'000x10 matrix. The k-th  column is the τC sample of the posterior conditioned on k individuals. Keep in mind that Julia has 1-based indexing.
-* `τAsample` similar to `τCsample`, but now for τA.
-* `ϵsample` similar to `τCsample`, but now for ϵ.
-* `accepted` is a 100'000x11 matrices of true/false values. The first column indicates whether a proposal for n is accepted. The k+1-th column indicates whether a proposal for (τC, τA,ϵ) of the posterior conditioned on k individuals was accepted.
-* `logjointprob` is a 100'000x11 matrices of log joint probability values. The first column indicates the log joint probability of the unconditioned posterior with `nsample[i]` individuals. The k+1-th column is the log joint probability conditioned on k individuals.  
-
-You can obtain the unconditioned sample from the posterior as follows 
-```julia
-using Charon 
-results = unpackposterior(chains)
-```
-`unpackposterior` does the following. It produces a [DataFrame](https://dataframes.juliadata.org/stable/man/working_with_dataframes/) with the unconditional posterior. Each row is an draw from the posterior. We have at at row i, for the first chain, `τC[i]=τCsample[i, nsample[i]]`, so it uses the `τC` value belonging to conditioning on `k=nsample[i]`. Similar for `τA`, and `ϵ`. It concatenates all chains, and gives each an ID, going from 1,...,4 (in this example). 
-
-
-`results` is a `DataFrame` with a sample from the unconditioned posterior. It has 7 columns, which are described [here](#output-format).  
-
-
-
-You can save the data frame as a CSV file as follows:
-```julia
-using CSV 
-resultscsvfile = "path/to/results.csv" # place on your hard disk
-# where you want to store your csv file. 
-CSV.write(resultscsvfile, results)
-```
-You can use the DataFrame or the CSV file for further analysis.
-
-#### Exit Julia
-
-Type `CTRL+D` or `exit()`.
- 
- ### How to transform CRAM/BAM files into CHARON's native format?
+### How to transform CRAM/BAM files into CHARON's native format?
 
 Either you use custom scripts or use [glactools](https://github.com/grenaud/glactools) and please cite glactools' paper [here](https://academic.oup.com/bioinformatics/article/34/8/1398/4665419). 
  
@@ -387,14 +320,6 @@ The script parseCount.py is found in the scripts/folder of CHARON. The script IB
 which represent the allele frequencies for each population to test.
 
 
-
-
-For detailed instructions and examples, refer to the `USER_GUIDE.md` file.
-
-
-
-
-
 ## How to make my own ACF file of populations?
 
 First, use glactools' vcfm2acf to transform vcf into acf and meld individuals from the same populations together:
@@ -418,6 +343,312 @@ glactools  cat   1000gmeld2_1.acf.gz 1000gmeld2_2.acf.gz 1000gmeld2_3.acf.gz 100
 ```
 
 The last file should be identical to the one we have on our ftp.
+
+## About the C++ version
+
+`charon` is a port of the Julia package Charon.jl (version 0.3.2) to C++17. It implements the same model and the same sampler (Supplementary Section S2.1 of the article):
+
+* the likelihood of Schraiber (2018) with the matrices Q and Qꜜ, whose exponentials are computed from an eigendecomposition (`P e^{τD} P⁻¹`), and the binomial read error model;
+* starting values from a grid search over 22 × 22 × 22 values of (τC, τA, ϵ) for every n;
+* for every n a Metropolis chain for (τC, τA, ϵ) conditioned on n, with normal proposals whose covariances adapt every 1000 steps from step 5000 on (thinned history from step 3000, scale factor 2.38²/4 adjusted towards an acceptance rate between 0.1 and 0.15);
+* a chain for n that proposes the current value with probability 0.8 and each other value with probability 0.2/(n_max − 1), and accepts using the conditional chains;
+* the unconditional posterior obtained by combining the chain for n with the conditional chains (`unpackposterior`).
+
+### Validation
+
+* **Unit tests** (`cpp/tests/test_charon.cpp`, run by `ctest`) port the tests of Charon.jl and add tests for the readers, the priors, the output, the reproducibility of the chains and the adaptation of the proposals. Test data in `cpp/tests/data` are simulated from the model with `cpp/tests/simulate_data.py`, which uses an independent implementation (SciPy's `expm`).
+* **Log-likelihoods agree with Charon.jl 0.3.2.** On a grid of n ∈ {1, 2, 3, 5, 8, 10}, τC ∈ {0, 0.05, 0.3, 0.9}, τA ∈ {0, 0.2, 0.7} and ϵ ∈ {0, 0.01, 0.3}, for the example data `IBS_ind4.dice.gz` (3.2 million informative loci) and for simulated data, the relative difference with Julia's `exactposterior` is at most 6·10⁻¹³ for n ≤ 5 (7·10⁻¹⁰ at τC = τA = 0). For n = 8 and n = 10 the differences are larger (up to 10⁻⁵ relative at τC = τA = 0) because of the conditioning problem described below; there the C++ values are the more accurate ones. Both programs read the 19 million rows of `IBS_ind4_basecount_IBS_ind4.gz` and `IBS_ind4_freq_IBS.gz` into the same 3,229,838 informative loci (61,956 distinct combinations), and give the same log-likelihoods for the DICE file and for the base count and frequency files.
+* **The posterior agrees with Charon.jl.** For data simulated with n = 3, τC = 0.1, τA = 0.2 and ϵ = 0.01 (`cpp/tests/data/small.dice.csv`, 4 chains of 50'000 steps, first quarter discarded), both programs recover the true values and give the same posterior up to Monte Carlo error (medians with 95% intervals):
+
+  | | P(n = 3) | P(n = 4) | τC | τA | ϵ |
+  |---|---|---|---|---|---|
+  | Charon.jl | 0.28 | 0.26 | 0.103 [0.089, 0.117] | 0.248 [0.168, 0.328] | 0.0093 [0.0074, 0.0113] |
+  | `charon` | 0.27 | 0.25 | 0.103 [0.089, 0.118] | 0.250 [0.169, 0.329] | 0.0092 [0.0074, 0.0113] |
+
+  For the example data `IBS_ind4.dice.gz` (4 chains of 20'000 steps) both give P(n = 4) = 1, τA = 0.0068 [0.0064, 0.0073] and ϵ = 0.0009, and the default run of `charon` (4 chains of 100'000 steps) gives the same values.
+* **Numerical accuracy for larger n.** The eigenvectors of Q and Qꜜ are badly conditioned for larger n (condition number about 10⁶ for n = 10), which limits the accuracy of both implementations; the article mentions numerical issues beyond eight individuals. Compared with the log-likelihood computed with 50 significant digits (mpmath), the C++ version is as accurate as or more accurate than the Julia version, by a factor of up to several thousand for small drift times:
+
+  | n | τC | τA | ϵ | error of Charon.jl | error of `charon` |
+  |---|---|---|---|---|---|
+  | 8 | 0.001 | 0.001 | 0.01 | 1.7·10⁻² | 6.2·10⁻⁵ |
+  | 8 | 0.01 | 0.01 | 0.01 | 3.3·10⁻⁴ | 2.5·10⁻⁷ |
+  | 10 | 0.001 | 0.01 | 0.01 | 8.2·10⁻¹ | 2.1·10⁻⁴ |
+  | 10 | 0.01 | 0.01 | 0.01 | 3.8·10⁻² | 2.0·10⁻⁵ |
+  | 10 | 0 | 0 | 0 | −∞ (wrong) | 2.5·10⁻² |
+
+  (absolute errors of the log-likelihood, whose value is about −7500, for the simulated test data `cpp/tests/data/small.dice.csv`).
+
+### Performance
+
+Wall-clock times on a shared server with 8 cores (Intel Xeon Cascade Lake), for the example data (3.2 million informative loci); times include reading the data and the grid search for starting values.
+
+| Task | Charon.jl 0.3.2 (Julia 1.10) | `charon` |
+|---|---|---|
+| MCMC, 4 chains × 5'000 steps, `IBS_ind4.dice.gz` | 2927 s, 1.3 GB (4 threads) | 89 s (4 threads), 46 s (8 threads), 78 MB |
+| MCMC, default 4 chains × 100'000 steps, base count + frequency files | — | 620 s, 200 MB (8 threads) |
+| Reading the base count and frequency files (19 million rows) | 49 s, 1.4 GB | 6 s, 26 MB |
+| `exactposterior` with the default grid (10 × 22 × 22 × 22 points) | — | 21 s (8 threads) |
+
+The speed-up comes from computing qᵀM once per distinct (coverage, derived reads) pair, from avoiding allocations in the inner loop, and from evaluating the conditional chains of one step in parallel. The chains themselves run in parallel as well (`--threads`, default: all cores); the results do not depend on the number of threads.
+
+### Differences from the Julia package
+
+* **Priors.** The command line accepts uniform and (rescaled) beta priors on τC, τA and ϵ, with independent priors on τC and τA, and discrete uniform or weighted priors on n. The Julia package accepts any distribution from Distributions.jl, including correlated priors on (τC, τA).
+* **Priors on n that Charon.jl cannot handle.** A prior on n whose smallest value is larger than 1 (such as `uniform:3:6`), a prior with zero weights, and a prior on a single value of n make Charon.jl stop with an error. `charon` handles them: the chain for n starts at the most likely value that has positive prior probability, and the chains conditioned on every n ∈ {1, ..., n_max} are run as in Charon.jl.
+* **Random numbers.** `charon` uses its own xoshiro256++ generator with a seed per chain, so runs are reproducible with `--seed`, independently of the number of threads. The draws differ from those of Julia, so the chains are not identical to those of Charon.jl, but they have the same distribution.
+* **Computation order.** For speed, `charon` computes qᵀM once per distinct (coverage, derived reads) pair instead of once per locus, evaluates the binomial probabilities in log space, and sums over the loci in a different order. This is mathematically identical to Charon.jl and changes the log-likelihood only in the last digits. The eigendecomposition uses Eigen with the same balancing step as LAPACK.
+* **Other details.** Loci with count 0 are ignored (in Charon.jl they can give `NaN`). Proposals are accepted when a uniform random number is *smaller than* the acceptance probability (Charon.jl: smaller than or equal to), which gives the same distribution. Both the MCMC sampler (as in Charon.jl) and `exactposterior` (unbounded in Charon.jl) allow n ≤ 10: beyond that the eigendecomposition of Q and Qꜜ is too ill-conditioned for reliable likelihoods.
+
+### Source code
+
+| Path | Contents |
+|---|---|
+| `cpp/src/charon/model.*` | the likelihood: `EigenExpansion`, `makeQ`, `makeQdown`, the binomial error model, `ConditionalModel` |
+| `cpp/src/charon/sampler.*` | `exactposterior`, the MCMC sampler and `unpackposterior` |
+| `cpp/src/charon/data.*` | reading DICE, base count and frequency files; filtering and aggregation of the loci |
+| `cpp/src/charon/priors.*` | priors |
+| `cpp/src/charon/io.*`, `rng.hpp` | output files, number formatting, random numbers |
+| `cpp/src/main.cpp` | the command line interface |
+| `cpp/tests/` | unit tests, test data and the simulator for test data |
+| `cpp/build-release.sh` | builds, tests and packages a static release |
+| `.github/workflows/cpp.yml` | continuous integration and GitHub releases |
+
+## Julia package
+
+The original implementation of CHARON is the Julia package [Charon.jl](https://github.com/Jan-van-Waaij/Charon.jl), registered in the Julia General registry. Use it if you want to work interactively in Julia or need priors that the command line program does not offer (any distribution from [Distributions.jl](https://juliastats.org/Distributions.jl/stable/), including correlated priors on (τC, τA)). It reads the same input files and writes the same output format as `charon`.
+
+### Install Julia
+
+Our software is written in the Julia language, and should be run by the Julia interpretor. Julia compiles the code in the background and thereby achieves speeds comparable with C. The current version of the Charon package is 0.3.2 and it should run with every Julia 1.X version. 
+
+Go to [julialang.org](https://julialang.org/downloads/) and follow the installation instructions for your platform.
+
+#### Add Julia to the path.
+Check if Julia is added to your path by typing, for instance, `julia --version` in the terminal. [If not, follow the instructions.](https://julialang.org/downloads/platform/)
+
+
+### Quick start with Julia
+
+After installing, you can use the following base count:
+
+```bash
+wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_basecount_IBS_ind4.gz
+```
+
+and allele frequency:
+
+```bash
+wget ftp://ftp.healthtech.dtu.dk:/public/edna_allelefreq/IBS_ind4_freq_IBS.gz
+```
+and download the following [script](runmcmc.jl):
+```bash
+wget https://jan-van-waaij.github.io/Charon.jl/runmcmc.jl 
+```
+Put all three files in one folder, and navigate to that folder in the terminal. Then copy-paste 
+```julia
+julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
+```
+in your terminal and press enter. This executes an MCMC sampler, whose output is saved to `output.csv`. This might take a few hours. See the ["Output format" section](#Output-format) below to interpret the output. The script takes care of installing and loading the appropriate Julia packages, including Charon. It generates 100'000 samples, and sets uniform priors on n, τC, τA and ϵ. 
+
+#### Windows
+If you use Windows Powershell, you can use 
+```powershell
+Invoke-WebRequest -Uri "https://jan-van-waaij.github.io/Charon.jl/runmcmc.jl" -OutFile "runmcmc.jl"
+Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_basecount_IBS_ind4.gz" -OutFile "IBS_ind4_basecount_IBS_ind4.gz"
+Invoke-WebRequest -Uri "ftp://ftp.healthtech.dtu.dk/public/edna_allelefreq/IBS_ind4_freq_IBS.gz" -OutFile "IBS_ind4_freq_IBS.gz"
+```
+instead of `wget`.
+
+### Convenience script
+Download the example [script](runmcmc.jl):
+```bash
+wget https://jan-van-waaij.github.io/Charon.jl/runmcmc.jl 
+```
+ This script sets uniform priors on `τC`, `τA`, `ϵ` and `n`, and generates four chains with 100'000 samples. It works both with the DICE-2 format and the other format with seperate base count and frequency files. The script saves the output as a CSV file. You can use your favourite software to analyse the output. Save runmcmc.jl on your computer. It works as follows (assuming Julia is in your path, and you use Julia 1.5 or higher):
+```julia
+julia --threads=4 path/to/runmcmc.jl path/to/basecountfile path/to/frequencyfile path/to/outputfile
+```
+or 
+```julia
+julia --threads=4 path/to/runmcmc.jl path/to/dicefile path/to/outputfile
+```
+where the output is saved in `outputfile`. `dicefile`, `basecountfile`, and `frequencyfile` might be a CSV files or a zipped CSV files. Example files can be found [here](#Example-files). The script installs Charon, and other necessary Julia packages, loads them and executes the MCMC sampler. 
+
+#### Example
+So if you have downloaded `IBS_ind4_basecount_IBS_ind4.gz` and `IBS_ind4_freq_IBS.gz` (or `IBS_ind4.dice.gz`) and `runmcmc.jl` from the former steps and have saved them in the same folder, and you navigate to the folder in the terminal, then the following command runs the MCMC and saves the results to `output.csv`.
+```julia
+julia --threads=4 runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
+```
+or
+```julia
+julia --threads=4 runmcmc.jl IBS_ind4.dice.gz output.csv
+```
+
+#### Older versions of Julia
+Older version of Julia (≤1.4), do not have the `--threads` flag, instead you should set the environment variable `JULIA_NUM_THREADS`. In Unix systems 
+```base
+export JULIA_NUM_THREADS=4
+```
+or in Windows Powershell:
+```powershell
+$env:JULIA_NUM_THREADS = 4
+```
+Then, run 
+```julia
+julia runmcmc.jl IBS_ind4_basecount_IBS_ind4.gz IBS_ind4_freq_IBS.gz output.csv
+```
+or
+```julia
+julia runmcmc.jl IBS_ind4.dice.gz output.csv
+```
+#### Very old versions of Julia
+In very old versions of Julia (≤1.2), the script does not work with gzipped files. So first unzip your files, and then run them as above. 
+
+### Detailed description of the Julia package
+
+Here follows a detailed description of the use of the MCMC sampler. Here we work interactively in the Julia REPL. You can also put your code in a script, and run it similar to the [example script](#Convenience-script). The easiest way is to adjust the [`runmcmc.jl` file](runmcmc.jl).
+
+#### Start Julia
+
+Type 
+```
+julia --threads=4 
+```
+this starts `julia` with 4 threads, and enables you to run 4 mcmc chains in parallel. You can use another number, if you want to run fewer or more chains in parallel. This starts the Julia [REPL](https://docs.julialang.org/en/v1/stdlib/REPL/). For Julia 1.4 or older, you need to set the `JULIA_NUM_THREADS` environment variable, as described [here](#older-versions-of-julia).
+
+
+#### Install Charon.
+
+In Julia run 
+```julia
+using Pkg
+Pkg.add("Charon")
+```
+`Pkg` is the [Julia package manager](https://pkgdocs.julialang.org/v1/). It installs Julia packages and keeps track of package versions. This installs the `Charon` package to the current environment. No need to use `git clone`. `Charon` is retrieved from the [General registry](https://github.com/JuliaRegistries/General). 
+
+You also need to install the packages [Distributions](https://juliastats.org/Distributions.jl/stable/), [CSV](https://csv.juliadata.org/stable/) and [DataFrames](https://dataframes.juliadata.org/stable/). 
+```julia
+using Pkg 
+Pkg.add(["Distributions", "CSV", "DataFrames"])
+```
+`Distributions` is a software to work with probability distributions. We use it to specify priors. `CSV` is software to work with CSV files. It can load and save CSV files. `DataFrames` is software to work with data frames, comparable with `data.frame` in R, or `pandas`' `DataFrame` in Python.  
+
+##### Hint
+To minimise the risk of conflicting package versions, use a new [environment](https://pkgdocs.julialang.org/v1/environments/). You need to do that before loading the packages. You can install the packages in the new environment. If you use Julia 1.5 or newer, you can use a temporary environment with `using Pkg; Pkg.activate(; temp=true)` that last for as long as the session runs.
+
+
+##### Load packages
+Load the packages Charon, Distributions, CSV and DataFrames. Once you have loaded the packages, you can use it's functions. In this step the packages are precompiled. This might take a few seconds. 
+
+In Julia run 
+```julia
+# load the packages. 
+using Charon, Distributions, CSV, DataFrames
+```
+If one of them is not installed, you can install them with 
+```julia
+using Pkg
+Pkg.add("PackageName")
+```
+where you replace PackageName with the name of the uninstalled package. 
+
+##### Specify files
+
+We assume here that the data is prepared in one of the two [prescribed data formats](#Prepare-data).
+
+Specify the relative, or absolute paths to the basecount and frequency files. The working directory can be found with `pwd()` and can be changed with `cd("path/to/folder")`.
+```julia
+basecountfile = "path/to/basecountfile.csv" # unix
+basecountfile = "path\\to\\basecountfile.csv" # windows
+basecountfile = "C:\\path\\to\\basecountfile.csv" # absolute path windows
+basecountfile = joinpath("path", "to", "basecountfile.csv") # works on all platforms
+basecountfile = joinpath("C:\\", "path", "to", "basecountfile.csv") # Windows, absolute path.
+```
+Similarly, set the path to the frequency file. 
+```julia
+frequencyfile = "path/to/frequencyfile.csv" # unix
+```
+Alternatively, you can specify the path to the DICE file. 
+```julia
+dicefile = "path/to/dicefile.csv" # UNIX-systems
+```
+
+##### Specify prior
+
+We need to specify a prior on n, (τC, τA) and ϵ. For example, you could use a uniform prior for all three:
+```julia
+using Distributions # Julia package for probability distributions. 
+prioronτCτA = product_distribution([Uniform(), Uniform()]) # uniform product prior [0,1]x[0,1] on (τC, τA).
+prioronn = DiscreteUniform(1, 10) # discrete uniform prior on {1, 2, ..., 10}.
+prioronϵ = Uniform(0, 0.5) # uniform prior on interval[0, 0.5].
+```
+`Uniform()` is a Julia object that represents a [uniform distribution](https://en.wikipedia.org/wiki/Continuous_uniform_distribution) on [0,1]. `product_distribution([Uniform(), Uniform()])` represents a [product measure](https://en.wikipedia.org/wiki/Product_measure), where each component is a uniform distribution. `DiscreteUniform(1, 10)` is a [discrete uniform distribution](https://en.wikipedia.org/wiki/Discrete_uniform_distribution) on the values 1, 2, 3, 4, 5, 6, 7, 8, 9, 10. So P(k)=1/10, for k=1,...,10. `Uniform(0, 0.5)` is the uniform distribution on the interval [0,0.5]. 
+Check the [Distributions documentation](https://juliastats.org/Distributions.jl/stable/) for other distributions. 
+
+
+##### Specify chains and number of samples.
+Specify how many MCMC samples you want and how many chains you want to sample. For example, if you want four chains with each 100'000 samples, you can specify 
+```julia
+nchains = 4 
+nsteps = 100_000
+```
+
+
+##### Execute sampler
+We can now execute our sampler, which might take a few hours. 
+```julia
+using Charon 
+chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, basecountfile, frequencyfile)
+```
+or
+```julia
+using Charon 
+chains = MCMCsampler(nchains, nsteps, prioronn, prioronτCτA, prioronϵ, dicefile)
+```
+
+The output of this function 
+`chains` is a vector of tuples. Each tuple represents an MCMC chain. Each tuple consists of six arrays. For instance, if we want to analyse the first chain, we get 
+```
+nsample, τCsample, τAsample, ϵsample, accepted, logjointprob = chains[1]
+```
+* `nsample` is the MCMC chain for the number of individuals. 
+* `τCsample` is (in this example) a 100'000x10 matrix. The k-th  column is the τC sample of the posterior conditioned on k individuals. Keep in mind that Julia has 1-based indexing.
+* `τAsample` similar to `τCsample`, but now for τA.
+* `ϵsample` similar to `τCsample`, but now for ϵ.
+* `accepted` is a 100'000x11 matrices of true/false values. The first column indicates whether a proposal for n is accepted. The k+1-th column indicates whether a proposal for (τC, τA,ϵ) of the posterior conditioned on k individuals was accepted.
+* `logjointprob` is a 100'000x11 matrices of log joint probability values. The first column indicates the log joint probability of the unconditioned posterior with `nsample[i]` individuals. The k+1-th column is the log joint probability conditioned on k individuals.  
+
+You can obtain the unconditioned sample from the posterior as follows 
+```julia
+using Charon 
+results = unpackposterior(chains)
+```
+`unpackposterior` does the following. It produces a [DataFrame](https://dataframes.juliadata.org/stable/man/working_with_dataframes/) with the unconditional posterior. Each row is an draw from the posterior. We have at at row i, for the first chain, `τC[i]=τCsample[i, nsample[i]]`, so it uses the `τC` value belonging to conditioning on `k=nsample[i]`. Similar for `τA`, and `ϵ`. It concatenates all chains, and gives each an ID, going from 1,...,4 (in this example). 
+
+
+`results` is a `DataFrame` with a sample from the unconditioned posterior. It has 7 columns, which are described [here](#output-format).  
+
+
+You can save the data frame as a CSV file as follows:
+```julia
+using CSV 
+resultscsvfile = "path/to/results.csv" # place on your hard disk
+# where you want to store your csv file. 
+CSV.write(resultscsvfile, results)
+```
+You can use the DataFrame or the CSV file for further analysis.
+
+##### Exit Julia
+
+Type `CTRL+D` or `exit()`.
+
+## Citation
+
+If you use CHARON, please cite:
+
+> Jan van Waaij, Mads Vodder Hartmann, Peter Wad Sackett and Gabriel Renaud (2026). CHARON: estimating the drift time and the number of individuals in environmental DNA with diploid individuals. *G3 Genes|Genomes|Genetics* 16(7), jkag099. [doi:10.1093/g3journal/jkag099](https://doi.org/10.1093/g3journal/jkag099)
+
+If you use glactools to prepare the data, please also cite the [glactools paper](https://academic.oup.com/bioinformatics/article/34/8/1398/4665419).
 
 ## License
 
