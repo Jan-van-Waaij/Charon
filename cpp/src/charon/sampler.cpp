@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cfenv>
 #include <cmath>
 #include <condition_variable>
 #include <exception>
@@ -12,6 +13,7 @@
 #include <stdexcept>
 #include <string>
 #include <thread>
+#include <utility>
 
 #include "charon/rng.hpp"
 
@@ -20,6 +22,22 @@ namespace charon {
 namespace {
 
 constexpr double kNegInf = -std::numeric_limits<double>::infinity();
+
+/// Starts a thread that runs f with the floating-point environment of the calling thread.
+/// POSIX threads inherit it, but 64-bit Windows starts every thread with the x87 FPU in
+/// 53-bit precision, and the MinGW runtime switches only the main thread to 64-bit
+/// precision. MinGW computes long double arithmetic and log, exp and log1p in x87
+/// extended precision, so without this the results would depend on the thread that
+/// computed them, that is, on the number of threads.
+template <class F>
+std::thread start_thread(F&& f) {
+    std::fenv_t env;
+    std::fegetenv(&env);
+    return std::thread([env, f = std::forward<F>(f)]() mutable {
+        std::fesetenv(&env);
+        f();
+    });
+}
 
 /// Runs body(0), ..., body(count-1) on up to `threads` threads; rethrows the first exception.
 template <class Body>
@@ -49,7 +67,7 @@ void parallel_for(std::size_t count, int threads, Body&& body) {
     };
     std::vector<std::thread> pool;
     pool.reserve(workers - 1);
-    for (int t = 0; t < workers - 1; ++t) pool.emplace_back(worker);
+    for (int t = 0; t < workers - 1; ++t) pool.push_back(start_thread(worker));
     worker();
     for (std::thread& t : pool) t.join();
     if (error) std::rethrow_exception(error);
@@ -61,7 +79,7 @@ void parallel_for(std::size_t count, int threads, Body&& body) {
 class WorkerTeam {
 public:
     explicit WorkerTeam(int threads) {
-        for (int t = 1; t < threads; ++t) helpers_.emplace_back([this] { helper_loop(); });
+        for (int t = 1; t < threads; ++t) helpers_.push_back(start_thread([this] { helper_loop(); }));
     }
     ~WorkerTeam() {
         {

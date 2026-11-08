@@ -76,16 +76,16 @@ private:
             const char* message = gzerror(file_, &errnum);
             throw std::runtime_error("Error while reading " + path_ + ": " + message);
         }
-        end_ += static_cast<std::size_t>(got);
-        if (got == 0) {
-            int errnum = 0;
-            const char* message = gzerror(file_, &errnum);
-            if (errnum != Z_OK && errnum != Z_STREAM_END) {
-                throw std::runtime_error("Error while reading " + path_ + ": " + message +
-                                         " (is the gzip file truncated?)");
-            }
-            eof_ = true;
+        // A truncated gzip file sets Z_BUF_ERROR on the read that returns the last data.
+        // zlib >= 1.3.2 clears that error on the next call, so check after every read.
+        int errnum = 0;
+        const char* message = gzerror(file_, &errnum);
+        if (errnum != Z_OK && errnum != Z_STREAM_END) {
+            throw std::runtime_error("Error while reading " + path_ + ": " + message +
+                                     " (is the gzip file truncated?)");
         }
+        end_ += static_cast<std::size_t>(got);
+        if (got == 0) eof_ = true;
     }
 
     std::string path_;

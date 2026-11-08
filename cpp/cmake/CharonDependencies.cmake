@@ -1,8 +1,8 @@
 # Provides the imported targets charon::eigen (header only) and charon::zlib.
 #
 # By default the system packages are used (Debian/Ubuntu: libeigen3-dev zlib1g-dev,
-# Fedora: eigen3-devel zlib-devel / zlib-static, macOS: brew install eigen,
-# MSYS2: mingw-w64-x86_64-eigen3 mingw-w64-x86_64-zlib).
+# Fedora: eigen3-devel zlib-devel / zlib-static, macOS: brew install eigen).
+# On Windows (MSYS2) use -DCHARON_FETCH_DEPS=ON: MSYS2 ships Eigen 5, which is not supported.
 # With -DCHARON_FETCH_DEPS=ON both are downloaded and zlib is built from source,
 # which only needs a C compiler and network access at configure time.
 

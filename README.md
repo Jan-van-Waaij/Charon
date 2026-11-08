@@ -65,7 +65,7 @@ Install the dependencies:
 | Fedora, RHEL | `sudo dnf install gcc-c++ cmake eigen3-devel zlib-devel zlib-static glibc-static libstdc++-static` |
 | Alpine (musl, recommended for portable static binaries) | `apk add build-base cmake eigen-dev zlib-dev zlib-static` |
 | macOS (Homebrew) | `brew install cmake eigen` |
-| Windows (MSYS2 MINGW64 shell) | `pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja mingw-w64-x86_64-eigen3 mingw-w64-x86_64-zlib` |
+| Windows (MSYS2 MINGW64 shell) | `pacman -S mingw-w64-x86_64-gcc mingw-w64-x86_64-cmake mingw-w64-x86_64-ninja`, then configure with `-DCHARON_FETCH_DEPS=ON` (MSYS2's Eigen 5 is not supported) |
 
 If Eigen or zlib cannot be installed, add `-DCHARON_FETCH_DEPS=ON` to the first `cmake` command below: CMake then downloads Eigen 3.4.0 and zlib 1.3.1 (checked against fixed SHA-256 hashes) and builds zlib itself.
 
@@ -80,7 +80,7 @@ ctest --test-dir cpp/build --output-on-failure    # CMake >= 3.20; otherwise: cd
 cmake --install cpp/build --prefix ~/.local         # installs ~/.local/bin/charon
 ```
 
-On Windows, run the same commands in the MSYS2 MINGW64 shell and add `-G Ninja` to the first `cmake` command.
+On Windows, run the same commands in the MSYS2 MINGW64 shell and add `-G Ninja -DCHARON_FETCH_DEPS=ON` to the first `cmake` command.
 
 Build options (add them to the first `cmake` command as `-DOPTION=VALUE`):
 
@@ -100,7 +100,7 @@ docker run --rm -v "$PWD:/src" -w /src alpine:3.20 sh -c \
   "apk add --no-cache build-base cmake eigen-dev zlib-dev zlib-static bash && cpp/build-release.sh && chown -R $(id -u):$(id -g) cpp/build-release dist"
 ```
 
-The GitHub workflow [`.github/workflows/cpp.yml`](.github/workflows/cpp.yml) builds and tests `charon` on Linux (x86_64 and ARM64, in Alpine), macOS and Windows for every change to the C++ code, the README or the workflow. Pushing a tag such as `v1.0.0` publishes all executables as a GitHub release:
+The GitHub workflow [`.github/workflows/cpp.yml`](.github/workflows/cpp.yml) builds and tests `charon` on Linux (x86_64 and ARM64, in Alpine), macOS and Windows for every push and for pull requests that change the C++ code. Pushing a tag such as `v1.0.0` publishes all executables as a GitHub release:
 
 ```bash
 git tag v1.0.0

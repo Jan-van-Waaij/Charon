@@ -4,10 +4,11 @@
 name: C++ build and release
 
 on:
+  # No paths filter on push: GitHub applies it to tag pushes as well, which then do
+  # not start the release.
   push:
     branches: ["**"]
     tags: ["v*"]
-    paths: ["cpp/**", ".github/workflows/cpp.yml", "README.md", "LICENSE.md"]
   pull_request:
     paths: ["cpp/**", ".github/workflows/cpp.yml"]
   workflow_dispatch:
@@ -37,7 +38,8 @@ jobs:
             apk add --no-cache build-base cmake eigen-dev zlib-dev zlib-static file tar
             cmake -S cpp -B build -DCMAKE_BUILD_TYPE=Release -DCHARON_STATIC=ON -DCPACK_SYSTEM_NAME=linux-${{ matrix.arch }}
             cmake --build build --parallel
-            (cd build && ctest --output-on-failure)
+            # Failing checks are also reported as annotations, which are readable without logging in.
+            (cd build && ctest --output-on-failure) || { grep -E "CHECK|expected |\[FAIL\]|unexpected exception|charon: error:" build/Testing/Temporary/LastTest.log | head -n 40 | sed "s/^/::error title=ctest::/"; exit 1; }
             file build/charon
             file build/charon | grep -q "statically linked"
             (cd build && cpack -B ../dist)
@@ -74,7 +76,9 @@ jobs:
             -DCMAKE_OSX_DEPLOYMENT_TARGET=${{ matrix.target }} -DCPACK_SYSTEM_NAME=macos-${{ matrix.arch }}
           cmake --build build --parallel
       - name: Test
-        run: cd build && ctest --output-on-failure
+        run: |
+          # Failing checks are also reported as annotations, which are readable without logging in.
+          (cd build && ctest --output-on-failure) || { grep -E "CHECK|expected |\[FAIL\]|unexpected exception|charon: error:" build/Testing/Temporary/LastTest.log | head -n 40 | sed "s/^/::error title=ctest::/"; exit 1; }
       - name: Show linked libraries
         run: otool -L build/charon
       - name: Package
@@ -99,15 +103,16 @@ jobs:
             mingw-w64-x86_64-gcc
             mingw-w64-x86_64-cmake
             mingw-w64-x86_64-ninja
-            mingw-w64-x86_64-eigen3
-            mingw-w64-x86_64-zlib
       - uses: actions/checkout@v4
       - name: Build
         run: |
-          cmake -S cpp -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCHARON_STATIC=ON -DCPACK_SYSTEM_NAME=windows-x86_64
+          # Fixed, checksummed Eigen and zlib versions instead of MSYS2's moving ones.
+          cmake -S cpp -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCHARON_STATIC=ON -DCHARON_FETCH_DEPS=ON -DCPACK_SYSTEM_NAME=windows-x86_64
           cmake --build build --parallel
       - name: Test
-        run: cd build && ctest --output-on-failure
+        run: |
+          # Failing checks are also reported as annotations, which are readable without logging in.
+          (cd build && ctest --output-on-failure) || { grep -E "CHECK|expected |\[FAIL\]|unexpected exception|charon: error:" build/Testing/Temporary/LastTest.log | head -n 40 | sed "s/^/::error title=ctest::/"; exit 1; }
       - name: Check that the executable has no MinGW runtime dependencies
         run: |
           objdump -p build/charon.exe | grep "DLL Name"

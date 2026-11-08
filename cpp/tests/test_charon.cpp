@@ -205,7 +205,11 @@ void test_eigen_expansion() {
     Eigen::Vector3d scaling(1.0, 1e4, 1e-4);
     const Mat badly = scaling.cwiseInverse().asDiagonal() * S * scaling.asDiagonal();
     const EigenExpansion FB(badly);
-    const LMat RB = expm_reference(badly, 0.5);
+    // e^{D^-1 S D} = D^-1 e^S D. expm_reference(badly, 0.5) would need 28 squarings, which
+    // amplify its rounding errors to ~1e-8 relative where long double is double (macOS arm64,
+    // MSVC), far above the tolerance; the similarity transform loses only a few ulps.
+    const Eigen::Matrix<long double, 3, 1> lscaling = scaling.cast<long double>();
+    const LMat RB = lscaling.cwiseInverse().asDiagonal() * RS * lscaling.asDiagonal();
     CHECK(static_cast<double>((FB.exp(0.5).cast<long double>() - RB).cwiseAbs().maxCoeff()) <
           1e-12 * static_cast<double>(RB.cwiseAbs().maxCoeff()));
     Mat rotation(2, 2);
